@@ -1,102 +1,28 @@
 # FormMate
 
-FormMate is a lightweight AI-assisted form companion that scaffolds answers and helps users complete tedious web forms faster. Users paste a form URL, converse via voice or text, and the AI suggests or fills responses that the user can review, regenerate, or edit. It’s designed for productivity and controlled automation, not bulk submission or spam.
+FormMate is a lightweight AI-assisted form companion that scaffolds answers and helps users complete web forms faster while keeping human approval at every step.
 
-The focus is on:
+## Current build
 
-* reducing repetitive typing
-* maintaining user oversight
-* working with dynamic web forms
-* clean, minimal web UI
-* AI-driven suggestion and scaffolding
+This repository now includes a runnable single-page prototype with:
 
-## Design Ideas
+- Form URL entry and simulated field discovery
+- Chat-style context input (text + optional voice via Web Speech API)
+- AI-like suggested answers per question
+- Per-question regenerate + approval toggles
+- Regenerate all, review summary, and fill-ready status checks
+- Light/dark mode toggle
 
-### Visual Style
+## Run locally
 
-* Apple-inspired minimalism
-* lots of whitespace
-* subtle shadows and card layouts
-* dark/light mode toggle (but default light for simplicity)
-* rounded corners and gentle micro-interactions
+```bash
+python3 -m http.server 4173
+```
 
-### UX Flow
+Then open <http://localhost:4173> in your browser.
 
-1. paste form URL
-2. form questions load (parsed dynamically)
-3. AI scaffolds answers
-4. user reviews or edits
-5. fill fields
-6. submit (user initiated)
+## Files
 
-### Interaction Patterns
-
-* voice input (optional)
-* chat-style conversation
-* regenerate single fields or entire response sets
-* one-click field suggestions
-* preview before fill
-
-### Accessibility
-
-* keyboard friendly
-* screen reader considerations
-* high contrast options
-* simple typography
-
-## Tech Stack
-
-### Frontend
-
-* React (or lightweight alternative)
-* Tailwind (or simple CSS)
-* Playwright (for form DOM interaction)
-* Web Speech API (voice, optional)
-
-### AI Layer
-
-* Gemini 3 Flash API (primary)
-* fallback to Gemini 2.5 or open-weight model if rate limited
-* prompt scaffolding with structured outputs
-
-### Architecture
-
-* browser automation for field discovery
-* DOM parsing for question extraction
-* user approval layer
-* no server-heavy persistence (privacy focused)
-
-### Data
-
-* session-based only
-* no long-term storage by default
-* user controls submission
-
-## Features (MVP)
-
-* form URL input
-* dynamic question detection
-* AI answer suggestions
-* regenerate per field
-* voice or text input
-* review step before fill
-* clean responsive UI
-
-## Design Notes
-
-* keep it small
-* avoid feature bloat
-* prioritize reliability
-* user always in control
-* no bulk automation
-
-## Future Ideas
-
-* templates for common forms
-* answer history (opt-in)
-* collaborative form filling
-* exportable data sets
-* plugin system
-
----
-
+- `index.html` – semantic app layout and controls
+- `styles.css` – minimal Apple-inspired styling and responsive behavior
+- `app.js` – UI state, interactions, and simulated suggestion flow

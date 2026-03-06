@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FormMate</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">AI-assisted form companion</p>
+          <h1>FormMate</h1>
+          <p class="subtitle">
+            Paste a form URL, get structured suggestions, and keep full control before anything is filled.
+          </p>
+        </div>
+        <button id="themeToggle" class="ghost-btn" aria-label="Toggle dark mode">🌙 Dark mode</button>
+      </header>
+
+      <section class="card stack-gap">
+        <label for="formUrl">Form URL</label>
+        <div class="url-row">
+          <input id="formUrl" type="url" placeholder="https://example.com/application" />
+          <button id="loadForm" class="primary-btn">Load questions</button>
+        </div>
+        <p id="urlStatus" class="status">No form loaded yet.</p>
+      </section>
+
+      <section class="grid">
+        <article class="card stack-gap" aria-labelledby="conversationTitle">
+          <div class="section-title-row">
+            <h2 id="conversationTitle">Conversation</h2>
+            <button id="voiceInput" class="ghost-btn">🎙️ Voice input</button>
+          </div>
+
+          <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+          <div class="composer-row">
+            <input id="chatInput" type="text" placeholder="Share context for better answers…" />
+            <button id="sendMessage" class="primary-btn">Send</button>
+          </div>
+        </article>
+
+        <article class="card stack-gap" aria-labelledby="answersTitle">
+          <div class="section-title-row">
+            <h2 id="answersTitle">Suggested answers</h2>
+            <button id="regenerateAll" class="ghost-btn">Regenerate all</button>
+          </div>
+
+          <ul id="questionList" class="question-list"></ul>
+
+          <div class="actions-row">
+            <button id="reviewAnswers" class="primary-btn">Review answers</button>
+            <button id="fillForm" class="ghost-btn">Fill fields</button>
+          </div>
+          <p id="actionStatus" class="status">Load questions to begin.</p>
+        </article>
+      </section>
+    </main>
+
+    <template id="questionTemplate">
+      <li class="question-item">
+        <div>
+          <p class="question-label"></p>
+          <textarea rows="3"></textarea>
+        </div>
+        <div class="question-actions">
+          <button class="ghost-btn small" data-action="regenerate">Regenerate</button>
+          <button class="ghost-btn small" data-action="approve">Approve</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
