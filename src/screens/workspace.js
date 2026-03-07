@@ -118,47 +118,74 @@ export function workspaceScreen() {
           </div>
 
           <!-- AI Chat Panel (Right) -->
-          <aside id="chat-panel" class="w-80 lg:w-96 border-l border-slate-200 bg-white flex flex-col shrink-0 hidden md:flex">
-            <div class="p-4 lg:p-6 border-b border-slate-200 flex items-center justify-between">
+          <aside id="chat-panel" class="w-80 lg:w-96 border-l border-slate-200 bg-white flex flex-col shrink-0 hidden md:flex z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] transition-all">
+            <div class="p-4 lg:p-6 border-b border-slate-200 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0">
               <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">smart_toy</span>
-                <span class="font-bold">FormMate AI</span>
+                <span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+                <span class="font-bold tracking-tight">Copilot</span>
               </div>
-              <span class="bg-green-100 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>
+              <div class="flex flex-col gap-1 items-end">
+                <span class="bg-green-100 text-green-600 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-green-200">Active</span>
+                <select id="chat-personality" class="text-xs border-none bg-transparent text-slate-500 font-medium py-0 h-auto cursor-pointer focus:ring-0 text-right w-24">
+                  <option value="professional">Professional</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="concise">Concise</option>
+                  <option value="creative">Creative</option>
+                </select>
+              </div>
             </div>
 
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 no-scrollbar">
+            <!-- Toolbar -->
+            <div class="px-4 py-2 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs">
+              <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                <input type="text" id="chat-search" placeholder="Search chat..." class="w-full bg-transparent border-none focus:ring-0 pl-7 text-xs py-1" />
+              </div>
+              <button id="btn-export-chat" class="p-1 text-slate-400 hover:text-primary transition-colors flex items-center gap-1" title="Export Chat">
+                <span class="material-symbols-outlined text-sm">download</span>
+              </button>
+            </div>
+
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 scroll-smooth">
               <!-- Initial AI greeting -->
               <div class="flex flex-col gap-2 animate-message-in">
-                <div class="max-w-[85%] bg-slate-100 rounded-2xl rounded-tl-none p-4 text-sm text-slate-600">
+                <div class="max-w-[85%] bg-slate-100 rounded-2xl rounded-tl-none p-4 text-sm text-slate-700 leading-relaxed relative group">
                   Hello! I've analyzed your form — <strong>${formData.title}</strong>. I found ${formData.questions.length} questions and generated suggested answers for each.
-                  <ul class="mt-2 space-y-1 list-disc list-inside">
-                    <li>Edit any answer directly on the card</li>
-                    <li>Ask me to refine specific answers</li>
-                    <li>Click "Review & Fill" when ready</li>
+                  <ul class="mt-3 space-y-1 my-2">
+                    <li class="flex items-start gap-2"><span class="material-symbols-outlined text-primary text-sm mt-0.5">edit_square</span> Edit any answer directly on the card.</li>
+                    <li class="flex items-start gap-2"><span class="material-symbols-outlined text-primary text-sm mt-0.5">forum</span> Or ask me to refine specific answers down here.</li>
                   </ul>
+                  Let me know what you need!
                 </div>
-                <span class="text-[10px] text-slate-400 ml-2">Just now</span>
+                <span class="text-[10px] text-slate-400 font-medium ml-2">System • ${formatTime(new Date())}</span>
               </div>
             </div>
 
             <!-- Chat Input -->
-            <div class="p-4 lg:p-6 border-t border-slate-200 bg-white/50 backdrop-blur-sm">
-              <div class="relative">
-                <textarea
-                  id="chat-input"
-                  class="w-full rounded-xl border-slate-200 bg-white focus:ring-primary focus:border-primary text-sm p-4 pr-12 resize-none no-scrollbar shadow-inner"
-                  placeholder="Ask AI to refine your form..."
-                  rows="2"
-                ></textarea>
-                <button id="btn-send-chat" class="absolute bottom-3 right-3 p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 btn-press">
-                  <span class="material-symbols-outlined text-lg">send</span>
+            <div class="p-4 lg:p-6 border-t border-slate-200 bg-white">
+              <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar scroll-smooth" id="chat-suggestions">
+                <!-- Suggestion pills update dynamically -->
+                <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Make all answers more professional">
+                  <span class="material-symbols-outlined text-[14px]">work</span> Professional
+                </button>
+                <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Shorten all long answers">
+                  <span class="material-symbols-outlined text-[14px]">compress</span> Shorten
+                </button>
+                <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Expand brief answers with more detail">
+                  <span class="material-symbols-outlined text-[14px]">expand_content</span> Expand
                 </button>
               </div>
-              <div class="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                <button class="chat-chip whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors" data-msg="Make all answers more professional">Professional</button>
-                <button class="chat-chip whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors" data-msg="Shorten all long answers">Shorten</button>
-                <button class="chat-chip whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors" data-msg="Expand brief answers with more detail">Expand</button>
+              <div class="relative group">
+                <textarea
+                  id="chat-input"
+                  class="w-full rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm py-3 pl-4 pr-12 resize-none transition-all shadow-sm"
+                  placeholder="Ask Copilot anything..."
+                  rows="1"
+                  style="min-height: 48px; max-height: 120px;"
+                ></textarea>
+                <button id="btn-send-chat" class="absolute bottom-2 right-2 p-1.5 bg-primary text-white rounded-lg hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50">
+                  <span class="material-symbols-outlined text-base">arrow_upward</span>
+                </button>
               </div>
             </div>
           </aside>
@@ -206,6 +233,9 @@ export function workspaceScreen() {
       // Update textarea
       const textarea = questionsContainer.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
       if (textarea) textarea.value = newAnswer.text;
+
+      // Update pills
+      updateChatPills(question);
 
       // Update badge
       const badge = questionsContainer.querySelector(`.answer-badge[data-question-id="${qId}"]`);
@@ -330,28 +360,82 @@ export function workspaceScreen() {
 
     // ─── Chat interactions ──────────────
 
+    const chatHistory = [];
+
+    // Setup Personality selector
+    const selectPersonality = wrapper.querySelector('#chat-personality');
+    const { settings } = getState();
+    if (settings?.ai?.personality) {
+      selectPersonality.value = settings.ai.personality;
+      setState({ personality: settings.ai.personality });
+    }
+    selectPersonality.addEventListener('change', (e) => {
+      setState({ personality: e.target.value });
+    });
+
+    // Auto-resize chat textarea
+    chatInput.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+      btnSend.disabled = !this.value.trim();
+    });
+
+    // Chat Search
+    const chatSearch = wrapper.querySelector('#chat-search');
+    chatSearch.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      const messages = chatMessages.querySelectorAll('.animate-message-in');
+      messages.forEach(msg => {
+        if (!term || msg.textContent.toLowerCase().includes(term)) {
+          msg.style.display = 'flex';
+        } else {
+          msg.style.display = 'none';
+        }
+      });
+    });
+
+    // Chat Export
+    const btnExportChat = wrapper.querySelector('#btn-export-chat');
+    btnExportChat.addEventListener('click', () => {
+      const extractText = Array.from(chatMessages.querySelectorAll('.animate-message-in')).map(node => {
+        const isUser = node.querySelector('.bg-primary.text-white');
+        const text = node.querySelector('.text-sm')?.textContent.trim() || '';
+        return `${isUser ? 'You' : 'Copilot'}: ${text}`;
+      }).join('\n\n');
+
+      const blob = new Blob([extractText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FormMate-Chat-${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+    });
+
     async function sendMessage(text) {
       if (!text.trim()) return;
 
+      chatHistory.push({ role: 'user', content: text });
+
       // Add user message
       const userBubble = document.createElement('div');
-      userBubble.className = 'flex flex-col gap-2 items-end animate-message-in';
+      userBubble.className = 'flex flex-col gap-1 items-end animate-message-in mb-6';
       userBubble.innerHTML = `
-        <div class="max-w-[85%] bg-primary text-white rounded-2xl rounded-tr-none p-4 text-sm font-medium">
+        <div class="max-w-[85%] bg-primary text-white rounded-2xl rounded-tr-none px-4 py-3 text-[13px] font-medium leading-relaxed shadow-sm">
           ${escapeHtml(text)}
         </div>
-        <span class="text-[10px] text-slate-400 mr-2">${formatTime(new Date())}</span>
+        <span class="text-[10px] text-slate-400 font-medium mr-2">You • ${formatTime(new Date())}</span>
       `;
       chatMessages.appendChild(userBubble);
+      btnSend.disabled = true;
 
       // Show typing indicator
       const typingEl = document.createElement('div');
-      typingEl.className = 'flex flex-col gap-2 animate-message-in';
+      typingEl.className = 'flex flex-col gap-1 animate-message-in mb-6';
       typingEl.innerHTML = `
-        <div class="max-w-[85%] bg-slate-100 rounded-2xl rounded-tl-none p-4 flex items-center gap-2">
-          <div class="typing-dot size-2 bg-slate-400 rounded-full"></div>
-          <div class="typing-dot size-2 bg-slate-400 rounded-full"></div>
-          <div class="typing-dot size-2 bg-slate-400 rounded-full"></div>
+        <div class="max-w-[85%] bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-1.5 h-10 w-16">
+          <div class="typing-dot bg-slate-400"></div>
+          <div class="typing-dot bg-slate-400" style="animation-delay: 0.2s"></div>
+          <div class="typing-dot bg-slate-400" style="animation-delay: 0.4s"></div>
         </div>
       `;
       chatMessages.appendChild(typingEl);
@@ -359,30 +443,68 @@ export function workspaceScreen() {
 
       // Get AI response
       const { formData: fd } = getState();
-      const response = await processChatMessage(text, {
-        title: fd.title,
-        questionCount: fd.questions.length
-      });
+      try {
+        const responseText = await processChatMessage(text, {
+          title: fd.title,
+          questionCount: fd.questions.length
+        }, chatHistory);
 
-      // Remove typing indicator
-      typingEl.remove();
+        chatHistory.push({ role: 'assistant', content: responseText });
 
-      // Add AI message
-      const aiBubble = document.createElement('div');
-      aiBubble.className = 'flex flex-col gap-2 animate-message-in';
-      aiBubble.innerHTML = `
-        <div class="max-w-[85%] bg-slate-100 rounded-2xl rounded-tl-none p-4 text-sm text-slate-600">
-          ${escapeHtml(response.text)}
-        </div>
-        <span class="text-[10px] text-slate-400 ml-2">${formatTime(new Date())}</span>
-      `;
-      chatMessages.appendChild(aiBubble);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Remove typing
+        typingEl.remove();
+
+        // Check if response contains field suggestion format (e.g. [Field N]: "suggestion")
+        // Basic heuristic for apply to field UI
+        const isSuggestion = (responseText.includes('Field') || responseText.includes('Q')) && responseText.includes(':');
+
+        // Add AI message
+        const aiBubble = document.createElement('div');
+        aiBubble.className = 'flex flex-col gap-1 animate-message-in mb-6 group';
+        aiBubble.innerHTML = `
+          <div class="max-w-[90%] bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none p-4 text-[13px] text-slate-700 leading-relaxed relative">
+            ${escapeHtml(responseText).replace(/\n/g, '<br>')}
+            
+            ${isSuggestion ? `
+              <div class="mt-3 pt-3 border-t border-slate-200/60 flex justify-end">
+                <button class="text-xs bg-white border border-slate-200 text-primary font-bold px-3 py-1.5 rounded-lg shadow-sm hover:border-primary/30 transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">checklist</span> Apply to fields
+                </button>
+              </div>
+            ` : ''}
+
+            <!-- Quick copy action overlay ->
+            <button class="absolute -right-2 -top-2 size-6 bg-white border border-slate-100 shadow-sm rounded-full text-slate-400 hover:text-primary items-center justify-center hidden group-hover:flex transition-all z-10" title="Copy text">
+              <span class="material-symbols-outlined text-[12px]">content_copy</span>
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-400 font-medium ml-2">Copilot • ${formatTime(new Date())}</span>
+        `;
+        chatMessages.appendChild(aiBubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Implement the apply button
+        const applyBtn = aiBubble.querySelector('button');
+        if (applyBtn) {
+          applyBtn.addEventListener('click', () => {
+            applyBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">check</span> Applied';
+            applyBtn.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
+            alert('In a real environment, this would parse the response and update the specific form inputs directly using their IDs.');
+          });
+        }
+
+      } catch (e) {
+        typingEl.remove();
+        console.error(e);
+      } finally {
+        chatInput.style.height = '48px'; // reset auto height
+      }
     }
 
     btnSend.addEventListener('click', () => {
       sendMessage(chatInput.value);
       chatInput.value = '';
+      btnSend.disabled = true;
     });
 
     chatInput.addEventListener('keydown', (e) => {
@@ -390,16 +512,19 @@ export function workspaceScreen() {
         e.preventDefault();
         sendMessage(chatInput.value);
         chatInput.value = '';
+        btnSend.disabled = true;
       }
     });
 
-    // Chip shortcuts
+    // Chip shortcuts - dynamic text insertion instead of immediate sending
     wrapper.querySelectorAll('.chat-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const msg = chip.dataset.msg;
         chatInput.value = msg;
-        sendMessage(msg);
-        chatInput.value = '';
+        chatInput.focus();
+        btnSend.disabled = false;
+        // Trigger resize
+        chatInput.dispatchEvent(new Event('input'));
       });
     });
 
@@ -426,6 +551,55 @@ export function workspaceScreen() {
       const count = Object.values(ans).filter(a => a?.text).length;
       const el = wrapper.querySelector('#answered-count');
       if (el) el.textContent = count;
+    }
+
+    function updateChatPills(question) {
+      if (!question) return;
+      const suggestionsContainer = wrapper.querySelector('#chat-suggestions');
+      if (!suggestionsContainer) return;
+
+      const type = question.type;
+      let pillsHtml = `
+        <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Rewrite the focus field professionally">
+          <span class="material-symbols-outlined text-[14px]">work</span> Professional
+        </button>
+      `;
+
+      if (type === 'long_text') {
+        pillsHtml += `
+          <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Shorten the focus field">
+            <span class="material-symbols-outlined text-[14px]">compress</span> Shorten
+          </button>
+          <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Expand the focus field with more detail">
+            <span class="material-symbols-outlined text-[14px]">expand_content</span> Expand
+          </button>
+        `;
+      } else {
+        pillsHtml += `
+          <button class="chat-chip whitespace-nowrap bg-primary/5 hover:bg-primary/10 text-[11px] font-bold px-3 py-1.5 rounded-lg text-primary transition-colors border border-primary/10 flex items-center gap-1" data-msg="Give me another option for this field">
+            <span class="material-symbols-outlined text-[14px]">lightbulb</span> Idea
+          </button>
+        `;
+      }
+
+      suggestionsContainer.innerHTML = pillsHtml;
+
+      // Re-bind listeners for the new chips
+      suggestionsContainer.querySelectorAll('.chat-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const msg = chip.dataset.msg;
+          chatInput.value = msg;
+          chatInput.focus();
+          btnSend.disabled = false;
+          chatInput.dispatchEvent(new Event('input'));
+        });
+      });
+    }
+
+    // Set initial pills based on first question
+    const { formData: initialFd } = getState();
+    if (initialFd?.questions?.length > 0) {
+      updateChatPills(initialFd.questions[0]);
     }
   }
 
