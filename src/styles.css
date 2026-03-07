@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   FormMate — Global Styles
+   FormMate — Global Styles (Enhanced)
    ═══════════════════════════════════════════ */
 
 /* Scrollbar hiding */
@@ -14,7 +14,10 @@
 
 /* Base font */
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--fm-font-sans);
+  background: var(--fm-bg);
+  color: var(--fm-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Material Symbols icon styling */
@@ -31,7 +34,91 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Spin animation (for loading spinners) */
+/* ─── Input Focus States ───────────────── */
+/* Thicker border + soft glow + faint pulsing shadow */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--fm-focus-border) !important;
+  border-width: 2px !important;
+  box-shadow: var(--fm-focus-glow) !important;
+  animation: focusPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes focusPulse {
+
+  0%,
+  100% {
+    box-shadow: var(--fm-focus-glow);
+  }
+
+  50% {
+    box-shadow: var(--fm-focus-ring), 0 0 24px rgba(91, 19, 236, 0.08);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @keyframes focusPulse {
+
+    0%,
+    100% {
+      box-shadow: var(--fm-focus-glow);
+    }
+
+    50% {
+      box-shadow: var(--fm-focus-ring), 0 0 24px rgba(139, 92, 246, 0.1);
+    }
+  }
+}
+
+/* ─── Button Micro-interactions ────────── */
+.btn-press {
+  transition: all var(--fm-transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+.btn-press:hover {
+  transform: translateY(-1px);
+}
+
+.btn-press:active {
+  transform: scale(0.97) translateY(0);
+}
+
+/* Ripple effect */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+  opacity: 0;
+}
+
+.btn-ripple:active::after {
+  width: 300px;
+  height: 300px;
+  opacity: 1;
+  transition: 0s;
+}
+
+/* ─── Spin animation ──────────────────── */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -46,7 +133,7 @@ html {
   animation: spin 1s linear infinite;
 }
 
-/* Screen transitions */
+/* ─── Screen transitions ─────────────── */
 .screen-enter {
   animation: screenFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -79,7 +166,7 @@ html {
   }
 }
 
-/* Pulse animation for loading states */
+/* ─── Pulse animation ────────────────── */
 @keyframes gentlePulse {
 
   0%,
@@ -96,7 +183,7 @@ html {
   animation: gentlePulse 2s ease-in-out infinite;
 }
 
-/* Scanning line for analysis screen */
+/* ─── Scanning line ──────────────────── */
 @keyframes scanLine {
   0% {
     transform: translateY(0);
@@ -115,7 +202,7 @@ html {
   animation: scanLine 2.5s ease-in-out infinite;
 }
 
-/* Stagger children animation */
+/* ─── Stagger children ───────────────── */
 .stagger-children>* {
   opacity: 0;
   animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -173,7 +260,7 @@ html {
   }
 }
 
-/* Typing indicator animation */
+/* ─── Typing indicator ───────────────── */
 @keyframes typingDot {
 
   0%,
@@ -201,7 +288,7 @@ html {
   animation-delay: 0.4s;
 }
 
-/* Progress bar animation */
+/* ─── Progress bar ───────────────────── */
 @keyframes progressGrow {
   from {
     width: 0%;
@@ -212,7 +299,7 @@ html {
   animation: progressGrow 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Float animation */
+/* ─── Float animation ────────────────── */
 @keyframes float {
 
   0%,
@@ -229,7 +316,7 @@ html {
   animation: float 3s ease-in-out infinite;
 }
 
-/* Checkmark pop */
+/* ─── Checkmark pop ──────────────────── */
 @keyframes checkPop {
   0% {
     transform: scale(0);
@@ -250,7 +337,7 @@ html {
   animation: checkPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Message slide-in */
+/* ─── Message slide-in ───────────────── */
 @keyframes messageSlideIn {
   from {
     opacity: 0;
@@ -267,14 +354,148 @@ html {
   animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom focus styles */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
+/* ─── Confetti ───────────────────────── */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
 }
 
-/* Smooth button press */
-.btn-press:active {
-  transform: scale(0.97);
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confettiFall 3s ease-in forwards;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── Skeleton loading ───────────────── */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--fm-bg-sunken) 25%, var(--fm-surface-hover) 50%, var(--fm-bg-sunken) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: var(--fm-radius-md);
+}
+
+/* ─── Glassmorphism ──────────────────── */
+.glass {
+  background: var(--fm-glass-bg);
+  backdrop-filter: blur(var(--fm-glass-blur));
+  -webkit-backdrop-filter: blur(var(--fm-glass-blur));
+  border: 1px solid var(--fm-glass-border);
+}
+
+/* ─── Background mesh ────────────────── */
+.bg-mesh {
+  background-image: var(--fm-gradient-mesh);
+}
+
+/* ─── Gradient accent text ───────────── */
+.text-gradient {
+  background: var(--fm-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Card hover lift ────────────────── */
+.card-hover {
+  transition: all var(--fm-transition-normal);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--fm-shadow-lg);
+}
+
+/* ─── Slide up entrance ──────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── Scale in entrance ──────────────── */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── Missing field highlight ────────── */
+@keyframes missingPulse {
+
+  0%,
+  100% {
+    border-color: rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+
+  50% {
+    border-color: rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+  }
+}
+
+.field-missing {
+  animation: missingPulse 2s ease-in-out infinite;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* ─── Command Palette Overlay ────────── */
+.command-palette-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+/* ─── Responsive utilities ───────────── */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none !important;
+  }
 }

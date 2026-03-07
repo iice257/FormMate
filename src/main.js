@@ -12,8 +12,14 @@ import '@fontsource/inter/700.css';
 import '@fontsource/inter/800.css';
 import '@fontsource/inter/900.css';
 
+// Design system & styles
+import './design-tokens.css';
 import './styles.css';
+
+// Core
 import { registerScreen, initRouter } from './router.js';
+
+// Screens
 import { landingScreen } from './screens/landing.js';
 import { analyzingScreen } from './screens/analyzing.js';
 import { workspaceScreen } from './screens/workspace.js';
