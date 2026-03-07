@@ -7,13 +7,12 @@
 // routes through AIService to the right model.
 //
 // Uses multi-model routing:
-//   Form understanding  → gpt-oss-120b
-//   Answer generation   → gpt-oss-20b
-//   Copilot chat        → qwen-2.5-32b
-//   Quick edits         → qwen-2.5-7b
+//   Form understanding  → openai/gpt-oss-120b
+//   Answer generation   → openai/gpt-oss-20b
+//   Copilot chat        → qwen/qwen3-32b
+//   Quick edits         → llama-3.1-8b-instant
 // ═══════════════════════════════════════════
 
-import { getState } from '../state.js';
 import { generate, parseJsonResponse } from './ai-service.js';
 import { MOCK_AI_ANSWERS, MOCK_CHAT_RESPONSES } from '../parser/mock-forms.js';
 
@@ -24,8 +23,6 @@ import { MOCK_AI_ANSWERS, MOCK_CHAT_RESPONSES } from '../parser/mock-forms.js';
  * Uses gpt-oss-120b for form understanding, then gpt-oss-20b for answer generation.
  */
 export async function generateAnswers(formData) {
-  const { groqApiKey } = getState();
-  if (!groqApiKey) return generateAnswersMock(formData);
 
   const questionsText = formData.questions.map((q, i) =>
     `${i + 1}. "${q.text}" (type: ${q.type}${q.options.length ? `, options: ${q.options.join(', ')}` : ''}${q.required ? ', required' : ''})`
@@ -61,7 +58,6 @@ Generate appropriate answers. Return ONLY valid JSON like:
     const responseText = await generate({
       task: 'answer_generation',
       messages,
-      apiKey: groqApiKey,
       temperature: 0.7,
       maxTokens: 2048,
       jsonMode: true,
@@ -94,8 +90,6 @@ Generate appropriate answers. Return ONLY valid JSON like:
  * Uses gpt-oss-20b.
  */
 export async function regenerateAnswer(question, currentAnswer) {
-  const { groqApiKey } = getState();
-  if (!groqApiKey) return regenerateAnswerMock(question);
 
   const messages = [
     {
@@ -115,10 +109,9 @@ Generate a completely different answer. Return ONLY the answer text.`
     const text = await generate({
       task: 'regeneration',
       messages,
-      apiKey: groqApiKey,
       temperature: 0.85,
       maxTokens: 512,
-      useCache: false, // Always generate fresh
+      useCache: false,
     });
 
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'ai', confidence: 0.85 };
@@ -134,8 +127,6 @@ Generate a completely different answer. Return ONLY the answer text.`
  * Uses qwen-2.5-32b for natural dialogue.
  */
 export async function processChatMessage(userMessage, formContext) {
-  const { groqApiKey } = getState();
-  if (!groqApiKey) return chatMock(userMessage);
 
   const messages = [
     {
@@ -161,7 +152,6 @@ Your role:
     const text = await generate({
       task: 'copilot_chat',
       messages,
-      apiKey: groqApiKey,
       temperature: 0.75,
       maxTokens: 512,
     });
@@ -187,10 +177,7 @@ Your role:
  * @returns {Promise<string>} The edited text
  */
 export async function quickEdit(currentText, action, questionText) {
-  const { groqApiKey } = getState();
-
-  if (!groqApiKey || !currentText.trim()) {
-    // Fallback: simple local edits
+  if (!currentText.trim()) {
     return quickEditLocal(currentText, action);
   }
 
@@ -222,7 +209,6 @@ Return ONLY the edited answer text:`
     const text = await generate({
       task: 'quick_edit',
       messages,
-      apiKey: groqApiKey,
       temperature: 0.6,
       maxTokens: 512,
     });

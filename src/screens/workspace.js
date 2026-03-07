@@ -24,7 +24,7 @@ export function workspaceScreen() {
 
       <!-- Sidebar Navigation -->
       <aside id="sidebar" class="w-64 border-r border-slate-200 bg-white flex flex-col shrink-0 hidden lg:flex">
-        <div class="p-6 flex items-center gap-3">
+        <div class="p-6 flex items-center gap-3 cursor-pointer" id="sidebar-logo">
           <div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
             <span class="material-symbols-outlined">auto_awesome</span>
           </div>
@@ -32,23 +32,14 @@ export function workspaceScreen() {
         </div>
 
         <nav class="flex-1 px-4 space-y-1">
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium cursor-pointer">
-            <span class="material-symbols-outlined">dashboard</span> Dashboard
+          <a id="nav-active" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium cursor-pointer">
+            <span class="material-symbols-outlined">folder_open</span> Active Form
           </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined">folder</span> Projects
+          <a id="nav-new-form" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+            <span class="material-symbols-outlined">add_circle</span> New Form
           </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined">description</span> Templates
-          </a>
-
-          <div class="pt-4 pb-2 px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Workspace</div>
-
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined">settings</span> Settings
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined">help_outline</span> Support
+          <a id="nav-history" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+            <span class="material-symbols-outlined">history</span> History
           </a>
         </nav>
 
@@ -113,8 +104,16 @@ export function workspaceScreen() {
                 ${questionsHtml}
               </div>
 
+              <!-- Bottom Review CTA -->
+              <div class="sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-4">
+                <button id="btn-review-bottom" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all flex items-center justify-center gap-2 btn-press">
+                  <span class="material-symbols-outlined">check_circle</span>
+                  Review & Fill
+                </button>
+              </div>
+
               <!-- Spacer -->
-              <div class="h-20"></div>
+              <div class="h-4"></div>
             </div>
           </div>
 
@@ -399,8 +398,17 @@ export function workspaceScreen() {
       chatPanel.classList.toggle('hidden');
     });
 
-    // ─── Review button ──────────────────
+    // ─── Review buttons (top + bottom) ──
     btnReview.addEventListener('click', () => navigateTo('review'));
+    const btnReviewBottom = wrapper.querySelector('#btn-review-bottom');
+    if (btnReviewBottom) btnReviewBottom.addEventListener('click', () => navigateTo('review'));
+
+    // ─── Sidebar navigation ─────────────
+    wrapper.querySelector('#sidebar-logo')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#nav-new-form')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#nav-history')?.addEventListener('click', () => {
+      alert('History feature coming soon! Your completed forms will appear here.');
+    });
 
     // ─── Helpers ────────────────────────
     function updateAnsweredCount() {

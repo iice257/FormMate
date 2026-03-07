@@ -9,23 +9,16 @@ const state = {
   formUrl: '',
 
   // Form data from parser
-  formData: null, // { title, description, questions: [] }
+  formData: null,
 
-  // AI-generated answers: { [questionId]: { text, source: 'ai'|'user'|'empty', confidence } }
+  // AI-generated answers: { [questionId]: { text, source, confidence } }
   answers: {},
 
   // Analysis progress
-  analysisProgress: {
-    step: 0,       // 0-3
-    percent: 0,
-    message: ''
-  },
+  analysisProgress: { step: 0, percent: 0, message: '' },
 
-  // Chat messages: [{ role: 'ai'|'user', text, timestamp, action? }]
+  // Chat messages
   chatMessages: [],
-
-  // Groq API key — loaded from .env (NEVER hardcode keys in source)
-  groqApiKey: import.meta.env.VITE_GROQ_API_KEY || '',
 
   // UI state
   activeQuestionId: null,
