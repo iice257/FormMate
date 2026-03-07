@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#5b13ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#161022",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>FormMate Review &amp; Confirmation</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Navigation Header -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-4 bg-white dark:bg-background-dark sticky top-0 z-10">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-8 flex items-center justify-center bg-primary/10 rounded-lg">
+<span class="material-symbols-outlined text-primary">description</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">Review &amp; Confirmation</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center rounded-full size-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</header>
+<main class="flex flex-1 justify-center py-8 px-4">
+<div class="layout-content-container flex flex-col max-w-[800px] flex-1 gap-6">
+<!-- Progress Section -->
+<div class="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="flex gap-6 justify-between items-center">
+<div class="flex flex-col">
+<p class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-normal">Ready for Submission</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal">All 24 fields have been successfully mapped.</p>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-primary text-xl font-bold leading-normal">100%</p>
+<p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Completed</p>
+</div>
+</div>
+<div class="rounded-full bg-slate-100 dark:bg-slate-800 h-3 overflow-hidden">
+<div class="h-full rounded-full bg-primary" style="width: 100%;"></div>
+</div>
+</div>
+<!-- Main Content Title -->
+<div class="flex flex-col gap-2">
+<h1 class="text-slate-900 dark:text-slate-100 text-3xl font-bold leading-tight">Final Summary</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base">Please review the responses below. AI-generated suggestions are marked for your verification.</p>
+</div>
+<!-- Category: Personal Details -->
+<section class="flex flex-col gap-3">
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold px-1">Personal Information</h3>
+<!-- Response Row 1 (AI Generated) -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center gap-2">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Full Name</p>
+<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Mapped
+                                    </span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium">Alexander James Johnson</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Response Row 2 (User Edited) -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center gap-2">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Email Address</p>
+<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">edit</span> User Edited
+                                    </span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium">alex.j@formmate.ai</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Response Row 3 (AI Generated) -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">call</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center gap-2">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Phone Number</p>
+<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Mapped
+                                    </span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium">+1 (555) 000-1234</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</section>
+<!-- Category: Employment History -->
+<section class="flex flex-col gap-3 pt-4">
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold px-1">Employment History</h3>
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
+<span class="material-symbols-outlined">work</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center gap-2">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Current Role</p>
+<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Mapped
+                                    </span>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium">Senior Product Designer at CreativeSync</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</section>
+<!-- Trust Messaging -->
+<div class="flex items-start gap-4 p-5 rounded-xl bg-primary/5 border border-primary/10 mt-4">
+<span class="material-symbols-outlined text-primary mt-0.5">verified_user</span>
+<div class="flex flex-col gap-1">
+<p class="text-slate-900 dark:text-slate-100 text-sm font-bold">Secure Submission</p>
+<p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">FormMate uses end-to-end encryption to fill your forms. Your data is only shared with the destination site during this session.</p>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex flex-col gap-3 py-6 sticky bottom-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<button class="w-full flex items-center justify-center gap-2 rounded-xl h-14 bg-primary text-white font-bold text-lg hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined">bolt</span>
+                            Fill Form Automatically
+                        </button>
+<div class="flex justify-center gap-6">
+<button class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors underline underline-offset-4 decoration-slate-300 dark:decoration-slate-700">Save for Later</button>
+<button class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors underline underline-offset-4 decoration-slate-300 dark:decoration-slate-700">Print Summary</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>
