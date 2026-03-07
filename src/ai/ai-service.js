@@ -21,7 +21,7 @@ const PROXY_AUDIO_URL = '/api/ai/transcribe';
 
 // ─── Model Registry (vendor-prefixed for Groq) ──
 
-const MODELS = {
+export const MODELS = {
   HEAVY: 'openai/gpt-oss-120b',
   STANDARD: 'openai/gpt-oss-20b',
   COPILOT: 'qwen/qwen3-32b',
@@ -31,7 +31,7 @@ const MODELS = {
 
 // ─── Task → Model Routing Table ──────────────
 
-const TASK_ROUTES = {
+export const TASK_ROUTES = {
   'form_understanding': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'question_intent': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'answer_generation': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
@@ -217,5 +217,3 @@ export async function transcribeAudio(audioBlob) {
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-
-export { MODELS, TASK_ROUTES };

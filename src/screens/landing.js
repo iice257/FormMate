@@ -7,7 +7,7 @@ import { navigateTo } from '../router.js';
 
 export function landingScreen() {
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-[#f8f7ff]">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden" style="background: var(--fm-bg)">
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
@@ -173,21 +173,21 @@ export function landingScreen() {
             <p class="text-slate-400 text-sm max-w-lg mx-auto mb-12">We've spent thousands of hours analyzing the friction of data entry. Here is what we're fixing.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm text-left">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">edit_note</span>
                 </div>
                 <h3 class="text-base font-bold text-slate-900 mb-2">Tedious Forms</h3>
                 <p class="text-slate-500 text-sm leading-relaxed">The average person spends 4 hours a month filling out repetitive online forms and applications.</p>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm text-left">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">replay</span>
                 </div>
                 <h3 class="text-base font-bold text-slate-900 mb-2">Repetitive Answers</h3>
                 <p class="text-slate-500 text-sm leading-relaxed">How many times have you typed your address or work history? We stop the endless cycle of repetition.</p>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm text-left">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">psychology_alt</span>
                 </div>
@@ -223,7 +223,7 @@ export function landingScreen() {
                     <div class="size-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
                     <div>
                       <h4 class="font-bold text-slate-900 text-sm">Answers Appear</h4>
-                      <p class="text-slate-500 text-sm leading-relaxed">Watch the magic happen as fields populate instantly. Just review and hit submit.</p>
+                      <p class="text-slate-500 text-sm leading-relaxed">Fields populate instantly — just review and submit.</p>
                     </div>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export function landingScreen() {
           <section class="max-w-[960px] w-full mt-28">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Contextual AI Answer Gen -->
-              <div class="p-8 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-8 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">auto_awesome</span>
                 </div>
@@ -288,7 +288,7 @@ export function landingScreen() {
               </div>
 
               <!-- Conversational Editing -->
-              <div class="p-8 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-8 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">chat</span>
                 </div>
@@ -303,7 +303,7 @@ export function landingScreen() {
 
             <!-- Instant Autofill + Voice Input -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <div class="p-8 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-8 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">bolt</span>
                 </div>
@@ -328,25 +328,25 @@ export function landingScreen() {
             <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-12">Built for every application</h2>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="job-application">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">work</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Job Apps</span>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="job-application">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">school</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Scholarships</span>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="customer-feedback">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow flex flex-col items-center gap-3 cursor-pointer" data-demo="customer-feedback">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">poll</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Surveys</span>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="travel-visa">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="travel-visa">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">account_balance</span>
                 </div>
@@ -358,7 +358,7 @@ export function landingScreen() {
           <!-- ═══ Section: Testimonials ═══ -->
           <section class="max-w-[960px] w-full mt-20">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"I applied to 60 jobs in the time it used to take to do 5. This is a game changer for job seekers."</p>
                 <div class="flex items-center gap-3">
                   <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">AE</div>
@@ -368,7 +368,7 @@ export function landingScreen() {
                   </div>
                 </div>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"The contextual generation is spooky accurate. It actually improved my personal statement on my college app."</p>
                 <div class="flex items-center gap-3">
                   <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">SJ</div>
@@ -378,7 +378,7 @@ export function landingScreen() {
                   </div>
                 </div>
               </div>
-              <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div class="p-6 rounded-2xl bg-white border border-white shadow-sm hover:shadow-[0_4px_18px_rgba(91,19,236,0.18)] transition-shadow">
                 <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"As a busy consultant, I have to fill dozens of intake forms weekly. FormMate saves me at least 5 hours a week."</p>
                 <div class="flex items-center gap-3">
                   <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">MC</div>

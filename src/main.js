@@ -27,6 +27,11 @@ import { analyzingScreen } from './screens/analyzing.js';
 import { workspaceScreen } from './screens/workspace.js';
 import { reviewScreen } from './screens/review.js';
 import { successScreen } from './screens/success.js';
+import { accountsScreen } from './screens/accounts.js';
+import { settingsScreen } from './screens/settings.js';
+import { analyticsScreen } from './screens/analytics.js';
+import { pricingScreen } from './screens/pricing.js';
+import { helpScreen } from './screens/help.js';
 
 // Register all screens
 registerScreen('auth', authScreen);
@@ -36,6 +41,11 @@ registerScreen('analyzing', analyzingScreen);
 registerScreen('workspace', workspaceScreen);
 registerScreen('review', reviewScreen);
 registerScreen('success', successScreen);
+registerScreen('accounts', accountsScreen);
+registerScreen('settings', settingsScreen);
+registerScreen('analytics', analyticsScreen);
+registerScreen('pricing', pricingScreen);
+registerScreen('help', helpScreen);
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {

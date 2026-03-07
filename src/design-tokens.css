@@ -33,7 +33,7 @@
   --fm-info-light: #dbeafe;
 
   /* ── Surfaces (Light Mode) ───────────── */
-  --fm-bg: #f6f6f8;
+  --fm-bg: #eef0f6;
   --fm-bg-elevated: #ffffff;
   --fm-bg-sunken: #f0f0f3;
   --fm-bg-overlay: rgba(0, 0, 0, 0.4);
@@ -63,6 +63,11 @@
   --fm-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   --fm-shadow-primary: 0 4px 14px rgba(91, 19, 236, 0.2);
   --fm-shadow-primary-lg: 0 10px 25px rgba(91, 19, 236, 0.25);
+  --fm-shadow-primary-hover: 0 4px 24px rgba(91, 19, 236, 0.35);
+
+  /* ── Card styling ─────────────────────── */
+  --fm-card-border: 2px solid #ffffff;
+  --fm-card-bg: #ffffff;
 
   /* ── Focus / Glow ────────────────────── */
   --fm-focus-ring: 0 0 0 3px rgba(91, 19, 236, 0.15);
