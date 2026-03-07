@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analyzing Form - FormMate</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#5b13ec",
+                "background-light": "#f6f6f8",
+                "background-dark": "#161022",
+              },
+              fontFamily: {
+                "display": ["Inter", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Navigation -->
+<header class="flex items-center justify-between border-b border-primary/10 px-6 py-4 md:px-20 lg:px-40 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary/10 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-2xl">tty</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight">FormMate</h2>
+</div>
+<button class="flex items-center justify-center rounded-full size-10 bg-slate-200/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col items-center justify-center px-6 py-12 md:px-20 lg:px-40">
+<div class="max-w-[640px] w-full flex flex-col items-center text-center">
+<!-- Visual Processing Indicator -->
+<div class="relative w-48 h-48 mb-12 flex items-center justify-center">
+<!-- Outer pulse -->
+<div class="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping"></div>
+<div class="absolute inset-4 rounded-full border-2 border-primary/40"></div>
+<!-- Form Structure Diagram Representation -->
+<div class="relative z-10 w-24 h-32 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 p-3 flex flex-col gap-2 overflow-hidden">
+<div class="h-1.5 w-1/2 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+<div class="h-3 w-full bg-primary/10 dark:bg-primary/20 rounded-md border border-primary/20"></div>
+<div class="h-1.5 w-2/3 bg-slate-200 dark:bg-slate-700 rounded-full mt-2"></div>
+<div class="h-3 w-full bg-slate-100 dark:bg-slate-700/50 rounded-md"></div>
+<div class="h-1.5 w-1/3 bg-slate-200 dark:bg-slate-700 rounded-full mt-2"></div>
+<div class="h-8 w-full bg-primary rounded-md mt-auto flex items-center justify-center">
+<div class="h-1.5 w-8 bg-white/30 rounded-full"></div>
+</div>
+<!-- Scanning line effect overlay -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary/40 shadow-[0_0_15px_rgba(91,19,236,0.5)] translate-y-24"></div>
+</div>
+</div>
+<h1 class="text-slate-900 dark:text-slate-100 tracking-tight text-3xl md:text-4xl font-bold leading-tight mb-4">
+                    Analyzing your form...
+                </h1>
+<p class="text-slate-600 dark:text-slate-400 text-lg font-normal leading-relaxed mb-10 max-w-md">
+                    Our AI is dissecting the structure, inputs, and flow to provide the best conversion suggestions.
+                </p>
+<!-- Progress Section -->
+<div class="w-full bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm mb-8">
+<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-end">
+<span class="text-slate-900 dark:text-slate-100 font-semibold">Understanding inputs</span>
+<span class="text-primary font-bold text-sm">65%</span>
+</div>
+<div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 65%;"></div>
+</div>
+<div class="flex justify-between">
+<span class="text-slate-500 text-xs font-medium uppercase tracking-wider">Step 2 of 3</span>
+<span class="text-slate-400 text-xs italic">Almost there...</span>
+</div>
+</div>
+<div class="h-px bg-slate-100 dark:bg-slate-800 w-full"></div>
+<!-- Stepper Details -->
+<div class="grid grid-cols-1 gap-4 text-left">
+<!-- Step 1: Completed -->
+<div class="flex items-center gap-4 group">
+<div class="flex-shrink-0 size-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-slate-100 font-medium leading-none">Detecting questions</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm mt-1">Found 12 distinct form fields</span>
+</div>
+</div>
+<!-- Step 2: Active -->
+<div class="flex items-center gap-4">
+<div class="flex-shrink-0 size-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-lg">sync</span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-slate-100 font-semibold leading-none">Understanding inputs</span>
+<span class="text-primary text-sm mt-1">Mapping validation rules &amp; types...</span>
+</div>
+</div>
+<!-- Step 3: Pending -->
+<div class="flex items-center gap-4 opacity-50">
+<div class="flex-shrink-0 size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-lg">pending</span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-slate-100 font-medium leading-none">Preparing suggestions</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm mt-1">Generating UX improvements</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer/Help Text -->
+<div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm bg-white/50 dark:bg-slate-900/50 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-800">
+<span class="material-symbols-outlined text-sm">info</span>
+<span>Larger forms may take up to 30 seconds to parse completely.</span>
+</div>
+</div>
+</main>
+<!-- Decorative Background Elements -->
+<div class="fixed -bottom-24 -left-24 size-96 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed top-24 -right-24 size-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+</div>
+</div>
+</body></html>

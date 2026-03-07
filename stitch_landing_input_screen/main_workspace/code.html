@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FormMate | AI Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#5b13ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#161022",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col">
+<div class="p-6 flex items-center gap-3">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">FormMate</h1>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">folder</span> Projects
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">description</span> Templates
+                </a>
+<div class="pt-4 pb-2 px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Workspace</div>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">help_outline</span> Support
+                </a>
+</nav>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-3">
+<p class="text-xs font-semibold text-slate-500 mb-2">PRO PLAN</p>
+<div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mb-2">
+<div class="bg-primary w-3/4 h-full rounded-full"></div>
+</div>
+<p class="text-[10px] text-slate-500">750 / 1000 AI Credits used</p>
+</div>
+</div>
+</aside>
+<!-- Main Workspace Area -->
+<main class="flex-1 flex flex-col overflow-hidden bg-white dark:bg-background-dark/50">
+<!-- Top Header -->
+<header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md z-10">
+<div class="flex items-center gap-4">
+<span class="text-slate-400">My Projects</span>
+<span class="material-symbols-outlined text-slate-300 text-sm">chevron_right</span>
+<span class="font-semibold">Customer Feedback Form</span>
+<span class="bg-slate-100 dark:bg-slate-800 text-[10px] font-bold px-2 py-0.5 rounded text-slate-500">DRAFT</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-lg">visibility</span> Preview
+                    </button>
+<button class="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+                        Publish Form
+                    </button>
+<div class="size-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ml-2 ring-2 ring-slate-100 dark:ring-slate-800">
+<img alt="User" data-alt="User profile avatar circle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuE9z5P2PiVwj_gofreeoxIPINnQYqlvGJtRClJhrhuPHysfxpa7thbRrpsm1anwFcF7nOC0kzYrBe8PGdheOF3GFgTK1BQvmeRuXLR9X-9j5cRZo9n7rhCyJIGDJGxOlAJFGmWQWW96EALIi_EToFeKUKcN2annL9gB8_RkdWsBr6udCi_pl6LEcvS2UaFTf0cRq7rrcssiMtZKVqfQfUhpJSxQeObplhbKo0pGTPkPVCESHv_6JaikOY68rJqs02bLnfuWlEsCzo"/>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- Form Builder (Left/Center) -->
+<div class="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
+<div class="max-w-3xl mx-auto space-y-8">
+<!-- Header Section -->
+<div class="space-y-2 border-b border-slate-100 dark:border-slate-800 pb-8">
+<h2 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Customer Feedback</h2>
+<p class="text-slate-500 text-lg">Help us understand how we can improve our service for you.</p>
+</div>
+<!-- Question Card 1 -->
+<div class="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-all">
+<div class="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300 cursor-grab">drag_indicator</span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div class="space-y-1 w-full">
+<input class="w-full bg-transparent border-none p-0 text-xl font-bold focus:ring-0 placeholder-slate-300 dark:placeholder-slate-700" type="text" value="What is your primary goal using our product?"/>
+<p class="text-xs text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">list</span> Multiple Choice
+                                    </p>
+</div>
+</div>
+<!-- Options -->
+<div class="space-y-2 mb-6">
+<div class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+<div class="size-4 border-2 border-slate-300 dark:border-slate-600 rounded-full"></div>
+<span class="text-sm">Improve workflow efficiency</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+<div class="size-4 border-2 border-slate-300 dark:border-slate-600 rounded-full"></div>
+<span class="text-sm">Collaborate with team members</span>
+</div>
+<button class="text-sm text-primary font-medium px-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add</span> Add option
+                                </button>
+</div>
+<!-- AI Insight Box -->
+<div class="bg-primary/5 dark:bg-primary/10 rounded-xl p-4 border border-primary/10">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+<span class="text-xs font-bold uppercase tracking-wider">AI Insight</span>
+</div>
+<button class="text-[10px] bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-colors">
+                                        Regenerate
+                                    </button>
+</div>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    This question is optimized for your SaaS industry. Based on similar surveys, including "Increasing automation" usually yields higher response quality.
+                                </p>
+</div>
+</div>
+<!-- Question Card 2 (In Focus/Active) -->
+<div class="group relative bg-white dark:bg-slate-900 border-2 border-primary rounded-xl p-6 shadow-xl shadow-primary/5 transition-all scale-[1.02]">
+<div class="flex justify-between items-start mb-4">
+<div class="space-y-1 w-full">
+<input class="w-full bg-transparent border-none p-0 text-xl font-bold focus:ring-0" type="text" value="On a scale of 1-10, how likely are you to recommend us?"/>
+<p class="text-xs text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">linear_scale</span> NPS Rating
+                                    </p>
+</div>
+</div>
+<div class="flex gap-1 mb-6">
+<div class="flex-1 h-10 flex items-center justify-center border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold">1</div>
+<div class="flex-1 h-10 flex items-center justify-center border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold">...</div>
+<div class="flex-1 h-10 flex items-center justify-center border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold bg-primary text-white">10</div>
+</div>
+<div class="flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">magic_button</span> Make friendlier
+                                </button>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">translate</span> Translate
+                                </button>
+<div class="flex-1"></div>
+<button class="p-2 text-slate-400 hover:text-red-500">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</div>
+<!-- Add Question Trigger -->
+<div class="flex justify-center py-4">
+<button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:border-primary hover:text-primary transition-all group">
+<span class="material-symbols-outlined transition-transform group-hover:scale-110">add_circle</span>
+<span class="font-medium">Add another question</span>
+</button>
+</div>
+</div>
+</div>
+<!-- AI Copilot Panel (Right) -->
+<aside class="w-96 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">smart_toy</span>
+<span class="font-bold">FormMate AI</span>
+</div>
+<span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+<!-- AI Message -->
+<div class="flex flex-col gap-2">
+<div class="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 text-sm text-slate-600 dark:text-slate-300">
+                                Hello! I've analyzed your form. It looks great for a basic survey, but I can help you increase the completion rate. Would you like me to:
+                                <ul class="mt-2 space-y-1 list-disc list-inside">
+<li>Add logic jumps?</li>
+<li>A/B test the NPS wording?</li>
+<li>Add an email capture field?</li>
+</ul>
+</div>
+<span class="text-[10px] text-slate-400 ml-2">Just now</span>
+</div>
+<!-- User Message -->
+<div class="flex flex-col gap-2 items-end">
+<div class="max-w-[85%] bg-primary text-white rounded-2xl rounded-tr-none p-4 text-sm font-medium">
+                                Let's add the logic jumps for users who score the NPS under 5.
+                            </div>
+<span class="text-[10px] text-slate-400 mr-2">12:44 PM</span>
+</div>
+<!-- AI Thinking/Action Message -->
+<div class="flex flex-col gap-2">
+<div class="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 text-sm text-slate-600 dark:text-slate-300">
+<div class="flex items-center gap-2 mb-2 font-bold text-primary">
+<span class="material-symbols-outlined text-base">task_alt</span> Action Proposed
+                                </div>
+                                I'll add a follow-up question: "We're sorry to hear that. What's the main reason for your score?" only for scores 1-5.
+                                <div class="mt-3 flex gap-2">
+<button class="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold">Apply Change</button>
+<button class="bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600">Reject</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-6 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-background-dark/50 backdrop-blur-sm">
+<div class="relative">
+<textarea class="w-full rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:ring-primary focus:border-primary text-sm p-4 pr-12 resize-none no-scrollbar shadow-inner" placeholder="Ask AI to refine your form..." rows="3"></textarea>
+<button class="absolute bottom-3 right-3 p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-lg">send</span>
+</button>
+</div>
+<div class="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+<button class="whitespace-nowrap bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors">Improve tone</button>
+<button class="whitespace-nowrap bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors">Add logic</button>
+<button class="whitespace-nowrap bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-semibold px-3 py-1.5 rounded-full text-slate-500 transition-colors">Summarize</button>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</div>
+</body></html>

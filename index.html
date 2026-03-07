@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FormMate — AI-Assisted Form Companion</title>
+  <meta name="description"
+    content="FormMate analyzes and helps you fill out complex forms automatically using AI. Paste any form URL and let AI do the work." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Fonts loaded locally via npm packages in main.js -->
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#5b13ec",
+            "primary-light": "#7c3aed",
+            "background-light": "#f6f6f8",
+            "background-dark": "#161022",
+          },
+          fontFamily: {
+            "display": ["Inter", "system-ui", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "2xl": "2rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+
+<body class="bg-background-light font-display antialiased text-slate-900">
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FormMate AI Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#5b13ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#161022",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex h-screen w-full overflow-hidden">
+<!-- Main Content Area (Background for Context) -->
+<main class="flex-1 flex flex-col p-8 gap-6 overflow-y-auto opacity-40 select-none pointer-events-none">
+<div class="flex items-center justify-between">
+<h1 class="text-2xl font-bold">Event Registration Form</h1>
+<div class="flex gap-2">
+<div class="w-24 h-8 bg-slate-200 dark:bg-slate-800 rounded"></div>
+<div class="w-24 h-8 bg-primary/20 rounded"></div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="h-12 w-full bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"></div>
+<div class="h-12 w-3/4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"></div>
+<div class="h-32 w-full bg-white dark:bg-slate-800 rounded-lg border-2 border-primary/50"></div>
+<div class="h-12 w-1/2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"></div>
+</div>
+</main>
+<!-- Sidebar AI Conversation Panel -->
+<aside class="w-[400px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shadow-2xl">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined text-2xl">neurology</span>
+</div>
+<div>
+<h2 class="text-sm font-bold leading-none">FormMate AI</h2>
+<span class="text-[11px] text-green-500 font-medium uppercase tracking-wider">Smart Collaborator</span>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500">
+<span class="material-symbols-outlined text-[20px]">history</span>
+</button>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Chat History -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- AI Message -->
+<div class="flex items-start gap-3">
+<div class="size-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 overflow-hidden" data-alt="AI avatar with purple gradient pattern">
+<span class="material-symbols-outlined text-sm">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1.5 max-w-[85%]">
+<p class="text-xs font-semibold text-slate-400 uppercase tracking-tight">Assistant</p>
+<div class="bg-slate-100 dark:bg-slate-800 px-4 py-3 rounded-2xl rounded-tl-none">
+<p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                                I've analyzed your form. Question 3 is currently yielding a 40% drop-off rate. Would you like me to optimize it?
+                            </p>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start gap-3 justify-end">
+<div class="flex flex-col gap-1.5 max-w-[85%] items-end text-right">
+<p class="text-xs font-semibold text-slate-400 uppercase tracking-tight">You</p>
+<div class="bg-primary text-white px-4 py-3 rounded-2xl rounded-tr-none shadow-md shadow-primary/20">
+<p class="text-sm leading-relaxed">
+                                Yes, can you look at the feedback section?
+                            </p>
+</div>
+</div>
+<div class="size-8 rounded-full bg-slate-300 shrink-0 overflow-hidden" data-alt="User profile photo of a person smiling" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_hTr9B5ZxizZoY1qMSB6gv-WvOVzJcWe7Xe8C60CdMnayNWbckKMjXHBFAIUktcjf6kJW2R70-tc9F50wFuLWvIFzAh9cX0fTVHluC3XDCMwRPsgK2HCUqTi3CC35NmpZDjpQlIdgARA_NGMOxp5-2RrYkD3nqmrRJHiIGhww8hJE6Y8dybB7fKwH2I6qLqtC_F6ziFQLy_yDY6Mc4agtmyS9Lu15jdbZ2IT4QSsBZxJpC3V1w2nc_p_2F0R7g75bQILvTRD5Z4AG'); background-size: cover;"></div>
+</div>
+<!-- AI Message 2 -->
+<div class="flex items-start gap-3">
+<div class="size-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 overflow-hidden" data-alt="AI robot icon on purple background">
+<span class="material-symbols-outlined text-sm">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1.5 max-w-[85%]">
+<p class="text-xs font-semibold text-slate-400 uppercase tracking-tight">Assistant</p>
+<div class="bg-slate-100 dark:bg-slate-800 px-4 py-3 rounded-2xl rounded-tl-none border-l-4 border-primary/40">
+<p class="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                                Question 3 is a bit wordy. I can rewrite it to be more concise or switch it to a rating scale for better engagement.
+                            </p>
+</div>
+</div>
+</div>
+<!-- Suggestion Chips -->
+<div class="flex flex-wrap gap-2 pt-2">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-primary/20 hover:border-primary/50 text-xs font-medium text-primary transition-all">
+<span class="material-symbols-outlined text-sm">edit</span>
+                        Rewrite question 3
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-primary/20 hover:border-primary/50 text-xs font-medium text-primary transition-all">
+<span class="material-symbols-outlined text-sm">compress</span>
+                        Make it shorter
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-primary/20 hover:border-primary/50 text-xs font-medium text-primary transition-all">
+<span class="material-symbols-outlined text-sm">star_rate</span>
+                        Add a rating scale
+                    </button>
+</div>
+</div>
+<!-- Footer Input -->
+<footer class="p-6 border-t border-slate-100 dark:border-slate-800">
+<div class="relative flex items-center group">
+<div class="absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined">auto_fix_high</span>
+</div>
+<input class="w-full bg-slate-50 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-primary rounded-xl py-4 pl-12 pr-24 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Ask FormMate anything..." type="text"/>
+<div class="absolute right-2 flex items-center gap-1">
+<button class="p-2 text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+<button class="p-2 bg-primary text-white rounded-lg shadow-lg shadow-primary/30 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[20px]">send</span>
+</button>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-center gap-4">
+<p class="text-[10px] text-slate-400 font-medium">FormMate can help with logic, copywriting, and design.</p>
+</div>
+</footer>
+</aside>
+</div>
+</body></html>
