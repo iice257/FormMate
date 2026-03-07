@@ -20,6 +20,8 @@ import './styles.css';
 import { registerScreen, initRouter } from './router.js';
 
 // Screens
+import { authScreen } from './screens/auth.js';
+import { onboardingScreen } from './screens/onboarding.js';
 import { landingScreen } from './screens/landing.js';
 import { analyzingScreen } from './screens/analyzing.js';
 import { workspaceScreen } from './screens/workspace.js';
@@ -27,6 +29,8 @@ import { reviewScreen } from './screens/review.js';
 import { successScreen } from './screens/success.js';
 
 // Register all screens
+registerScreen('auth', authScreen);
+registerScreen('onboarding', onboardingScreen);
 registerScreen('landing', landingScreen);
 registerScreen('analyzing', analyzingScreen);
 registerScreen('workspace', workspaceScreen);
