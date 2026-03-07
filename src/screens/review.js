@@ -44,7 +44,7 @@ export function reviewScreen() {
       }
 
       return `
-        <div class="flex items-start gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow" data-review-id="${q.id}">
+        <div class="flex items-start gap-4 card-premium p-4 rounded-xl shadow-sm" data-review-id="${q.id}">
           <div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
             <span class="material-symbols-outlined">${icon}</span>
           </div>
@@ -100,7 +100,7 @@ export function reviewScreen() {
           <div class="flex flex-col max-w-[800px] flex-1 gap-6">
 
             <!-- Progress -->
-            <div class="flex flex-col gap-4 p-6 bg-white rounded-xl shadow-sm border border-slate-100">
+            <div class="flex flex-col gap-4 p-6 card-premium rounded-xl shadow-sm">
               <div class="flex gap-6 justify-between items-center">
                 <div class="flex flex-col">
                   <p class="text-slate-900 text-lg font-bold">Ready for Submission</p>

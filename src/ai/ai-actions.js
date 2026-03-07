@@ -2,55 +2,165 @@
 // FormMate — AI Actions Layer
 // ═══════════════════════════════════════════
 //
-// High-level AI functions that the app calls.
-// Each function builds the correct prompt and
-// routes through AIService to the right model.
-//
-// Uses multi-model routing:
-//   Form understanding  → openai/gpt-oss-120b
-//   Answer generation   → openai/gpt-oss-20b
-//   Copilot chat        → qwen/qwen3-32b
-//   Quick edits         → llama-3.1-8b-instant
+// High-level AI functions that build context-aware
+// prompts using user profile, vault, and settings.
 // ═══════════════════════════════════════════
 
 import { generate, parseJsonResponse } from './ai-service.js';
-import { MOCK_AI_ANSWERS, MOCK_CHAT_RESPONSES } from '../parser/mock-forms.js';
+import { getState } from '../state.js';
+
+// ─── Prompt Composer ─────────────────────────
+
+function buildSystemPrompt(taskType, additionalContext = '') {
+  const { userProfile, vault, settings, personality } = getState();
+
+  // Base Rules
+  let prompt = `You are FormMate, an expert AI form assistant. You help the user fill out forms intelligently.\n`;
+  prompt += `Strict Rules:\n`;
+  prompt += `- Never fabricate personal information that is not provided.\n`;
+  prompt += `- If asked for specific personal data (like ID numbers) that is missing, return an empty string or placeholder.\n`;
+
+  // Personality / Tone
+  prompt += `- Writing Tone: ${personality || 'professional'}. `;
+  if (personality === 'professional') prompt += `Be formal, concise, and business-appropriate.\n`;
+  else if (personality === 'friendly') prompt += `Be warm, approachable, and use a conversational tone.\n`;
+  else if (personality === 'concise') prompt += `Use as few words as possible. Use bullet points if applicable.\n`;
+  else if (personality === 'creative') prompt += `Be engaging, expressive, and think outside the box.\n`;
+  else prompt += `Be formal and structured.\n`;
+
+  // Formatting
+  if (settings?.formatting?.responseLength === 'short') prompt += `- Keep all generated text very brief.\n`;
+  if (settings?.formatting?.preferBullets) prompt += `- Prefer bullet points for long text answers.\n`;
+
+  // Context Injection
+  prompt += `\n--- Context ---\n`;
+  prompt += `User Profile:\n`;
+  prompt += `- Name: ${userProfile?.name || 'Unknown'}\n`;
+  prompt += `- Email: ${userProfile?.email || 'Unknown'}\n`;
+  prompt += `- Occupation: ${userProfile?.occupation || 'Unknown'}\n`;
+  prompt += `- Experience: ${userProfile?.experience || 'Unknown'}\n`;
+  if (userProfile?.bio) prompt += `- Bio/Notes: ${userProfile.bio}\n`;
+
+  const vaultKeys = Object.keys(vault || {});
+  if (vaultKeys.length > 0) {
+    prompt += `\nStored Vault Data (use this if relevant):\n`;
+    for (const [k, v] of Object.entries(vault)) {
+      prompt += `- ${k}: ${v}\n`;
+    }
+  }
+
+  // Task specific instructions
+  prompt += `\n--- Task Instructions ---\n`;
+  if (taskType === 'answer_generation') {
+    prompt += `You MUST return valid JSON ONLY. It must be an object where keys are question IDs (strings, 1-indexed) and values are objects with "answer" (string) and "confidence" (number between 0.0 and 1.0).\n`;
+    prompt += `For radio/dropdown, answer MUST exactly match one option.\n`;
+    prompt += `For checkboxes, answer MUST be a comma-separated list of exact options.\n`;
+    prompt += `If you are absolutely certain based on the User Profile or Vault Data, set confidence to 0.95 or higher.\n`;
+    prompt += `If generating a generic but appropriate answer, set confidence between 0.70 and 0.85.\n`;
+  }
+
+  if (additionalContext) {
+    prompt += `\n${additionalContext}\n`;
+  }
+
+  return prompt;
+}
+
+// ─── Form Analysis (Field Categorization) ────
+
+/**
+ * Pre-analyze the form to categorize fields: autofillable, generatable, manual-only.
+ */
+export async function analyzeFormFields(formData) {
+  // Logic to determine which fields can be auto-filled directly from vault vs AI generated
+  const analysis = {};
+  const { userProfile, vault, settings } = getState();
+
+  formData.questions.forEach(q => {
+    let category = 'generatable';
+    let exactMatch = null;
+
+    const lowerText = q.text.toLowerCase();
+
+    // Direct matches from profile
+    if (lowerText.includes('first name') || lowerText.includes('full name') || lowerText === 'name') {
+      if (userProfile.name) { category = 'autofillable'; exactMatch = userProfile.name; }
+    } else if (lowerText.includes('email')) {
+      if (userProfile.email) { category = 'autofillable'; exactMatch = userProfile.email; }
+    } else if (lowerText.includes('phone') || lowerText.includes('mobile')) {
+      if (userProfile.phone) { category = 'autofillable'; exactMatch = userProfile.phone; }
+    } else if (lowerText.includes('occupation') || lowerText.includes('job title')) {
+      if (userProfile.occupation) { category = 'autofillable'; exactMatch = userProfile.occupation; }
+    }
+
+    // Direct matches from vault
+    if (!exactMatch && vault) {
+      for (const [key, val] of Object.entries(vault)) {
+        if (lowerText.includes(key.toLowerCase())) {
+          category = 'autofillable';
+          exactMatch = val;
+          break;
+        }
+      }
+    }
+
+    // Sensitive / manual fields
+    if (lowerText.includes('password') || lowerText.includes('credit card') || lowerText.includes('ssn')) {
+      category = 'manual_only';
+    }
+
+    // Only allow autofill if settings permit
+    if (category === 'autofillable' && !settings?.personalization?.autoFillPersonal) {
+      category = 'generatable';
+      exactMatch = null;
+    }
+
+    analysis[q.id] = { category, exactMatch };
+  });
+
+  return analysis;
+}
 
 // ─── Answer Generation ───────────────────────
 
 /**
  * Generate AI answers for all questions in a form.
- * Uses gpt-oss-120b for form understanding, then gpt-oss-20b for answer generation.
  */
 export async function generateAnswers(formData) {
+  const { settings } = getState();
+  const fieldAnalysis = await analyzeFormFields(formData);
+  const answers = {};
 
-  const questionsText = formData.questions.map((q, i) =>
-    `${i + 1}. "${q.text}" (type: ${q.type}${q.options.length ? `, options: ${q.options.join(', ')}` : ''}${q.required ? ', required' : ''})`
+  // First pass: apply autofillable fields immediately
+  const questionsToGenerate = [];
+  formData.questions.forEach((q, i) => {
+    const analysis = fieldAnalysis[q.id];
+    if (analysis.category === 'autofillable' && analysis.exactMatch) {
+      answers[q.id] = { text: String(analysis.exactMatch), source: 'autofill', confidence: 1.0 };
+    } else if (analysis.category === 'manual_only') {
+      answers[q.id] = { text: '', source: 'manual', confidence: 0 };
+    } else {
+      questionsToGenerate.push({ ...q, tempId: String(i + 1) });
+    }
+  });
+
+  if (questionsToGenerate.length === 0) {
+    return answers;
+  }
+
+  // Construct prompt for remaining questions
+  const questionsText = questionsToGenerate.map(q =>
+    `${q.tempId}. [ID: ${q.id}] "${q.text}" (type: ${q.type}${q.options.length ? `, options: ${q.options.join(', ')}` : ''})`
   ).join('\n');
 
   const messages = [
     {
       role: 'system',
-      content: `You are FormMate, an expert AI form assistant. Generate realistic, professional answers for each form question. You MUST return valid JSON only — an object where keys are question numbers (1-indexed) and values are answer objects with "answer" and "confidence" fields.
-
-Rules:
-- Never fabricate personal information that could be harmful
-- Use realistic placeholder data (professional names, emails, etc.)
-- Match answer format to question type (dates for date fields, options for radio/checkbox)
-- Be specific and professional
-- For radio/dropdown, pick from the available options
-- For checkbox, pick 1-3 relevant options separated by commas`
+      content: buildSystemPrompt('answer_generation', `Form Title: "${formData.title}"\nForm Description: "${formData.description}"\n\nReturn JSON mapped by the 1-indexed number provided in the prompt.`)
     },
     {
       role: 'user',
-      content: `Form: "${formData.title}"
-Description: ${formData.description}
-
-Questions:
-${questionsText}
-
-Generate appropriate answers. Return ONLY valid JSON like:
-{"1": {"answer": "answer text", "confidence": "high"}, "2": {"answer": "...", "confidence": "medium"}}`
+      content: `Questions to answer:\n${questionsText}\n\nGenerate responses formatted as JSON.`
     }
   ];
 
@@ -58,50 +168,77 @@ Generate appropriate answers. Return ONLY valid JSON like:
     const responseText = await generate({
       task: 'answer_generation',
       messages,
-      temperature: 0.7,
-      maxTokens: 2048,
+      temperature: settings?.ai?.temperature || 0.7,
+      maxTokens: 3000,
       jsonMode: true,
     });
 
     const parsed = parseJsonResponse(responseText);
-    const answers = {};
 
-    formData.questions.forEach((q, i) => {
-      const key = String(i + 1);
-      const entry = parsed[key];
-      const answerText = typeof entry === 'string' ? entry : entry?.answer || '';
-      const confidence = entry?.confidence === 'high' ? 0.92 : entry?.confidence === 'medium' ? 0.80 : 0.70;
+    questionsToGenerate.forEach(q => {
+      const entry = parsed[q.tempId];
+      if (entry) {
+        const text = typeof entry === 'string' ? entry : (entry.answer || '');
+        let confidence = typeof entry.confidence === 'number' ? entry.confidence : 0.8;
 
-      answers[q.id] = { text: answerText, source: 'ai', confidence };
+        // If verbosity is low, we might truncate long text but let's trust the model instructions
+        answers[q.id] = { text: String(text).trim(), source: 'ai', confidence };
+      }
     });
 
-    return answers;
-
   } catch (err) {
-    console.warn('[AI Actions] Answer generation failed, falling back to mock:', err);
-    return generateAnswersMock(formData);
+    console.warn('[AI Actions] Answer generation failed', err);
+    // Fallback logic could go here
+  }
+
+  return answers;
+}
+
+// ─── Custom Rewrite (Quick Edit) ─────────────
+
+export async function quickEditAnswer(question, currentAnswer, instruction) {
+  const { settings } = getState();
+
+  const messages = [
+    {
+      role: 'system',
+      content: buildSystemPrompt('quick_edit', `You are editing an existing answer based on user instruction. Return ONLY the edited text. Do not wrap in quotes.`)
+    },
+    {
+      role: 'user',
+      content: `Field: "${question.text}"\nCurrent Answer: "${currentAnswer}"\nUser Instruction: "${instruction}"\n\nProvide the new answer:`
+    }
+  ];
+
+  try {
+    const text = await generate({
+      task: 'quick_edit',
+      messages,
+      temperature: 0.5,
+      maxTokens: 1024,
+      useCache: false,
+    });
+
+    return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'edited', confidence: 1.0 };
+  } catch (err) {
+    console.error(err);
+    throw new Error('Failed to edit answer.');
   }
 }
 
 // ─── Answer Regeneration ─────────────────────
 
-/**
- * Regenerate a single answer with a different response.
- * Uses gpt-oss-20b.
- */
 export async function regenerateAnswer(question, currentAnswer) {
+  const { settings } = getState();
 
   const messages = [
     {
       role: 'system',
-      content: `You are FormMate AI. Generate a different, equally professional answer for the given form question. Return ONLY the answer text — no quotes, no formatting, no explanation.`
+      content: buildSystemPrompt('regeneration', `Generate a completely DIFFERENT answer than the current one for the given question. Follow tone guidelines. Return ONLY the new answer text.`)
     },
     {
       role: 'user',
-      content: `Question: "${question.text}" (type: ${question.type}${question.options?.length ? `, options: ${question.options.join(', ')}` : ''})
-Previous answer: "${currentAnswer}"
-
-Generate a completely different answer. Return ONLY the answer text.`
+      content: `Question: "${question.text}"\nPrevious Answer: "${currentAnswer}"\n\nGenerate alternate answer:`
     }
   ];
 
@@ -110,38 +247,33 @@ Generate a completely different answer. Return ONLY the answer text.`
       task: 'regeneration',
       messages,
       temperature: 0.85,
-      maxTokens: 512,
+      maxTokens: 1024,
       useCache: false,
     });
 
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'ai', confidence: 0.85 };
-  } catch {
-    return regenerateAnswerMock(question);
+  } catch (err) {
+    console.error(err);
+    throw new Error('Failed to regenerate answer.');
   }
 }
 
 // ─── Copilot Chat ────────────────────────────
 
-/**
- * Process a conversational chat message.
- * Uses qwen-2.5-32b for natural dialogue.
- */
-export async function processChatMessage(userMessage, formContext) {
+export async function processChatMessage(userMessage, formContext, history = []) {
+  const { settings } = getState();
+
+  const formattedHistory = history.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content
+  }));
 
   const messages = [
     {
       role: 'system',
-      content: `You are FormMate AI, a friendly and smart form assistant. You're helping the user complete a form titled "${formContext.title}" with ${formContext.questionCount} questions.
-
-Your role:
-- Help refine and improve their form answers
-- Suggest better wording, more professional tone, or missing details
-- Answer questions about how to fill specific fields
-- Be concise, warm, and helpful
-- If they ask to modify a specific answer, describe what you'd change
-- Never fabricate personal information
-- Always respect user control — suggest, don't dictate`
+      content: buildSystemPrompt('copilot_chat', `You are FormMate's chat copilot. You assist the user with filling out the form titled "${formContext.title}".\nBe helpful, provide concrete suggestions, and answer questions clearly.`)
     },
+    ...formattedHistory,
     {
       role: 'user',
       content: userMessage
@@ -149,156 +281,16 @@ Your role:
   ];
 
   try {
-    const text = await generate({
+    const responseText = await generate({
       task: 'copilot_chat',
       messages,
-      temperature: 0.75,
-      maxTokens: 512,
+      temperature: 0.7,
+      maxTokens: 1024,
+      useCache: false,
     });
 
-    return {
-      text,
-      hasAction: userMessage.toLowerCase().match(/rewrite|shorten|expand|change|update|modify/) !== null,
-    };
-  } catch {
-    return chatMock(userMessage);
+    return responseText;
+  } catch (err) {
+    throw new Error('Chat generation failed.');
   }
-}
-
-// ─── Quick Edits ─────────────────────────────
-
-/**
- * Perform a quick edit on an answer (shorten, expand, professional, friendly).
- * Uses qwen-2.5-7b for fast, low-latency responses.
- *
- * @param {string} currentText - The current answer text
- * @param {string} action - one of: 'shorten', 'expand', 'professional', 'friendly', 'rewrite'
- * @param {string} questionText - The question being answered
- * @returns {Promise<string>} The edited text
- */
-export async function quickEdit(currentText, action, questionText) {
-  if (!currentText.trim()) {
-    return quickEditLocal(currentText, action);
-  }
-
-  const instructions = {
-    shorten: 'Make this answer significantly shorter and more concise. Keep the key information. Remove filler words and redundancy.',
-    expand: 'Expand this answer with more specific details, examples, and context. Make it more comprehensive while staying relevant.',
-    professional: 'Rewrite this answer in a more professional, formal tone. Use proper business language. Remove casual phrasing.',
-    friendly: 'Rewrite this answer in a warmer, more personable tone. Make it conversational but still respectful.',
-    rewrite: 'Completely rewrite this answer with fresh wording. Keep the same meaning but use a totally different structure and phrasing.',
-  };
-
-  const messages = [
-    {
-      role: 'system',
-      content: `You are a writing assistant. ${instructions[action] || instructions.rewrite}
-
-Return ONLY the edited text. No quotes, no explanation, no preamble.`
-    },
-    {
-      role: 'user',
-      content: `Question: "${questionText}"
-Answer to edit: "${currentText}"
-
-Return ONLY the edited answer text:`
-    }
-  ];
-
-  try {
-    const text = await generate({
-      task: 'quick_edit',
-      messages,
-      temperature: 0.6,
-      maxTokens: 512,
-    });
-
-    return text.trim().replace(/^["']|["']$/g, '');
-  } catch {
-    return quickEditLocal(currentText, action);
-  }
-}
-
-// ─── Local Quick Edit Fallback ───────────────
-
-function quickEditLocal(text, action) {
-  switch (action) {
-    case 'shorten': {
-      const sentences = text.split(/\.\s+/);
-      return sentences.slice(0, Math.ceil(sentences.length / 2)).join('. ').replace(/\.?\s*$/, '.');
-    }
-    case 'professional': {
-      return text
-        .replace(/\bi\b/g, 'I')
-        .replace(/gonna/gi, 'going to')
-        .replace(/wanna/gi, 'want to')
-        .replace(/can't/gi, 'cannot')
-        .replace(/won't/gi, 'will not')
-        .replace(/\.?\s*$/, '.');
-    }
-    case 'friendly': {
-      return text.replace(/\.?\s*$/, '') + '. 😊';
-    }
-    case 'expand': {
-      return text + ' Additionally, I bring relevant experience and a strong commitment to delivering excellent results in this area.';
-    }
-    default:
-      return text;
-  }
-}
-
-// ─── Mock Implementations ────────────────────
-// Preserved for demo mode when no API key is available
-
-function generateAnswersMock(formData) {
-  const urlLower = (formData.url || '').toLowerCase();
-  let mockKey = 'customer-feedback';
-
-  if (urlLower.includes('job') || urlLower.includes('lever') || urlLower.includes('career') || urlLower.includes('application')) {
-    mockKey = 'job-application';
-  } else if (urlLower.includes('visa') || urlLower.includes('travel') || urlLower.includes('gov')) {
-    mockKey = 'travel-visa';
-  }
-
-  if (MOCK_AI_ANSWERS[mockKey]) {
-    return { ...MOCK_AI_ANSWERS[mockKey] };
-  }
-
-  const answers = {};
-  formData.questions.forEach(q => {
-    answers[q.id] = generateGenericAnswer(q);
-  });
-  return answers;
-}
-
-function generateGenericAnswer(question) {
-  const typeDefaults = {
-    'short_text': { text: 'Sample response', source: 'ai', confidence: 0.80 },
-    'long_text': { text: 'This is a thoughtfully crafted response that addresses the question with specific details and relevant context.', source: 'ai', confidence: 0.82 },
-    'radio': { text: question.options?.[0] || 'Option A', source: 'ai', confidence: 0.75 },
-    'checkbox': { text: question.options?.slice(0, 2).join(', ') || 'Option A, Option B', source: 'ai', confidence: 0.78 },
-    'dropdown': { text: question.options?.[0] || 'Selected option', source: 'ai', confidence: 0.80 },
-    'date': { text: '2026-04-15', source: 'ai', confidence: 0.70 },
-    'scale': { text: '8', source: 'ai', confidence: 0.75 },
-    'file_upload': { text: '', source: 'empty', confidence: 0 },
-  };
-  return typeDefaults[question.type] || typeDefaults['short_text'];
-}
-
-function regenerateAnswerMock(question) {
-  const answer = generateGenericAnswer(question);
-  answer.text = answer.text + ' (regenerated)';
-  answer.confidence = Math.max(0.7, answer.confidence - 0.05);
-  return answer;
-}
-
-function chatMock(userMessage) {
-  const msgLower = userMessage.toLowerCase();
-  const match = MOCK_CHAT_RESPONSES.find(r => msgLower.includes(r.trigger));
-  const response = match || MOCK_CHAT_RESPONSES.find(r => r.trigger === 'default');
-
-  return {
-    text: response.response,
-    hasAction: msgLower.includes('rewrite') || msgLower.includes('shorten') || msgLower.includes('expand'),
-  };
 }

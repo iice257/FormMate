@@ -27,11 +27,32 @@ export function renderQuestionCard(question, answer, index) {
 
   const typeInfo = typeLabels[type] || typeLabels['short_text'];
 
-  const badgeHtml = source === 'ai'
-    ? `<span class="answer-badge flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold" data-question-id="${id}"><span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Generated</span>`
-    : source === 'user'
-      ? `<span class="answer-badge flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold" data-question-id="${id}"><span class="material-symbols-outlined text-[12px]">edit</span> User Edited</span>`
-      : `<span class="answer-badge flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold" data-question-id="${id}"><span class="material-symbols-outlined text-[12px]">warning</span> Unanswered</span>`;
+  const getBadgeHtml = () => {
+    if (source === 'autofill') {
+      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-success-light); color: var(--fm-success); border: 1px solid rgba(var(--fm-success-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">bolt</span> Autofilled</span>`;
+    }
+    if (source === 'ai') {
+      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-primary-50); color: var(--fm-primary); border: 1px solid rgba(var(--fm-primary-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI Generated</span>`;
+    }
+    if (source === 'user' || source === 'edited') {
+      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-bg-sunken); color: var(--fm-text-secondary); border: 1px solid var(--fm-border);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">edit</span> User Edited</span>`;
+    }
+    return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-warning-light); color: var(--fm-warning); border: 1px solid rgba(var(--fm-warning-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">warning</span> Missing Data</span>`;
+  };
+
+  const badgeHtml = getBadgeHtml();
+
+  // Confidence meter (if AI generated)
+  const confidenceHtml = (source === 'ai' || source === 'autofill') && confidence > 0 ? `
+    <div class="flex items-center gap-2 mt-4 pt-3 border-t" style="border-color: var(--fm-border);">
+      <div class="flex-1 max-w-[100px] h-1.5 rounded-full overflow-hidden" style="background: var(--fm-bg-sunken);">
+        <div class="h-full rounded-full" style="width: ${confidence * 100}%; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
+      </div>
+      <span class="text-[10px] font-semibold" style="color: var(--fm-text-tertiary);">
+        ${Math.round(confidence * 100)}% Match
+      </span>
+    </div>
+  ` : '';
 
   let inputHtml = '';
 
@@ -146,7 +167,7 @@ export function renderQuestionCard(question, answer, index) {
   }
 
   return `
-    <div class="group relative bg-white border ${isActive ? 'border-2 border-primary shadow-xl shadow-primary/5' : 'border-slate-200 shadow-sm hover:shadow-md'} rounded-xl p-6 transition-all" data-card-id="${id}">
+    <div class="group relative card-premium ${isActive ? 'border-primary ring-2 ring-primary/10 shadow-xl shadow-primary/20' : 'shadow-sm'} rounded-xl p-6 transition-all" data-card-id="${id}">
 
       <!-- Drag handle -->
       <div class="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -171,6 +192,7 @@ export function renderQuestionCard(question, answer, index) {
       <!-- Input Area -->
       <div class="mb-4">
         ${inputHtml}
+        ${confidenceHtml}
       </div>
 
       <!-- Actions -->

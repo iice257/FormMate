@@ -4,7 +4,7 @@
 
 import { getState, setState, updateAnswer, addChatMessage } from '../state.js';
 import { navigateTo } from '../router.js';
-import { regenerateAnswer, processChatMessage, quickEdit } from '../ai/ai-actions.js';
+import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-actions.js';
 import { renderQuestionCard } from '../components/question-card.js';
 
 export function workspaceScreen() {
@@ -221,7 +221,7 @@ export function workspaceScreen() {
       updateAnsweredCount();
     });
 
-    // Quick action buttons (shorten, professional, friendly) — AI-powered via qwen-2.5-7b
+    // Quick action buttons (shorten, professional, friendly)
     questionsContainer.addEventListener('click', async (e) => {
       const actionBtn = e.target.closest('.quick-action');
       if (!actionBtn) return;
@@ -239,15 +239,25 @@ export function workspaceScreen() {
       actionBtn.disabled = true;
       actionBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> ...';
 
-      const newText = await quickEdit(currentText, action, question?.text || '');
+      try {
+        const newAnswer = await quickEditAnswer(question, currentText, action);
 
-      updateAnswer(qId, newText, 'ai');
-      const textarea = questionsContainer.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
-      if (textarea) textarea.value = newText;
+        updateAnswer(qId, newAnswer.text, newAnswer.source);
+        const textarea = questionsContainer.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+        if (textarea) textarea.value = newAnswer.text;
 
-      // Restore button
-      actionBtn.disabled = false;
-      actionBtn.innerHTML = originalHtml;
+        // Re-render card completely to update badge and confidence (or just let the user know, since we use vanilla js right now)
+        // A minimal DOM update for the badge:
+        const badge = questionsContainer.querySelector(`.answer-badge[data-question-id="${qId}"]`);
+        if (badge) {
+          badge.outerHTML = `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-bg-sunken); color: var(--fm-text-secondary); border: 1px solid var(--fm-border);" data-question-id="${qId}"><span class="material-symbols-outlined text-[14px]">edit</span> User Edited</span>`;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = originalHtml;
+      }
     });
 
     // Select answers for radio/checkbox/dropdown
