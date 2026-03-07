@@ -136,6 +136,26 @@ export function successScreen() {
   `;
 
   function init(wrapper) {
+    // Add confetti animation
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
+    script.onload = () => {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, disableForReducedMotion: true };
+
+      const interval = setInterval(function () {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+        const particleCount = 50 * (timeLeft / duration);
+        window.confetti(Object.assign({}, defaults, {
+          particleCount,
+          origin: { x: Math.random() - 0.2 + (Math.random() * 0.4), y: Math.random() - 0.2 }
+        }));
+      }, 250);
+    };
+    document.body.appendChild(script);
+
     wrapper.querySelector('#btn-close').addEventListener('click', () => navigateTo('landing'));
 
     wrapper.querySelector('#btn-new-form').addEventListener('click', () => {

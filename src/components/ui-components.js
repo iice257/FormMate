@@ -26,7 +26,7 @@ export function renderButton(text, { id = '', icon = '', variant = 'primary', si
 
   const iconHtml = icon ? `<span class="material-symbols-outlined text-[1em]">${icon}</span>` : '';
 
-  return `<button ${id ? `id="${id}"` : ''} class="flex items-center justify-center font-bold transition-all btn-press ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${classes}" ${disabled ? 'disabled' : ''}>
+  return `<button ${id ? `id="${id}"` : ''} class="flex items-center justify-center font-bold transition-all btn-press ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${classes}" ${disabled ? 'disabled aria-disabled="true"' : ''} aria-label="${text.replace(/"/g, '&quot;')}">
     ${iconHtml}${text}
   </button>`;
 }

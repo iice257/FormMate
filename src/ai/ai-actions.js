@@ -8,63 +8,8 @@
 
 import { generate, parseJsonResponse } from './ai-service.js';
 import { getState } from '../state.js';
-
-// ─── Prompt Composer ─────────────────────────
-
-function buildSystemPrompt(taskType, additionalContext = '') {
-  const { userProfile, vault, settings, personality } = getState();
-
-  // Base Rules
-  let prompt = `You are FormMate, an expert AI form assistant. You help the user fill out forms intelligently.\n`;
-  prompt += `Strict Rules:\n`;
-  prompt += `- Never fabricate personal information that is not provided.\n`;
-  prompt += `- If asked for specific personal data (like ID numbers) that is missing, return an empty string or placeholder.\n`;
-
-  // Personality / Tone
-  prompt += `- Writing Tone: ${personality || 'professional'}. `;
-  if (personality === 'professional') prompt += `Be formal, concise, and business-appropriate.\n`;
-  else if (personality === 'friendly') prompt += `Be warm, approachable, and use a conversational tone.\n`;
-  else if (personality === 'concise') prompt += `Use as few words as possible. Use bullet points if applicable.\n`;
-  else if (personality === 'creative') prompt += `Be engaging, expressive, and think outside the box.\n`;
-  else prompt += `Be formal and structured.\n`;
-
-  // Formatting
-  if (settings?.formatting?.responseLength === 'short') prompt += `- Keep all generated text very brief.\n`;
-  if (settings?.formatting?.preferBullets) prompt += `- Prefer bullet points for long text answers.\n`;
-
-  // Context Injection
-  prompt += `\n--- Context ---\n`;
-  prompt += `User Profile:\n`;
-  prompt += `- Name: ${userProfile?.name || 'Unknown'}\n`;
-  prompt += `- Email: ${userProfile?.email || 'Unknown'}\n`;
-  prompt += `- Occupation: ${userProfile?.occupation || 'Unknown'}\n`;
-  prompt += `- Experience: ${userProfile?.experience || 'Unknown'}\n`;
-  if (userProfile?.bio) prompt += `- Bio/Notes: ${userProfile.bio}\n`;
-
-  const vaultKeys = Object.keys(vault || {});
-  if (vaultKeys.length > 0) {
-    prompt += `\nStored Vault Data (use this if relevant):\n`;
-    for (const [k, v] of Object.entries(vault)) {
-      prompt += `- ${k}: ${v}\n`;
-    }
-  }
-
-  // Task specific instructions
-  prompt += `\n--- Task Instructions ---\n`;
-  if (taskType === 'answer_generation') {
-    prompt += `You MUST return valid JSON ONLY. It must be an object where keys are question IDs (strings, 1-indexed) and values are objects with "answer" (string) and "confidence" (number between 0.0 and 1.0).\n`;
-    prompt += `For radio/dropdown, answer MUST exactly match one option.\n`;
-    prompt += `For checkboxes, answer MUST be a comma-separated list of exact options.\n`;
-    prompt += `If you are absolutely certain based on the User Profile or Vault Data, set confidence to 0.95 or higher.\n`;
-    prompt += `If generating a generic but appropriate answer, set confidence between 0.70 and 0.85.\n`;
-  }
-
-  if (additionalContext) {
-    prompt += `\n${additionalContext}\n`;
-  }
-
-  return prompt;
-}
+import { categorizeField } from './field-classifier.js';
+import { buildSystemPrompt } from './system-prompts.js';
 
 // ─── Form Analysis (Field Categorization) ────
 
@@ -72,52 +17,10 @@ function buildSystemPrompt(taskType, additionalContext = '') {
  * Pre-analyze the form to categorize fields: autofillable, generatable, manual-only.
  */
 export async function analyzeFormFields(formData) {
-  // Logic to determine which fields can be auto-filled directly from vault vs AI generated
   const analysis = {};
-  const { userProfile, vault, settings } = getState();
-
   formData.questions.forEach(q => {
-    let category = 'generatable';
-    let exactMatch = null;
-
-    const lowerText = q.text.toLowerCase();
-
-    // Direct matches from profile
-    if (lowerText.includes('first name') || lowerText.includes('full name') || lowerText === 'name') {
-      if (userProfile.name) { category = 'autofillable'; exactMatch = userProfile.name; }
-    } else if (lowerText.includes('email')) {
-      if (userProfile.email) { category = 'autofillable'; exactMatch = userProfile.email; }
-    } else if (lowerText.includes('phone') || lowerText.includes('mobile')) {
-      if (userProfile.phone) { category = 'autofillable'; exactMatch = userProfile.phone; }
-    } else if (lowerText.includes('occupation') || lowerText.includes('job title')) {
-      if (userProfile.occupation) { category = 'autofillable'; exactMatch = userProfile.occupation; }
-    }
-
-    // Direct matches from vault
-    if (!exactMatch && vault) {
-      for (const [key, val] of Object.entries(vault)) {
-        if (lowerText.includes(key.toLowerCase())) {
-          category = 'autofillable';
-          exactMatch = val;
-          break;
-        }
-      }
-    }
-
-    // Sensitive / manual fields
-    if (lowerText.includes('password') || lowerText.includes('credit card') || lowerText.includes('ssn')) {
-      category = 'manual_only';
-    }
-
-    // Only allow autofill if settings permit
-    if (category === 'autofillable' && !settings?.personalization?.autoFillPersonal) {
-      category = 'generatable';
-      exactMatch = null;
-    }
-
-    analysis[q.id] = { category, exactMatch };
+    analysis[q.id] = categorizeField(q);
   });
-
   return analysis;
 }
 

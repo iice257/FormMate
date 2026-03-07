@@ -91,6 +91,7 @@ select:focus {
   transform: scale(0.97) translateY(0);
 }
 
+
 /* Ripple effect */
 .btn-ripple {
   position: relative;
@@ -116,6 +117,42 @@ select:focus {
   height: 300px;
   opacity: 1;
   transition: 0s;
+}
+
+/* ─── Glassmorphism ───────────────────── */
+.glass-panel {
+  background: var(--fm-glass-bg);
+  backdrop-filter: blur(var(--fm-glass-blur));
+  -webkit-backdrop-filter: blur(var(--fm-glass-blur));
+  border: 1px solid var(--fm-glass-border);
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--fm-border-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-header {
+    background: rgba(12, 10, 20, 0.85);
+  }
+}
+
+/* ─── Gradient Accents ────────────────── */
+.text-gradient {
+  background: var(--fm-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-mesh {
+  background-image: var(--fm-gradient-mesh);
+  background-position: center;
+  background-size: cover;
 }
 
 /* ─── Spin animation ──────────────────── */
@@ -246,6 +283,40 @@ select:focus {
 
 .stagger-children>*:nth-child(10) {
   animation-delay: 0.5s;
+}
+
+/* ─── Skeleton Loading ───────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: #f6f7f8;
+  background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+  background-repeat: no-repeat;
+  background-size: 800px 100%;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: shimmer;
+  animation-timing-function: linear;
+}
+
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background: #1a1530;
+    background-image: linear-gradient(to right, #1a1530 0%, #211b3a 20%, #1a1530 40%, #1a1530 100%);
+  }
+}
+
+.dark-mode-transition {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
 }
 
 @keyframes staggerIn {

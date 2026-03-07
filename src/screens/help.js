@@ -56,7 +56,7 @@ export function helpScreen() {
         <div class="max-w-3xl mx-auto p-8 space-y-8">
           
           <!-- Hero Banner -->
-          <div class="p-8 rounded-2xl relative overflow-hidden" style="background: var(--fm-gradient-primary);">
+          <div class="p-8 rounded-[var(--fm-card-radius)] relative overflow-hidden" style="background: var(--fm-gradient-primary);">
             <div class="relative z-10 text-white">
               <h2 class="text-2xl font-bold mb-2">How can we help?</h2>
               <p class="text-white/80 text-sm max-w-sm">Search our FAQs, check keyboard shortcuts, or contact support directly.</p>

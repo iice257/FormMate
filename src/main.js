@@ -33,6 +33,8 @@ import { analyticsScreen } from './screens/analytics.js';
 import { pricingScreen } from './screens/pricing.js';
 import { helpScreen } from './screens/help.js';
 
+import { initCommandPalette } from './components/command-palette.js';
+
 // Register all screens
 registerScreen('auth', authScreen);
 registerScreen('onboarding', onboardingScreen);
@@ -48,11 +50,22 @@ registerScreen('pricing', pricingScreen);
 registerScreen('help', helpScreen);
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
+function boot() {
   initRouter();
-});
+  initCommandPalette();
+
+  // Attach command palette bindings to search buttons
+  document.body.addEventListener('click', (e) => {
+    const searchBtn = e.target.closest('#btn-search-cmd');
+    if (searchBtn && window.openCommandPalette) {
+      window.openCommandPalette();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', boot);
 
 // Also init immediately if DOM already loaded
 if (document.readyState !== 'loading') {
-  initRouter();
+  boot();
 }

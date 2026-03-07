@@ -80,7 +80,7 @@ export function analyticsScreen() {
           
           <!-- Top Stats row -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="p-5 rounded-2xl" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="p-5 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="size-10 rounded-xl flex items-center justify-center mb-3" style="background: var(--fm-primary-50); color: var(--fm-primary);">
                 <span class="material-symbols-outlined">description</span>
               </div>
@@ -88,7 +88,7 @@ export function analyticsScreen() {
               <h3 class="text-3xl font-bold" style="color: var(--fm-text);">${formsAnalyzed}</h3>
             </div>
             
-            <div class="p-5 rounded-2xl" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="p-5 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="size-10 rounded-xl flex items-center justify-center mb-3" style="background: var(--fm-success-light); color: var(--fm-success);">
                 <span class="material-symbols-outlined">check_circle</span>
               </div>
@@ -96,7 +96,7 @@ export function analyticsScreen() {
               <h3 class="text-3xl font-bold" style="color: var(--fm-text);">${submitted}</h3>
             </div>
             
-            <div class="p-5 rounded-2xl" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="p-5 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="size-10 rounded-xl flex items-center justify-center mb-3" style="background: var(--fm-info-light); color: var(--fm-info);">
                 <span class="material-symbols-outlined">smart_toy</span>
               </div>
@@ -104,7 +104,7 @@ export function analyticsScreen() {
               <h3 class="text-3xl font-bold" style="color: var(--fm-text);">${answersGen}</h3>
             </div>
             
-            <div class="p-5 rounded-2xl" style="background: var(--fm-gradient-primary);">
+            <div class="p-5 rounded-[var(--fm-card-radius)]" style="background: var(--fm-gradient-primary);">
               <div class="size-10 rounded-xl flex items-center justify-center mb-3" style="background: rgba(255,255,255,0.2); color: white;">
                 <span class="material-symbols-outlined">timer</span>
               </div>
@@ -120,7 +120,7 @@ export function analyticsScreen() {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <!-- Activity Chart -->
-            <div class="md:col-span-2 p-6 rounded-2xl flex flex-col" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="md:col-span-2 p-6 rounded-[var(--fm-card-radius)] flex flex-col" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="mb-6">
                 <h3 class="text-base font-bold" style="color: var(--fm-text);">Activity History</h3>
                 <p class="text-xs" style="color: var(--fm-text-tertiary);">Your form analysis & edit volume over the last 7 days.</p>
@@ -132,7 +132,7 @@ export function analyticsScreen() {
             </div>
 
             <!-- Current Plan limits -->
-            <div class="p-6 rounded-2xl" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="mb-6 flex items-center justify-between">
                 <div>
                   <h3 class="text-base font-bold" style="color: var(--fm-text);">Current Plan</h3>
@@ -182,7 +182,7 @@ export function analyticsScreen() {
           </div>
           
           <!-- Quality Trends -->
-          <div class="p-6 rounded-2xl flex items-center gap-6" style="background: var(--fm-surface); border: 1px solid var(--fm-border);">
+          <div class="p-6 rounded-[var(--fm-card-radius)] flex items-center gap-6" style="background: var(--fm-surface); border: 1px solid var(--fm-border);">
             <div class="size-12 rounded-full flex items-center justify-center shrink-0" style="background: var(--fm-success-light); color: var(--fm-success);">
               <span class="material-symbols-outlined text-2xl">trending_up</span>
             </div>

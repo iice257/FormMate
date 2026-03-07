@@ -96,13 +96,19 @@ export function settingsScreen() {
               <p class="text-xs" style="color: var(--fm-text-tertiary);">Customize the look and feel.</p>
             </div>
             <div class="p-5 rounded-xl space-y-4" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
-              <div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--fm-surface);">
-                <span class="material-symbols-outlined" style="color: var(--fm-primary);">dark_mode</span>
-                <div class="flex-1">
-                  <p class="text-sm font-medium" style="color: var(--fm-text);">Dark Mode</p>
-                  <p class="text-xs" style="color: var(--fm-text-tertiary);">Follows your system setting automatically.</p>
+              <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--fm-surface);">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined" style="color: var(--fm-primary);">dark_mode</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium" style="color: var(--fm-text);">Theme</p>
+                    <p class="text-xs" style="color: var(--fm-text-tertiary);">Interface color preference.</p>
+                  </div>
                 </div>
-                <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: var(--fm-primary-50); color: var(--fm-primary);">Auto</span>
+                <select id="set-theme" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-transparent focus:ring-0 cursor-pointer outline-none transition-colors hover:border-primary/20" style="background: var(--fm-primary-50); color: var(--fm-primary);">
+                  <option value="auto" ${settings.ui.theme === 'auto' || !settings.ui.theme ? 'selected' : ''}>System Auto</option>
+                  <option value="light" ${settings.ui.theme === 'light' ? 'selected' : ''}>Always Light</option>
+                  <option value="dark" ${settings.ui.theme === 'dark' ? 'selected' : ''}>Always Dark</option>
+                </select>
               </div>
               ${renderToggle('set-compact', { label: 'Compact Mode', description: 'Reduce spacing for denser layouts', checked: settings.ui.compactMode })}
               ${renderToggle('set-animations', { label: 'Animations', description: 'Enable smooth transitions and effects', checked: settings.ui.animationsEnabled })}
@@ -282,6 +288,22 @@ export function settingsScreen() {
       updateSettings('ai.defaultPersonality', e.target.value);
       setState({ personality: e.target.value });
       logSettingsChanged('ai');
+    });
+
+    // Theme
+    const themeSelect = wrapper.querySelector('#set-theme');
+    themeSelect?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      updateSettings('ui.theme', val);
+      document.body.classList.remove('dark-mode-override', 'light-mode-override', 'dark');
+      if (val === 'dark') document.body.classList.add('dark', 'dark-mode-override');
+      if (val === 'light') document.body.classList.add('light-mode-override');
+      if (val === 'auto') {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.body.classList.add('dark');
+        }
+      }
+      logSettingsChanged('ui');
     });
 
     // Toggles

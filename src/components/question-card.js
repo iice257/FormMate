@@ -170,7 +170,7 @@ export function renderQuestionCard(question, answer, index) {
     <div class="group relative card-premium ${isActive ? 'border-primary ring-2 ring-primary/10 shadow-xl shadow-primary/20' : 'shadow-sm'} rounded-xl p-6 transition-all" data-card-id="${id}">
 
       <!-- Drag handle -->
-      <div class="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div class="drag-handle absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 -ml-2">
         <span class="material-symbols-outlined text-slate-300 cursor-grab">drag_indicator</span>
       </div>
 
@@ -196,7 +196,14 @@ export function renderQuestionCard(question, answer, index) {
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-2 pt-3 border-t border-slate-100 flex-wrap">
+      <div class="flex items-center gap-1.5 pt-3 border-t border-slate-100 flex-wrap">
+        <button class="btn-undo flex items-center justify-center size-7 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all" data-question-id="${id}" title="Undo">
+          <span class="material-symbols-outlined text-[16px]">undo</span>
+        </button>
+        <button class="btn-redo flex items-center justify-center size-7 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all" data-question-id="${id}" title="Redo">
+          <span class="material-symbols-outlined text-[16px]">redo</span>
+        </button>
+        <div class="w-px h-4 bg-slate-200 mx-1"></div>
         ${type === 'long_text' || type === 'short_text' ? `
           <button class="quick-action flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-all"
                   data-question-id="${id}" data-action="shorten">

@@ -56,8 +56,8 @@ export function accountsScreen() {
 
         <div class="max-w-3xl mx-auto p-8 space-y-8">
           <!-- Profile Header -->
-          <div class="flex items-center gap-6 p-6 rounded-2xl" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
-            <div class="size-20 rounded-2xl flex items-center justify-center text-3xl font-bold" style="background: var(--fm-gradient-primary); color: white;">
+          <div class="flex items-center gap-6 p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+            <div class="size-20 rounded-[var(--fm-card-radius)] flex items-center justify-center text-3xl font-bold" style="background: var(--fm-gradient-primary); color: white;">
               ${(userProfile.name || 'U').charAt(0).toUpperCase()}
             </div>
             <div class="flex-1">

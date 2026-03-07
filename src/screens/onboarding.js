@@ -18,7 +18,7 @@ export function onboardingScreen() {
 
         <!-- Header -->
         <div class="text-center mb-10">
-          <div class="inline-flex items-center justify-center size-16 rounded-2xl mb-4" style="background: var(--fm-gradient-primary); box-shadow: var(--fm-shadow-primary-lg);">
+          <div class="inline-flex items-center justify-center size-16 rounded-[var(--fm-card-radius)] mb-4" style="background: var(--fm-gradient-primary); box-shadow: var(--fm-shadow-primary-lg);">
             <span class="material-symbols-outlined text-white text-3xl">waving_hand</span>
           </div>
           <h1 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Welcome to FormMate</h1>
@@ -26,7 +26,7 @@ export function onboardingScreen() {
         </div>
 
         <!-- Onboarding Card -->
-        <div class="rounded-2xl p-8 space-y-6 animate-slide-up" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); box-shadow: var(--fm-shadow-xl);">
+        <div class="rounded-[var(--fm-card-radius)] p-8 space-y-6 animate-slide-up" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); box-shadow: var(--fm-shadow-xl);">
 
           <!-- Name -->
           <div>

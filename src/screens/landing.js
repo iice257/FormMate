@@ -7,61 +7,65 @@ import { navigateTo } from '../router.js';
 
 export function landingScreen() {
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden" style="background: var(--fm-bg)">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh dark-mode-transition">
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header class="flex items-center justify-between px-6 py-4 md:px-20 lg:px-40 bg-white/60 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
+        <header class="flex items-center justify-between px-6 py-4 md:px-12 lg:px-24 glass-header sticky top-0 z-50 transition-all">
           <div class="flex items-center gap-8">
-            <div class="flex items-center gap-2.5">
-              <div class="flex items-center justify-center size-9 rounded-lg bg-primary text-white">
+            <div class="flex items-center gap-2.5 btn-press">
+              <div class="flex items-center justify-center size-10 rounded-xl bg-gradient-to-br from-primary to-primary-light text-white shadow-primary">
                 <span class="material-symbols-outlined text-xl">dynamic_form</span>
               </div>
-              <h2 class="text-slate-900 text-lg font-bold tracking-tight">FormMate</h2>
+              <h2 class="text-slate-900 text-xl font-black tracking-tight" style="font-family: var(--fm-font-sans)">FormMate</h2>
             </div>
-            <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-500">
-              <a class="hover:text-slate-900 transition-colors cursor-pointer" id="nav-product">Product</a>
-              <a class="hover:text-slate-900 transition-colors cursor-pointer" id="nav-features">Features</a>
-              <a class="hover:text-slate-900 transition-colors cursor-pointer" id="nav-pricing">Pricing</a>
+            <nav class="hidden md:flex gap-8 text-sm font-semibold text-slate-500">
+              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-product">Product</a>
+              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-features">Features</a>
+              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-pricing">Pricing</a>
             </nav>
           </div>
           <div class="flex items-center gap-3">
-            <button class="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-4 py-2" id="btn-login">Login</button>
-            <button class="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-full hover:bg-primary/90 transition-all shadow-sm btn-press" id="btn-signup">Sign Up</button>
+            <div class="hidden lg:flex items-center gap-1.5 mr-4 text-slate-400 bg-white/50 px-2 py-1 rounded-md border border-slate-200 shadow-sm cursor-pointer hover:bg-white transition-colors">
+              <span class="material-symbols-outlined text-[14px]">search</span>
+              <span class="text-[10px] font-mono font-bold">Cmd K</span>
+            </div>
+            <button class="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors px-4 py-2" id="btn-login">Login</button>
+            <button class="bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-signup">Get Started</button>
           </div>
         </header>
 
-        <main class="flex-1 flex flex-col items-center px-6 pt-16 pb-12 md:pt-24">
+        <main class="flex-1 flex flex-col items-center px-6 pt-20 pb-16 md:pt-32 z-10">
           <!-- Hero Section -->
-          <div class="max-w-[720px] w-full text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-              <span class="material-symbols-outlined text-sm">auto_awesome</span>
-              Your AI Copilot for Forms
+          <div class="max-w-[800px] w-full text-center space-y-6 animate-screen-enter">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
+              <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+              Smart AI Copilot
             </div>
 
-            <h1 class="text-slate-900 text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight">
-              Fill Any Form<br><span class="text-primary">in Seconds</span>
+            <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
+              Fill Any Form<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">in Seconds.</span>
             </h1>
 
-            <p class="text-slate-500 text-lg md:text-xl font-normal max-w-lg mx-auto leading-relaxed">
+            <p class="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed mt-6">
               Paste a form link and let AI generate smart answers, refine them with conversation, and autofill the entire form effortlessly.
             </p>
 
             <!-- URL Input -->
-            <div class="mt-10 w-full max-w-xl mx-auto">
-              <div class="bg-white p-2 rounded-2xl shadow-xl shadow-primary/5 border border-slate-200/60 flex flex-col md:flex-row gap-2">
+            <div class="mt-12 w-full max-w-2xl mx-auto">
+              <div class="bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
                 <div class="flex-1 relative">
                   <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
                   <input
                     id="url-input"
-                    class="w-full pl-11 pr-4 h-12 rounded-xl border-none focus:ring-2 focus:ring-primary/20 text-slate-900 placeholder:text-slate-400 text-sm bg-transparent"
+                    class="w-full pl-11 pr-4 h-14 rounded-xl border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-base bg-transparent font-medium"
                     placeholder="Paste your form link here..."
                     type="text"
                   />
                 </div>
-                <button id="btn-analyze" class="bg-primary text-white px-8 h-12 rounded-xl font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25">
-                  Analyze
-                  <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                <button id="btn-analyze" class="bg-primary text-white px-8 h-14 rounded-xl font-bold text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group">
+                  Start Analyzing
+                  <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
               </div>
 
@@ -75,79 +79,81 @@ export function landingScreen() {
           </div>
 
           <!-- Workspace Preview (inline mockup) -->
-          <div class="max-w-[960px] w-full mt-16">
-            <div class="bg-white rounded-2xl shadow-2xl shadow-primary/5 border border-slate-200/50 overflow-hidden">
+          <div class="max-w-[1020px] w-full mt-20 stagger-children">
+            <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(91,19,236,0.15)] transition-all duration-500">
               <!-- Preview Chrome Bar -->
-              <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+              <div class="flex items-center gap-2 px-4 py-3 bg-slate-100/50 border-b border-slate-200/60">
                 <div class="flex gap-1.5">
-                  <div class="size-3 rounded-full bg-slate-200"></div>
-                  <div class="size-3 rounded-full bg-slate-200"></div>
-                  <div class="size-3 rounded-full bg-slate-200"></div>
+                  <div class="size-3 rounded-full bg-slate-300"></div>
+                  <div class="size-3 rounded-full bg-slate-300"></div>
+                  <div class="size-3 rounded-full bg-slate-300"></div>
                 </div>
                 <div class="flex-1 flex justify-center">
-                  <div class="bg-white rounded-md border border-slate-200 px-4 py-1 text-xs text-slate-400 w-80 text-center truncate">formmate.ai/workspace</div>
+                  <div class="bg-white rounded-md border border-slate-200 px-4 py-1 text-[11px] font-medium text-slate-500 w-80 text-center truncate shadow-sm flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px]">lock</span> formmate.ai/workspace
+                  </div>
                 </div>
               </div>
 
               <!-- Three-Column Preview -->
-              <div class="flex min-h-[340px]">
+              <div class="flex min-h-[360px]">
                 <!-- Sidebar Preview -->
-                <div class="w-48 border-r border-slate-100 p-4 hidden md:flex flex-col gap-2">
+                <div class="w-56 border-r border-slate-200/60 p-5 hidden md:flex flex-col gap-3 bg-slate-50/50">
                   <div class="flex items-center gap-2 mb-4">
-                    <div class="size-6 bg-primary rounded-md"></div>
-                    <span class="text-xs font-bold text-slate-700">FormMate</span>
+                    <div class="size-7 bg-gradient-to-br from-primary to-primary-light text-white rounded-lg flex items-center justify-center font-bold text-sm shadow-sm">F</div>
+                    <span class="text-sm font-black text-slate-800 tracking-tight">FormMate</span>
                   </div>
-                  <div class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium">
-                    <span class="material-symbols-outlined text-sm">folder</span> Active Forms
+                  <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-900 text-[13px] font-bold shadow-sm">
+                    <span class="material-symbols-outlined text-[18px] text-primary">edit_document</span> Active Form
                   </div>
-                  <div class="flex items-center gap-2 px-2 py-1.5 text-slate-400 text-xs">
-                    <span class="material-symbols-outlined text-sm">person</span> Profiles
-                  </div>
-                  <div class="flex items-center gap-2 px-2 py-1.5 text-slate-400 text-xs">
-                    <span class="material-symbols-outlined text-sm">history</span> History
+                  <div class="flex items-center gap-2 px-3 py-2 text-slate-500 text-[13px] font-medium hover:bg-slate-100/50 rounded-lg cursor-pointer transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">history</span> History
                   </div>
                 </div>
 
                 <!-- Center: Question Cards -->
-                <div class="flex-1 p-6 space-y-4 overflow-hidden">
-                  <h3 class="text-sm font-bold text-slate-800">Senior UX Designer Application</h3>
-                  <p class="text-[10px] text-slate-400">posted by CreativeSync • 3h ago</p>
+                <div class="flex-1 p-6 lg:p-8 space-y-4 overflow-hidden relative">
+                  <h3 class="text-xl font-black text-slate-900 tracking-tight">Senior UX Designer Application</h3>
+                  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">CreativeSync</p>
 
-                  <div class="space-y-3 mt-4">
+                  <div class="space-y-4 mt-6">
                     <!-- Question Card 1 -->
-                    <div class="border-2 border-white rounded-xl p-4 shadow-sm transition-all hover:shadow-[var(--fm-shadow-primary-hover)]">
-                      <p class="text-xs font-semibold text-slate-500 mb-2">Professional Summary</p>
-                      <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-700 leading-relaxed">
+                    <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-white transition-all group-hover:shadow-md animate-gentle-pulse">
+                      <p class="text-[13px] font-bold text-slate-800 mb-2.5">Professional Summary</p>
+                      <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-[13px] text-slate-600 leading-relaxed font-medium">
                         I am a Senior UX Designer with over 8 years of experience building accessible enterprise platforms. At my previous role at Acme Corp, I led the redesign of...
                       </div>
-                      <div class="flex items-center justify-end mt-2">
-                        <span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI GENERATED</span>
+                      <div class="flex items-center justify-end mt-3 gap-2">
+                        <span class="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                          <span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI GENERATED
+                        </span>
                       </div>
                     </div>
 
                     <!-- Question Card 2 -->
-                    <div class="border-2 border-white rounded-xl p-4 shadow-sm transition-all hover:shadow-[var(--fm-shadow-primary-hover)]">
-                      <p class="text-xs font-semibold text-slate-500 mb-2">Expected Salary Range</p>
-                      <div class="border border-primary/30 rounded-lg p-3 text-xs text-primary font-medium">
-                        Loading profile data...
+                    <div class="border border-slate-200 rounded-xl p-4 shadow-sm bg-white opacity-70 cursor-not-allowed">
+                      <p class="text-[13px] font-bold text-slate-800 mb-2">Expected Salary Range</p>
+                      <div class="border border-dashed border-slate-300 rounded-lg p-3 text-[12px] text-slate-400 font-medium">
+                        Waiting for user input...
                       </div>
                     </div>
-
-                    <!-- Question Card 3 -->
-                    <div class="border-2 border-white rounded-xl p-4 shadow-sm transition-all hover:shadow-[var(--fm-shadow-primary-hover)] opacity-80">
-                      <p class="text-xs font-semibold text-slate-500 mb-2">Why do you want to join our team?</p>
-                      <div class="text-xs text-slate-400 italic">Click to generate response based on company research</div>
-                    </div>
                   </div>
+
+                  <!-- Fade out bottom gradient -->
+                  <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                 </div>
 
                 <!-- Right: AI Chat Preview -->
-                <div class="w-56 border-l border-slate-100 p-4 hidden lg:flex flex-col">
-                  <div class="flex items-center gap-2 mb-4">
-                    <span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
-                    <span class="text-xs font-bold">FormMate AI</span>
+                <div class="w-64 border-l border-slate-200/60 p-5 hidden lg:flex flex-col bg-white">
+                  <div class="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-primary text-[18px]">smart_toy</span>
+                      <span class="text-[13px] font-bold text-slate-800">Copilot</span>
+                    </div>
+                    <span class="text-[9px] font-black uppercase text-green-600 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">Active</span>
                   </div>
-                  <div class="bg-slate-50 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed mb-3">
+                  <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[12px] text-slate-700 leading-relaxed mb-4 font-medium shadow-sm relative">
+
                     I've detected 12 fields. 8 have been auto-filled based on your "UX Design" profile.
                   </div>
                   <div class="bg-primary/10 rounded-xl p-3 text-[11px] text-primary font-medium mb-3">
@@ -431,8 +437,8 @@ export function landingScreen() {
         </footer>
 
       </div>
-    </div>
-  `;
+    </div >
+    `;
 
   function init(wrapper) {
     const urlInput = wrapper.querySelector('#url-input');

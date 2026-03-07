@@ -61,12 +61,20 @@ export function analyzingScreen() {
             </p>
 
             <!-- Progress Section -->
-            <div class="w-full bg-white rounded-2xl p-8 border border-slate-200 shadow-sm mb-8">
+            <div class="w-full bg-white rounded-[var(--fm-card-radius)] p-8 border border-slate-200 shadow-sm mb-8">
               <div class="flex flex-col gap-6">
                 <div class="flex flex-col gap-3">
-                  <div class="flex justify-between items-end">
+                  <div class="flex justify-between items-center mb-1">
                     <span id="progress-label" class="text-slate-900 font-semibold">Detecting questions</span>
-                    <span id="progress-percent" class="text-primary font-bold text-sm">0%</span>
+                    <div class="flex items-center gap-2">
+                      <div class="relative size-5">
+                        <svg class="size-full -rotate-90" viewBox="0 0 36 36">
+                          <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="4"></circle>
+                          <circle id="progress-ring" cx="18" cy="18" r="16" fill="none" class="stroke-primary transition-all duration-700 ease-out" stroke-width="4" stroke-dasharray="100" stroke-dashoffset="100" stroke-linecap="round"></circle>
+                        </svg>
+                      </div>
+                      <span id="progress-percent" class="text-primary font-bold text-sm">0%</span>
+                    </div>
                   </div>
                   <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div id="progress-bar" class="h-full bg-primary rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
@@ -132,6 +140,7 @@ export function analyzingScreen() {
 
   function init(wrapper) {
     const progressBar = wrapper.querySelector('#progress-bar');
+    const progressRing = wrapper.querySelector('#progress-ring');
     const progressPercent = wrapper.querySelector('#progress-percent');
     const progressLabel = wrapper.querySelector('#progress-label');
     const progressStep = wrapper.querySelector('#progress-step');
@@ -203,7 +212,8 @@ export function analyzingScreen() {
     }
 
     function updateProgress(percent, label, step, hint) {
-      progressBar.style.width = percent + '%';
+      if (progressBar) progressBar.style.width = percent + '%';
+      if (progressRing) progressRing.setAttribute('stroke-dashoffset', 100 - percent);
       progressPercent.textContent = percent + '%';
       progressLabel.textContent = label;
       progressStep.textContent = step;
