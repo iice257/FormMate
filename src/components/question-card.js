@@ -2,6 +2,8 @@
 // FormMate — Question Card Component
 // ═══════════════════════════════════════════
 
+import { categorizeField } from '../ai/field-classifier.js';
+
 /**
  * Render a single question card.
  * Returns HTML string.
@@ -26,6 +28,7 @@ export function renderQuestionCard(question, answer, index) {
   };
 
   const typeInfo = typeLabels[type] || typeLabels['short_text'];
+  const { category } = categorizeField(question);
 
   const getBadgeHtml = () => {
     if (source === 'autofill') {
@@ -37,6 +40,11 @@ export function renderQuestionCard(question, answer, index) {
     if (source === 'user' || source === 'edited') {
       return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-bg-sunken); color: var(--fm-text-secondary); border: 1px solid var(--fm-border);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">edit</span> User Edited</span>`;
     }
+    if (category === 'manual_only' && !answerText) {
+      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-error-light); color: var(--fm-error); border: 1px solid rgba(var(--fm-error-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">edit_document</span> Manual Input Required</span>`;
+    }
+
+    // Default empty state
     return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-warning-light); color: var(--fm-warning); border: 1px solid rgba(var(--fm-warning-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">warning</span> Missing Data</span>`;
   };
 
@@ -204,25 +212,13 @@ export function renderQuestionCard(question, answer, index) {
           <span class="material-symbols-outlined text-[16px]">redo</span>
         </button>
         <div class="w-px h-4 bg-slate-200 mx-1"></div>
-        ${type === 'long_text' || type === 'short_text' ? `
-          <button class="quick-action flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-all"
-                  data-question-id="${id}" data-action="shorten">
-            <span class="material-symbols-outlined text-sm">compress</span> Shorten
-          </button>
-          <button class="quick-action flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-all"
-                  data-question-id="${id}" data-action="professional">
-            <span class="material-symbols-outlined text-sm">work</span> Professional
-          </button>
-          <button class="quick-action flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-all"
-                  data-question-id="${id}" data-action="friendly">
-            <span class="material-symbols-outlined text-sm">sentiment_satisfied</span> Friendly
-          </button>
-        ` : ''}
         <div class="flex-1"></div>
+        ${category !== 'manual_only' ? `
         <button class="btn-regenerate flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
                 data-question-id="${id}">
           <span class="material-symbols-outlined text-sm">refresh</span> Regenerate
         </button>
+        ` : ''}
       </div>
     </div>
   `;

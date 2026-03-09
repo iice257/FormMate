@@ -32,7 +32,14 @@ export function load(key) {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     if (!raw) return null;
 
-    const entry = JSON.parse(raw);
+    let entry;
+    try {
+      entry = JSON.parse(raw);
+    } catch (parseErr) {
+      console.warn('[Storage] Failed to parse JSON for key:', key, parseErr);
+      localStorage.removeItem(STORAGE_PREFIX + key);
+      return null;
+    }
 
     // Check TTL expiration
     if (entry.ttl && Date.now() - entry.timestamp > entry.ttl) {

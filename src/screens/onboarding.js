@@ -18,8 +18,8 @@ export function onboardingScreen() {
 
         <!-- Header -->
         <div class="text-center mb-10">
-          <div class="inline-flex items-center justify-center size-16 rounded-[var(--fm-card-radius)] mb-4" style="background: var(--fm-gradient-primary); box-shadow: var(--fm-shadow-primary-lg);">
-            <span class="material-symbols-outlined text-white text-3xl">waving_hand</span>
+          <div class="mb-4">
+            <span class="material-symbols-outlined text-5xl" style="color: var(--fm-primary);">waving_hand</span>
           </div>
           <h1 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Welcome to FormMate</h1>
           <p class="text-sm" style="color: var(--fm-text-tertiary);">Tell us a bit about yourself so we can personalize your experience. This is optional.</p>
@@ -116,7 +116,11 @@ export function onboardingScreen() {
       wrapper.querySelector('#ob-name').value = authUser.name;
     }
     if (authUser?.email) {
-      wrapper.querySelector('#ob-email').value = authUser.email;
+      const em = wrapper.querySelector('#ob-email');
+      em.value = authUser.email;
+      em.readOnly = true;
+      em.style.opacity = '0.6';
+      em.style.cursor = 'not-allowed';
     }
 
     // Tone selection

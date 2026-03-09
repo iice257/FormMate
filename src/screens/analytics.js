@@ -45,10 +45,10 @@ export function analyticsScreen() {
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
         <div class="p-6 flex items-center gap-3">
-          <div class="size-8 rounded-lg flex items-center justify-center text-white" style="background: var(--fm-primary);">
-            <span class="material-symbols-outlined">auto_awesome</span>
+          <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
-          <h1 class="text-xl font-bold tracking-tight" style="color: var(--fm-text);">FormMate</h1>
+          <h1 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h1>
         </div>
         <nav class="flex-1 px-4 space-y-1">
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('landing')">

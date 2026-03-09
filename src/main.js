@@ -28,12 +28,12 @@ import { workspaceScreen } from './screens/workspace.js';
 import { reviewScreen } from './screens/review.js';
 import { successScreen } from './screens/success.js';
 import { accountsScreen } from './screens/accounts.js';
-import { settingsScreen } from './screens/settings.js';
 import { analyticsScreen } from './screens/analytics.js';
+import { docsScreen } from './screens/docs.js';
 import { pricingScreen } from './screens/pricing.js';
 import { helpScreen } from './screens/help.js';
+import { examplesScreen } from './screens/examples.js';
 
-import { initCommandPalette } from './components/command-palette.js';
 
 // Register all screens
 registerScreen('auth', authScreen);
@@ -44,23 +44,53 @@ registerScreen('workspace', workspaceScreen);
 registerScreen('review', reviewScreen);
 registerScreen('success', successScreen);
 registerScreen('accounts', accountsScreen);
-registerScreen('settings', settingsScreen);
 registerScreen('analytics', analyticsScreen);
+registerScreen('docs', docsScreen);
 registerScreen('pricing', pricingScreen);
 registerScreen('help', helpScreen);
+registerScreen('examples', examplesScreen);
+
+
+
+// Global hiding header logic
+function initHidingHeader() {
+  let lastScrollY = window.scrollY;
+  // We attach to window scroll
+  window.addEventListener('scroll', () => {
+    const headers = document.querySelectorAll('header');
+    const currentScrollY = window.scrollY;
+
+    if (currentScrollY > lastScrollY && currentScrollY > 60) {
+      // Scrolling down
+      headers.forEach(h => {
+        h.style.transform = 'translateY(-100%)';
+        h.style.opacity = '0';
+      });
+    } else {
+      // Scrolling up
+      headers.forEach(h => {
+        h.style.transform = 'translateY(0)';
+        h.style.opacity = '1';
+      });
+    }
+    lastScrollY = currentScrollY;
+  }, { passive: true });
+
+  // Add transitional styling dynamically to make sure existing styles don't conflict, though transition-all should be on most headers
+  const style = document.createElement('style');
+  style.textContent = `
+    header {
+      transition: transform 0.3s ease, opacity 0.3s ease !important;
+      will-change: transform, opacity;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // Initialize the app
 function boot() {
   initRouter();
-  initCommandPalette();
-
-  // Attach command palette bindings to search buttons
-  document.body.addEventListener('click', (e) => {
-    const searchBtn = e.target.closest('#btn-search-cmd');
-    if (searchBtn && window.openCommandPalette) {
-      window.openCommandPalette();
-    }
-  });
+  initHidingHeader();
 }
 
 document.addEventListener('DOMContentLoaded', boot);

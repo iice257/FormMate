@@ -2,14 +2,16 @@
 // FormMate — Accounts Center
 // ═══════════════════════════════════════════
 
-import { getState, setState, updateProfile, updateVault } from '../state.js';
-import { navigateTo } from '../router.js';
-import { loadFormHistory, saveVault, loadVault, saveProfile } from '../storage/local-store.js';
+import { getState, setState, updateProfile, updateVault, updateSettings } from '../state.js';
+import { navigateTo, goBack } from '../router.js';
+import { loadFormHistory, saveVault, loadVault, saveProfile, clearAll } from '../storage/local-store.js';
+import { signOut, deleteAccount } from '../auth/auth-service.js';
 import { toast } from '../components/toast.js';
-import { renderTabs, initTabs, renderEmptyState } from '../components/ui-components.js';
+import { renderTabs, initTabs, renderEmptyState, renderToggle } from '../components/ui-components.js';
+import { logSettingsChanged } from '../storage/activity-logger.js';
 
 export function accountsScreen() {
-  const { userProfile, vault } = getState();
+  const { userProfile, vault, settings } = getState();
   const formHistory = loadFormHistory();
 
   const tones = ['professional', 'friendly', 'concise', 'creative', 'formal', 'casual'];
@@ -21,10 +23,10 @@ export function accountsScreen() {
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
         <div class="p-6 flex items-center gap-3">
-          <div class="size-8 rounded-lg flex items-center justify-center text-white" style="background: var(--fm-primary);">
-            <span class="material-symbols-outlined">auto_awesome</span>
+          <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
-          <h1 class="text-xl font-bold tracking-tight" style="color: var(--fm-text);">FormMate</h1>
+          <h1 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h1>
         </div>
         <nav class="flex-1 px-4 space-y-1">
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('landing')">
@@ -33,10 +35,10 @@ export function accountsScreen() {
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer" style="background: var(--fm-primary-50); color: var(--fm-primary);">
             <span class="material-symbols-outlined">person</span> Account
           </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('settings')">
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" id="sidebar-nav-settings">
             <span class="material-symbols-outlined">settings</span> Settings
           </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('help')">
+          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('docs')">
             <span class="material-symbols-outlined">help_outline</span> Help
           </a>
         </nav>
@@ -73,6 +75,7 @@ export function accountsScreen() {
     { label: 'Vault', icon: 'shield' },
     { label: 'History', icon: 'history' },
     { label: 'Style', icon: 'palette' },
+    { label: 'Settings', icon: 'settings' },
   ], { id: 'account-tabs' })}
 
           <!-- Tab Content -->
@@ -192,6 +195,121 @@ export function accountsScreen() {
                 </button>
               </div>
             </div>
+
+            <!-- Settings Tab (hidden) -->
+            <div id="tab-settings" class="hidden h-[650px] flex flex-row gap-6">
+              
+              <!-- Main Settings Content -->
+              <div class="flex-1 overflow-y-auto no-scrollbar pr-4 space-y-8 pb-16">
+                <!-- AI Behavior -->
+                <section id="section-ai" class="settings-section space-y-5">
+                  <div>
+                    <h3 class="text-lg font-bold" style="color: var(--fm-text);">AI Behavior</h3>
+                    <p class="text-xs" style="color: var(--fm-text-tertiary);">Control how the AI generates responses.</p>
+                  </div>
+                  <div class="p-5 rounded-xl space-y-5" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+                    <div>
+                      <label class="text-xs font-semibold mb-2 block" style="color: var(--fm-text-secondary);">Temperature: <span id="temp-val">${settings?.ai?.temperature || 0.7}</span></label>
+                      <input id="set-temperature" type="range" min="0" max="1" step="0.1" value="${settings?.ai?.temperature || 0.7}" class="w-full accent-[var(--fm-primary)]" />
+                      <div class="flex justify-between text-[10px] mt-1" style="color: var(--fm-text-tertiary);"><span>Precise</span><span>Creative</span></div>
+                    </div>
+                    <div>
+                      <label class="text-xs font-semibold mb-2 block" style="color: var(--fm-text-secondary);">Verbosity</label>
+                      <div class="grid grid-cols-3 gap-2">
+                        ${['concise', 'balanced', 'detailed'].map(v => `
+                          <button class="set-verbosity h-9 rounded-lg text-xs font-semibold capitalize btn-press" data-value="${v}"
+                            style="border: 1px solid ${(settings?.ai?.verbosity || 'balanced') === v ? 'var(--fm-primary)' : 'var(--fm-border)'}; background: ${(settings?.ai?.verbosity || 'balanced') === v ? 'var(--fm-primary-50)' : ''}; color: ${(settings?.ai?.verbosity || 'balanced') === v ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'};">
+                            ${v}
+                          </button>
+                        `).join('')}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Appearance -->
+                <section id="section-ui" class="settings-section space-y-5">
+                  <div>
+                    <h3 class="text-lg font-bold" style="color: var(--fm-text);">Appearance</h3>
+                    <p class="text-xs" style="color: var(--fm-text-tertiary);">Customize the look and feel.</p>
+                  </div>
+                  <div class="p-5 rounded-xl space-y-4" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+                    ${renderToggle('set-compact', { label: 'Compact Mode', description: 'Reduce spacing for denser layouts', checked: settings?.ui?.compactMode })}
+                    ${renderToggle('set-animations', { label: 'Animations', description: 'Enable smooth transitions and effects', checked: settings?.ui?.animationsEnabled })}
+                    ${renderToggle('set-sidebar', { label: 'Show Sidebar by Default', checked: settings?.ui?.sidebarDefault })}
+                    ${renderToggle('set-chat-panel', { label: 'Show Chat Panel by Default', checked: settings?.ui?.chatPanelDefault })}
+                  </div>
+                </section>
+
+                <!-- Keyboard Shortcuts -->
+                <section id="section-shortcuts" class="settings-section space-y-5">
+                  <div>
+                    <h3 class="text-lg font-bold" style="color: var(--fm-text);">Keyboard Shortcuts</h3>
+                  </div>
+                  <div class="p-5 rounded-xl space-y-2" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+                    ${[
+      { keys: 'Ctrl + Enter', action: 'Submit / Fill Form' },
+      { keys: 'Ctrl + Z', action: 'Undo Answer' },
+      { keys: 'Ctrl + Shift + Z', action: 'Redo Answer' },
+      { keys: 'Escape', action: 'Close Modal / Panel' },
+      { keys: 'Tab', action: 'Next Question' },
+    ].map(s => `
+                      <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--fm-surface);">
+                        <span class="text-xs" style="color: var(--fm-text-secondary);">${s.action}</span>
+                        <kbd class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" style="background: var(--fm-bg-sunken); color: var(--fm-text);">${s.keys}</kbd>
+                      </div>
+                    `).join('')}
+                  </div>
+                </section>
+
+                <!-- Account -->
+                <section id="section-account" class="settings-section space-y-5">
+                  <div>
+                    <h3 class="text-lg font-bold" style="color: var(--fm-text);">Account Management</h3>
+                  </div>
+                  <div class="p-5 rounded-xl space-y-4" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+                    <button id="btn-signout" class="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 btn-press" style="border: 1px solid var(--fm-border); color: var(--fm-text);">
+                      <span class="material-symbols-outlined text-sm">logout</span> Sign Out
+                    </button>
+                    <button id="btn-delete-account" class="w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 btn-press" style="background: var(--fm-error-light); color: var(--fm-error);">
+                      <span class="material-symbols-outlined text-sm">delete</span> Delete Account
+                    </button>
+                  </div>
+                </section>
+
+                <!-- Help Link in Settings -->
+                <section class="p-6 rounded-xl text-center space-y-3" style="background: var(--fm-primary-50); border: 1px dashed var(--fm-primary-200);">
+                   <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                     <span class="material-symbols-outlined">quiz</span>
+                   </div>
+                   <div>
+                     <h4 class="font-bold text-sm" style="color: var(--fm-text);">Got more questions?</h4>
+                     <p class="text-xs mt-1" style="color: var(--fm-text-tertiary);">Visit our Help Center for detailed guides and FAQs.</p>
+                   </div>
+                   <button onclick="window.__fmNav('docs')" class="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 transition-all btn-press shadow-sm">
+                     Visit Help Center
+                   </button>
+                </section>
+              </div>
+
+              <!-- Subtabs (Right Side) -->
+              <aside class="w-48 shrink-0 flex flex-col border-l pl-4 overflow-y-auto no-scrollbar" style="border-color: var(--fm-border);">
+                <nav id="settings-nav" class="space-y-1">
+                  ${[
+      { id: 'ai', icon: 'neurology', label: 'AI Behavior' },
+      { id: 'ui', icon: 'palette', label: 'Appearance' },
+      { id: 'shortcuts', icon: 'keyboard', label: 'Shortcuts' },
+      { id: 'account', icon: 'manage_accounts', label: 'Account' },
+    ].map((item, i) => `
+                    <a class="settings-nav-item flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors" data-section="${item.id}"
+                      style="${i === 0 ? 'background: var(--fm-primary-50); color: var(--fm-primary); font-weight: 600;' : 'color: var(--fm-text-secondary);'}">
+                      <span class="material-symbols-outlined text-base">${item.icon}</span> <span class="text-xs">${item.label}</span>
+                    </a>
+                  `).join('')}
+                </nav>
+              </aside>
+
+            </div>
           </div>
         </div>
       </main>
@@ -201,10 +319,15 @@ export function accountsScreen() {
   function init(wrapper) {
     // Navigation
     window.__fmNav = (screen) => navigateTo(screen);
-    wrapper.querySelector('#btn-back').addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
+
+    wrapper.querySelector('#sidebar-nav-settings')?.addEventListener('click', () => {
+      const settingsTabBtn = wrapper.querySelector('[data-tab-index="4"]');
+      if (settingsTabBtn) settingsTabBtn.click();
+    });
 
     // Tabs
-    const tabIds = ['tab-profile', 'tab-vault', 'tab-history', 'tab-style'];
+    const tabIds = ['tab-profile', 'tab-vault', 'tab-history', 'tab-style', 'tab-settings'];
     initTabs(wrapper, 'account-tabs', (index) => {
       tabIds.forEach((id, i) => {
         wrapper.querySelector(`#${id}`).classList.toggle('hidden', i !== index);
@@ -289,6 +412,80 @@ export function accountsScreen() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Data exported!');
+    });
+
+    // --- Settings Tab Logic ---
+    wrapper.querySelectorAll('.settings-nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const sectionId = `section-${item.dataset.section}`;
+        const section = wrapper.querySelector(`#${sectionId}`);
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        wrapper.querySelectorAll('.settings-nav-item').forEach(n => {
+          n.style.background = '';
+          n.style.color = 'var(--fm-text-secondary)';
+          n.style.fontWeight = '';
+        });
+        item.style.background = 'var(--fm-primary-50)';
+        item.style.color = 'var(--fm-primary)';
+        item.style.fontWeight = '600';
+      });
+    });
+
+    const tempSlider = wrapper.querySelector('#set-temperature');
+    const tempVal = wrapper.querySelector('#temp-val');
+    tempSlider?.addEventListener('input', () => {
+      tempVal.textContent = tempSlider.value;
+      updateSettings('ai.temperature', parseFloat(tempSlider.value));
+      if (typeof logSettingsChanged === 'function') logSettingsChanged('ai');
+    });
+
+    wrapper.querySelectorAll('.set-verbosity').forEach(btn => {
+      btn.addEventListener('click', () => {
+        wrapper.querySelectorAll('.set-verbosity').forEach(b => {
+          b.style.borderColor = 'var(--fm-border)';
+          b.style.background = '';
+          b.style.color = 'var(--fm-text-secondary)';
+        });
+        btn.style.borderColor = 'var(--fm-primary)';
+        btn.style.background = 'var(--fm-primary-50)';
+        btn.style.color = 'var(--fm-primary)';
+        updateSettings('ai.verbosity', btn.dataset.value);
+        if (typeof logSettingsChanged === 'function') logSettingsChanged('ai');
+      });
+    });
+
+    const toggleMap = {
+      'set-compact': 'ui.compactMode',
+      'set-animations': 'ui.animationsEnabled',
+      'set-sidebar': 'ui.sidebarDefault',
+      'set-chat-panel': 'ui.chatPanelDefault'
+    };
+
+    Object.entries(toggleMap).forEach(([id, path]) => {
+      const el = wrapper.querySelector(`#${id}`);
+      if (el) {
+        el.addEventListener('change', () => {
+          updateSettings(path, el.checked);
+          if (typeof logSettingsChanged === 'function') logSettingsChanged(path.split('.')[0]);
+        });
+      }
+    });
+
+    wrapper.querySelector('#btn-signout')?.addEventListener('click', () => {
+      signOut();
+      setState({ isAuthenticated: false, authUser: null });
+      toast.info('Signed out.');
+      navigateTo('auth');
+    });
+
+    wrapper.querySelector('#btn-delete-account')?.addEventListener('click', async () => {
+      if (confirm('This will permanently delete your account and all data. This action cannot be undone.')) {
+        await deleteAccount();
+        clearAll();
+        toast.warning('Account deleted.');
+        navigateTo('auth');
+      }
     });
 
     return () => { delete window.__fmNav; };

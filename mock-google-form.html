@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Party RSVP</title>
+</head>
+
+<body>
+  <div class="F9yp7e">Party RSVP</div>
+  <div class="wGQFbe">Please let us know if you can make it!</div>
+
+  <div role="listitem">
+    <div role="heading">Name</div>
+    <input type="text" id="q1" aria-required="true" />
+  </div>
+
+  <div role="listitem">
+    <div role="heading">Email</div>
+    <input type="email" id="q2" required />
+  </div>
+
+  <div role="listitem">
+    <div role="heading">Are you coming?</div>
+    <label for="coming-yes">Yes</label>
+    <input type="radio" id="coming-yes" aria-label="Yes" role="radio" name="coming" />
+    <label for="coming-no">No</label>
+    <input type="radio" id="coming-no" aria-label="No" role="radio" name="coming" />
+  </div>
+
+  <div role="listitem">
+    <div role="heading">Dietary Restrictions *</div>
+    <label for="diet-veg">Vegetarian</label>
+    <input type="checkbox" id="diet-veg" aria-label="Vegetarian" role="checkbox" />
+    <label for="diet-vegan">Vegan</label>
+    <input type="checkbox" id="diet-vegan" aria-label="Vegan" role="checkbox" />
+  </div>
+
+  <div role="listitem">
+    <div role="heading">Any other comments?</div>
+    <textarea></textarea>
+  </div>
+
+  <div role="listitem">
+    <div role="heading">Party date preference</div>
+    <div role="listbox">
+      <div role="option" data-value="Friday">Friday</div>
+      <div role="option" data-value="Saturday">Saturday</div>
+      <div role="option" data-value="Sunday">Sunday</div>
+    </div>
+  </div>
+
+</body>
+
+</html>

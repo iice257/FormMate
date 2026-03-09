@@ -15,17 +15,17 @@
 //   whisper-large-v3      → speech-to-text
 // ═══════════════════════════════════════════
 
-// Proxy endpoints (API key stays server-side)
-const PROXY_CHAT_URL = '/api/ai/chat';
-const PROXY_AUDIO_URL = '/api/ai/transcribe';
+import { getState } from '../state.js';
+
+const GROQ_BASE = 'https://api.groq.com/openai/v1';
 
 // ─── Model Registry (vendor-prefixed for Groq) ──
 
 export const MODELS = {
-  HEAVY: 'openai/gpt-oss-120b',
-  STANDARD: 'openai/gpt-oss-20b',
-  COPILOT: 'qwen/qwen3-32b',
-  FAST: 'llama-3.1-8b-instant',
+  HEAVY: 'llama-3.3-70b-versatile',
+  STANDARD: 'llama-3.1-8b-instant',
+  COPILOT: 'mixtral-8x7b-32768',
+  FAST: 'llama3-8b-8192',
   WHISPER: 'whisper-large-v3',
 };
 
@@ -33,11 +33,13 @@ export const MODELS = {
 
 export const TASK_ROUTES = {
   'form_understanding': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
+  'form_parsing': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'question_intent': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'answer_generation': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
   'regeneration': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
   'copilot_chat': { model: MODELS.COPILOT, fallback: [MODELS.FAST, MODELS.STANDARD] },
   'quick_edit': { model: MODELS.FAST, fallback: [MODELS.COPILOT] },
+  'docs_chat': { model: MODELS.FAST, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'voice_transcription': { model: MODELS.WHISPER, fallback: [] },
 };
 
@@ -74,7 +76,8 @@ const CACHE_MAX = 100;
 const cache = new Map();
 
 function getCacheKey(task, prompt) {
-  return `${task}::${prompt.substring(0, 200)}`;
+  // Use a simple hash or the full string to avoid collisions on long system prompts
+  return `${task}::${prompt}`;
 }
 
 function getCached(key) {
@@ -106,9 +109,19 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
     body.response_format = { type: 'json_object' };
   }
 
-  const response = await fetch(PROXY_CHAT_URL, {
+  const state = getState();
+  const apiKey = state.groqApiKey || ((typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : undefined);
+
+  if (!apiKey) {
+    throw new Error('[AIService] Missing Groq API Key. Please add VITE_GROQ_API_KEY to your .env file or input it in settings.');
+  }
+
+  const response = await fetch(`${GROQ_BASE}/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
     body: JSON.stringify(body),
   });
 
@@ -202,8 +215,18 @@ export async function transcribeAudio(audioBlob) {
   formData.append('model', MODELS.WHISPER);
   formData.append('response_format', 'json');
 
-  const response = await fetch(PROXY_AUDIO_URL, {
+  const state = getState();
+  const apiKey = state.groqApiKey || ((typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : undefined);
+
+  if (!apiKey) {
+    throw new Error('[AIService] Missing Groq API Key. Please add VITE_GROQ_API_KEY to your .env file or input it in settings.');
+  }
+
+  const response = await fetch(`${GROQ_BASE}/audio/transcriptions`, {
     method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: formData,
   });
 

@@ -15,10 +15,10 @@ export function authScreen() {
       <div class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden" style="background: var(--fm-gradient-primary);">
         <div class="relative z-10">
           <div class="flex items-center gap-3 mb-16">
-            <div class="flex items-center justify-center size-10 rounded-xl bg-white/20 backdrop-blur-sm">
-              <span class="material-symbols-outlined text-white text-2xl">dynamic_form</span>
+            <div class="size-10 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain filter brightness-0 invert" />
             </div>
-            <h2 class="text-white text-xl font-bold tracking-tight">FormMate</h2>
+            <h2 class="text-white text-2xl font-black tracking-tighter">Form<span class="text-white/80">Mate</span></h2>
           </div>
 
           <h1 class="text-white text-5xl font-extrabold leading-tight tracking-tight mb-6">
@@ -38,7 +38,7 @@ export function authScreen() {
             `).join('')}
           </div>
           <div>
-            <p class="text-white text-sm font-semibold">12,000+ professionals</p>
+            <p class="text-white text-sm font-semibold">500+ professionals</p>
             <p class="text-white/50 text-xs">trust FormMate daily</p>
           </div>
         </div>
@@ -55,10 +55,10 @@ export function authScreen() {
         <div class="w-full max-w-[420px]">
           <!-- Mobile logo -->
           <div class="lg:hidden flex items-center gap-3 mb-10">
-            <div class="flex items-center justify-center size-10 rounded-xl" style="background: var(--fm-primary);">
-              <span class="material-symbols-outlined text-white text-2xl">dynamic_form</span>
+            <div class="size-10 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-xl font-bold tracking-tight" style="color: var(--fm-text);">FormMate</h2>
+            <h2 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h2>
           </div>
 
           <!-- Login Form (default) -->
@@ -106,6 +106,8 @@ export function authScreen() {
                 Apple
               </button>
             </div>
+
+
 
             <p class="text-center text-xs mt-6" style="color: var(--fm-text-tertiary);">
               Don't have an account? <button id="btn-to-signup" class="font-semibold hover:underline" style="color: var(--fm-primary);">Create one</button>
@@ -235,6 +237,8 @@ export function authScreen() {
       }
     });
 
+
+
     // Signup
     wrapper.querySelector('#btn-signup').addEventListener('click', async () => {
       const name = wrapper.querySelector('#signup-name').value.trim();
@@ -295,7 +299,8 @@ export function authScreen() {
     });
 
     // Social login
-    wrapper.querySelector('#btn-google').addEventListener('click', async () => {
+    wrapper.querySelector('#btn-google').addEventListener('click', async (e) => {
+      e.preventDefault();
       try {
         const session = await signInWithGoogle();
         setState({ isAuthenticated: true, authUser: session.user });
@@ -306,7 +311,8 @@ export function authScreen() {
       }
     });
 
-    wrapper.querySelector('#btn-apple').addEventListener('click', async () => {
+    wrapper.querySelector('#btn-apple').addEventListener('click', async (e) => {
+      e.preventDefault();
       try {
         const session = await signInWithApple();
         setState({ isAuthenticated: true, authUser: session.user });

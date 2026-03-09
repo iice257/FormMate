@@ -12,6 +12,7 @@ import {
   loadVault, saveVault,
   loadFormHistory,
   isOnboardingComplete,
+  load, save
 } from './storage/local-store.js';
 
 // ─── Event Bus ───────────────────────────
@@ -26,14 +27,14 @@ const state = {
   formUrl: '',
 
   // Form data from parser
-  formData: null,
+  formData: load('form_data_state') || null,
 
   // AI-generated answers: { [questionId]: { text, source, confidence } }
-  answers: {},
+  answers: load('answers_state') || {},
 
   // Answer history for undo/redo: { [questionId]: [{ text, source, confidence }] }
-  answerHistory: {},
-  answerHistoryIndex: {},
+  answerHistory: load('answer_history') || {},
+  answerHistoryIndex: load('answer_history_index') || {},
 
   // Analysis progress
   analysisProgress: {
@@ -46,7 +47,7 @@ const state = {
   chatMessages: [],
 
   // Groq API key
-  groqApiKey: import.meta.env.VITE_GROQ_API_KEY || '',
+  groqApiKey: (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : '',
 
   // UI state
   activeQuestionId: null,
@@ -92,6 +93,7 @@ export function setState(updates) {
   if (updates.userProfile) saveProfile(updates.userProfile);
   if (updates.settings) saveSettings(updates.settings);
   if (updates.vault) saveVault(updates.vault);
+  if (updates.formData) save('form_data_state', updates.formData);
 
   listeners.forEach(fn => fn(state));
 }
@@ -127,6 +129,11 @@ export function updateAnswer(questionId, text, source = 'user') {
     ...state.answers,
     [questionId]: answer,
   };
+
+  save('answers_state', state.answers);
+  save('answer_history', state.answerHistory);
+  save('answer_history_index', state.answerHistoryIndex);
+
   listeners.forEach(fn => fn(state));
 }
 
@@ -138,6 +145,10 @@ export function undoAnswer(questionId) {
   state.answerHistoryIndex[questionId] = idx - 1;
   const prev = history[idx - 1];
   state.answers = { ...state.answers, [questionId]: { ...prev } };
+
+  save('answers_state', state.answers);
+  save('answer_history_index', state.answerHistoryIndex);
+
   listeners.forEach(fn => fn(state));
   return prev;
 }
@@ -150,6 +161,10 @@ export function redoAnswer(questionId) {
   state.answerHistoryIndex[questionId] = idx + 1;
   const next = history[idx + 1];
   state.answers = { ...state.answers, [questionId]: { ...next } };
+
+  save('answers_state', state.answers);
+  save('answer_history_index', state.answerHistoryIndex);
+
   listeners.forEach(fn => fn(state));
   return next;
 }

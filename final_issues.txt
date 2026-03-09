@@ -1,0 +1,49 @@
+﻿Found additional issues: 48
+[Input missing id/aria-label for a11y] src\components\question-card.js:70
+[Clickable div/span without ARIA/tabindex] src\components\question-card.js:95
+[Clickable div/span without ARIA/tabindex] src\components\question-card.js:113
+[Input missing id/aria-label for a11y] src\components\question-card.js:139
+[Clickable div/span without ARIA/tabindex] src\components\question-card.js:161
+[Input missing id/aria-label for a11y] src\components\question-card.js:172
+[a tag missing href] src\screens\accounts.js:30
+[a tag missing href] src\screens\accounts.js:33
+[a tag missing href] src\screens\accounts.js:36
+[a tag missing href] src\screens\accounts.js:39
+[Clickable div/span without ARIA/tabindex] src\screens\accounts.js:146
+[a tag missing href] src\screens\analytics.js:54
+[a tag missing href] src\screens\analytics.js:57
+[Clickable div/span without ARIA/tabindex] src\screens\examples.js:15
+[Clickable div/span without ARIA/tabindex] src\screens\examples.js:148
+[a tag missing href] src\screens\help.js:30
+[a tag missing href] src\screens\help.js:33
+[a tag missing href] src\screens\help.js:36
+[a tag missing href] src\screens\help.js:39
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:26
+[a tag missing href] src\screens\landing.js:34
+[a tag missing href] src\screens\landing.js:35
+[a tag missing href] src\screens\landing.js:36
+[a tag missing href] src\screens\landing.js:37
+[a tag missing href] src\screens\landing.js:38
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:47
+[Input missing id/aria-label for a11y] src\screens\landing.js:76
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:91
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:92
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:93
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:126
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:357
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:363
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:369
+[Clickable div/span without ARIA/tabindex] src\screens\landing.js:375
+[a tag missing href] src\screens\landing.js:463
+[a tag missing href] src\screens\landing.js:464
+[a tag missing href] src\screens\landing.js:465
+[a tag missing href] src\screens\landing.js:466
+[Input missing id/aria-label for a11y] src\screens\review.js:60
+[a tag missing href] src\screens\settings.js:37
+[Clickable div/span without ARIA/tabindex] src\screens\success.js:73
+[Clickable div/span without ARIA/tabindex] src\screens\success.js:100
+[a tag missing href] src\screens\success.js:126
+[a tag missing href] src\screens\success.js:127
+[a tag missing href] src\screens\success.js:128
+[Clickable div/span without ARIA/tabindex] src\screens\workspace.js:41
+[Clickable div/span without ARIA/tabindex] src\screens\workspace.js:137

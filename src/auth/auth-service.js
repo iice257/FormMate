@@ -58,6 +58,7 @@ export async function signUp(email, password, name = '') {
     id: generateId(),
     email,
     name,
+    tier: 'free',
     createdAt: Date.now(),
   };
 
@@ -66,7 +67,7 @@ export async function signUp(email, password, name = '') {
   save(USERS_KEY, users);
 
   // Create session
-  const session = { user, isAuthenticated: true, createdAt: Date.now() };
+  const session = { user, isAuthenticated: true, tier: 'free', createdAt: Date.now() };
   save(AUTH_KEY, session);
 
   notifyListeners(session);
@@ -90,8 +91,8 @@ export async function signIn(email, password) {
     throw new Error('Incorrect password. Please try again.');
   }
 
-  const user = { id: stored.id, email: stored.email, name: stored.name };
-  const session = { user, isAuthenticated: true, createdAt: Date.now() };
+  const user = { id: stored.id, email: stored.email, name: stored.name, tier: stored.tier || 'free' };
+  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
   save(AUTH_KEY, session);
 
   notifyListeners(session);
@@ -115,13 +116,14 @@ export async function signInWithGoogle() {
       email,
       name: 'Google User',
       provider: 'google',
+      tier: 'free',
       createdAt: Date.now(),
     };
     save(USERS_KEY, users);
   }
 
-  const user = { id: users[email].id, email, name: users[email].name };
-  const session = { user, isAuthenticated: true, createdAt: Date.now() };
+  const user = { id: users[email].id, email, name: users[email].name, tier: users[email].tier || 'free' };
+  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
   save(AUTH_KEY, session);
 
   notifyListeners(session);
@@ -143,13 +145,14 @@ export async function signInWithApple() {
       email,
       name: 'Apple User',
       provider: 'apple',
+      tier: 'free',
       createdAt: Date.now(),
     };
     save(USERS_KEY, users);
   }
 
-  const user = { id: users[email].id, email, name: users[email].name };
-  const session = { user, isAuthenticated: true, createdAt: Date.now() };
+  const user = { id: users[email].id, email, name: users[email].name, tier: users[email].tier || 'free' };
+  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
   save(AUTH_KEY, session);
 
   notifyListeners(session);
@@ -240,3 +243,32 @@ function simpleHash(str) {
   }
   return 'h_' + Math.abs(hash).toString(36);
 }
+
+// Ensure test users exist
+export function initializeTestUser() {
+  const users = load(USERS_KEY) || {};
+
+  const testUsers = [
+    { email: 'free@formmate.ai', name: 'Free User', tier: 'free' },
+    { email: 'weekly@formmate.ai', name: 'Pro Weekly User', tier: 'weekly' },
+    { email: 'monthly@formmate.ai', name: 'Pro Monthly User', tier: 'monthly' }
+  ];
+
+  let changed = false;
+  testUsers.forEach(u => {
+    if (!users[u.email]) {
+      users[u.email] = {
+        id: generateId(),
+        email: u.email,
+        name: u.name,
+        tier: u.tier,
+        createdAt: Date.now(),
+        passwordHash: simpleHash('password')
+      };
+      changed = true;
+    }
+  });
+
+  if (changed) save(USERS_KEY, users);
+}
+initializeTestUser();

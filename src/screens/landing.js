@@ -6,32 +6,39 @@ import { setState, getState } from '../state.js';
 import { navigateTo } from '../router.js';
 
 export function landingScreen() {
+  const { isAuthenticated, userProfile } = getState();
+
+  const authButtonHtml = isAuthenticated
+    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
+         <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+       </button>`
+    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
+
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh dark-mode-transition">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header class="flex items-center justify-between px-6 py-4 md:px-12 lg:px-24 glass-header sticky top-0 z-50 transition-all">
-          <div class="flex items-center gap-8">
-            <div class="flex items-center gap-2.5 btn-press">
-              <div class="flex items-center justify-center size-10 rounded-xl bg-gradient-to-br from-primary to-primary-light text-white shadow-primary">
-                <span class="material-symbols-outlined text-xl">dynamic_form</span>
+        <header class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+          <div class="flex-1 flex items-center justify-start">
+            <div class="flex items-center gap-2.5 btn-press cursor-pointer">
+              <div class="size-10 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
-              <h2 class="text-slate-900 text-xl font-black tracking-tight" style="font-family: var(--fm-font-sans)">FormMate</h2>
+              <h2 class="text-slate-900 text-2xl font-black tracking-tighter" style="font-family: var(--fm-font-sans)">Form<span class="text-primary">Mate</span></h2>
             </div>
-            <nav class="hidden md:flex gap-8 text-sm font-semibold text-slate-500">
-              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-product">Product</a>
-              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-features">Features</a>
-              <a class="hover:text-primary transition-colors cursor-pointer" id="nav-pricing">Pricing</a>
-            </nav>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="hidden lg:flex items-center gap-1.5 mr-4 text-slate-400 bg-white/50 px-2 py-1 rounded-md border border-slate-200 shadow-sm cursor-pointer hover:bg-white transition-colors">
-              <span class="material-symbols-outlined text-[14px]">search</span>
-              <span class="text-[10px] font-mono font-bold">Cmd K</span>
-            </div>
-            <button class="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors px-4 py-2" id="btn-login">Login</button>
-            <button class="bg-slate-900 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-signup">Get Started</button>
+          
+          <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
+            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Forms</a>
+            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</a>
+            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-pricing">${(getState().tier && getState().tier !== 'free') ? 'Subscription' : 'Pricing'}</a>
+            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</a>
+          </nav>
+ 
+          <div class="flex-1 flex items-center justify-end gap-3">
+            ${authButtonHtml}
           </div>
         </header>
 
@@ -48,29 +55,30 @@ export function landingScreen() {
             </h1>
 
             <p class="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed mt-6">
-              Paste a form link and let AI generate smart answers, refine them with conversation, and autofill the entire form effortlessly.
+              Paste any <span class="font-bold text-slate-700">public</span> form link and let AI generate smart answers, refine them with conversation, and autofill the entire form effortlessly.
             </p>
 
             <!-- URL Input -->
-            <div class="mt-12 w-full max-w-2xl mx-auto">
-              <div class="bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+            <div class="mt-12 w-full max-w-2xl mx-auto relative relative z-20">
+
+              <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
                 <div class="flex-1 relative">
-                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
+                  <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
                   <input
                     id="url-input"
-                    class="w-full pl-11 pr-4 h-14 rounded-xl border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-base bg-transparent font-medium"
+                    class="w-full pl-14 pr-4 h-14 rounded-full border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-base bg-transparent font-medium focus-glow"
                     placeholder="Paste your form link here..."
                     type="text"
                   />
                 </div>
-                <button id="btn-analyze" class="bg-primary text-white px-8 h-14 rounded-xl font-bold text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group">
+                <button id="btn-analyze" class="bg-primary text-white px-8 h-14 rounded-full font-bold text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group">
                   Start Analyzing
                   <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
               </div>
 
               <p class="mt-4 text-slate-400 text-sm">
-                Or try out these examples:
+                Try out these examples:
                 <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="job-application">Job Application</span>,
                 <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Mortgage Form</span>, or
                 <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="travel-visa">Travel Visa</span>
@@ -80,7 +88,7 @@ export function landingScreen() {
 
           <!-- Workspace Preview (inline mockup) -->
           <div class="max-w-[1020px] w-full mt-20 stagger-children">
-            <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(91,19,236,0.15)] transition-all duration-500">
+            <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(91,19,236,0.15)] transition-all duration-500">
               <!-- Preview Chrome Bar -->
               <div class="flex items-center gap-2 px-4 py-3 bg-slate-100/50 border-b border-slate-200/60">
                 <div class="flex gap-1.5">
@@ -100,8 +108,10 @@ export function landingScreen() {
                 <!-- Sidebar Preview -->
                 <div class="w-56 border-r border-slate-200/60 p-5 hidden md:flex flex-col gap-3 bg-slate-50/50">
                   <div class="flex items-center gap-2 mb-4">
-                    <div class="size-7 bg-gradient-to-br from-primary to-primary-light text-white rounded-lg flex items-center justify-center font-bold text-sm shadow-sm">F</div>
-                    <span class="text-sm font-black text-slate-800 tracking-tight">FormMate</span>
+                    <div class="size-7 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+                    </div>
+                    <span class="text-sm font-black text-slate-900 tracking-tighter">Form<span class="text-primary">Mate</span></span>
                   </div>
                   <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-900 text-[13px] font-bold shadow-sm">
                     <span class="material-symbols-outlined text-[18px] text-primary">edit_document</span> Active Form
@@ -179,21 +189,21 @@ export function landingScreen() {
             <p class="text-slate-400 text-sm max-w-lg mx-auto mb-12">We've spent thousands of hours analyzing the friction of data entry. Here is what we're fixing.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="p-6 rounded-2xl card-premium shadow-sm text-left">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">edit_note</span>
                 </div>
                 <h3 class="text-base font-bold text-slate-900 mb-2">Tedious Forms</h3>
                 <p class="text-slate-500 text-sm leading-relaxed">The average person spends 4 hours a month filling out repetitive online forms and applications.</p>
               </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm text-left">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">replay</span>
                 </div>
                 <h3 class="text-base font-bold text-slate-900 mb-2">Repetitive Answers</h3>
                 <p class="text-slate-500 text-sm leading-relaxed">How many times have you typed your address or work history? We stop the endless cycle of repetition.</p>
               </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm text-left">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm text-left">
                 <div class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                   <span class="material-symbols-outlined text-lg">psychology_alt</span>
                 </div>
@@ -237,7 +247,7 @@ export function landingScreen() {
 
               <!-- Right: Mockup -->
               <div class="flex-1 w-full">
-                <div class="bg-white rounded-2xl border border-slate-200/60 shadow-xl overflow-hidden">
+                <div class="bg-white rounded-[var(--fm-card-radius)] border border-slate-200/60 shadow-xl overflow-hidden">
                   <div class="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                     <div class="flex gap-1.5">
                       <div class="size-2.5 rounded-full bg-slate-200"></div>
@@ -281,7 +291,7 @@ export function landingScreen() {
           <section class="max-w-[960px] w-full mt-28">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Contextual AI Answer Gen -->
-              <div class="p-8 rounded-2xl card-premium shadow-sm">
+              <div class="p-8 rounded-[var(--fm-card-radius)] card-premium shadow-sm">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">auto_awesome</span>
                 </div>
@@ -294,7 +304,7 @@ export function landingScreen() {
               </div>
 
               <!-- Conversational Editing -->
-              <div class="p-8 rounded-2xl card-premium shadow-sm">
+              <div class="p-8 rounded-[var(--fm-card-radius)] card-premium shadow-sm">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">chat</span>
                 </div>
@@ -309,7 +319,7 @@ export function landingScreen() {
 
             <!-- Instant Autofill + Voice Input -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <div class="p-8 rounded-2xl card-premium shadow-sm">
+              <div class="p-8 rounded-[var(--fm-card-radius)] card-premium shadow-sm">
                 <div class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <span class="material-symbols-outlined">bolt</span>
                 </div>
@@ -317,24 +327,27 @@ export function landingScreen() {
                 <p class="text-slate-500 text-sm leading-relaxed">Works across millions of sites. One keyboard shortcut or button click activates the FormMate helper on any web application.</p>
               </div>
 
-              <div class="p-8 rounded-2xl bg-slate-900 text-white">
+              <div class="p-8 rounded-[var(--fm-card-radius)] bg-slate-900 text-white">
                 <div class="flex items-center justify-between mb-5">
                   <h3 class="text-xl font-bold">Voice Input Mode</h3>
                   <div class="size-10 rounded-full bg-primary flex items-center justify-center">
                     <span class="material-symbols-outlined text-white">mic</span>
                   </div>
                 </div>
-                <p class="text-slate-300 text-sm leading-relaxed">Speak naturally. FormMate listens to your verbal responses and converts them into perfectly formatted form data.</p>
+                <p class="text-slate-300 text-sm leading-relaxed">Speak naturally. FormMate AI listens to your verbal responses and converts them into perfectly formatted form data.</p>
               </div>
             </div>
           </section>
 
           <!-- ═══ Section: Built for every application ═══ -->
           <section class="max-w-[960px] w-full mt-28 text-center">
-            <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-12">Built for every application</h2>
+            <div class="mb-12">
+              <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Built for every application</h2>
+              <p class="text-slate-500 text-lg">Try out these examples</p>
+            </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div class="p-6 rounded-2xl card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">work</span>
                 </div>
@@ -346,7 +359,7 @@ export function landingScreen() {
                 </div>
                 <span class="text-sm font-bold text-slate-900">Scholarships</span>
               </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="customer-feedback">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="customer-feedback">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">poll</span>
                 </div>
@@ -362,39 +375,21 @@ export function landingScreen() {
           </section>
 
           <!-- ═══ Section: Testimonials ═══ -->
-          <section class="max-w-[960px] w-full mt-20">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="p-6 rounded-2xl card-premium shadow-sm">
-                <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"I applied to 60 jobs in the time it used to take to do 5. This is a game changer for job seekers."</p>
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">AE</div>
-                  <div>
-                    <p class="text-sm font-bold text-slate-900">Alex Evans</p>
-                    <p class="text-xs text-slate-400">Product Designer</p>
-                  </div>
-                </div>
-              </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm">
-                <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"The contextual generation is spooky accurate. It actually improved my personal statement on my college app."</p>
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">SJ</div>
-                  <div>
-                    <p class="text-sm font-bold text-slate-900">Sarah Jardine</p>
-                    <p class="text-xs text-slate-400">High School Senior</p>
-                  </div>
-                </div>
-              </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm">
-                <p class="text-slate-600 text-sm leading-relaxed italic mb-4">"As a busy consultant, I have to fill dozens of intake forms weekly. FormMate saves me at least 5 hours a week."</p>
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">MC</div>
-                  <div>
-                    <p class="text-sm font-bold text-slate-900">Marcus Chen</p>
-                    <p class="text-xs text-slate-400">Consultant</p>
-                  </div>
-                </div>
-              </div>
+          <section class="max-w-[1000px] w-full mt-28 mx-auto text-center flex flex-col items-center">
+            <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-4">Loved by <span class="text-primary font-cursive">thousands</span></h2>
+            <p class="text-slate-500 text-lg mb-12">What people are saying</p>
+            
+            <div id="testimonials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full text-left transition-all duration-500 overflow-hidden relative" style="max-height: 220px;">
+              <!-- Initially we'll just put an empty div, we will render it via JS! -->
             </div>
+            
+            <!-- Fade out gradient for collapsed state -->
+            <div id="testimonials-fade" class="w-full h-32 -mt-32 bg-gradient-to-t from-mesh to-transparent pointer-events-none relative z-10 transition-opacity"></div>
+
+            <button id="btn-more-testimonials" class="mt-8 text-sm font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 transition-colors mx-auto py-2.5 px-5 rounded-full hover:bg-slate-100 border border-transparent hover:border-slate-200 relative z-20">
+              <span id="btn-more-text">read more testimonials</span>
+              <span id="btn-more-icon" class="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
           </section>
 
           <!-- ═══ Section: CTA Banner ═══ -->
@@ -403,13 +398,13 @@ export function landingScreen() {
               <h2 class="text-white text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-3">
                 Stop filling forms<br><span class="text-primary">manually.</span>
               </h2>
-              <p class="text-slate-400 text-base max-w-md mx-auto mb-8">Join 50,000+ others who have reclaimed their time with AI-powered form filling.</p>
+              <p class="text-slate-400 text-base max-w-md mx-auto mb-8">Join 500+ early adopters who have reclaimed their time with AI-powered form filling.</p>
               <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button id="btn-cta-start" class="bg-primary text-white px-8 py-3.5 rounded-full font-bold text-base hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 btn-press">
                   Get Started Now
                 </button>
-                <button id="btn-cta-contact" class="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold text-base hover:bg-white/20 transition-all">
-                  Contact Sales
+                <button id="btn-cta-dashboard" class="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold text-base hover:bg-white/20 transition-all">
+                  Go to Dashboard
                 </button>
               </div>
             </div>
@@ -418,21 +413,23 @@ export function landingScreen() {
         </main>
 
         <!-- Footer -->
-        <footer class="px-6 md:px-20 lg:px-40 py-10 border-t border-slate-100 bg-white">
-          <div class="max-w-[960px] mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
-            <div class="flex items-center gap-2.5">
-              <div class="size-8 rounded-lg bg-primary text-white flex items-center justify-center">
-                <span class="material-symbols-outlined text-lg">dynamic_form</span>
+        <footer class="px-6 md:px-20 lg:px-40 py-12 border-t border-slate-100 bg-white">
+          <div class="max-w-[1100px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+            <div class="flex items-center gap-2.5 shrink-0">
+              <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
-              <span class="font-bold text-slate-900">FormMate</span>
+              <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
             </div>
-            <div class="flex flex-wrap gap-x-12 gap-y-4 text-xs text-slate-500 font-medium">
+            
+            <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
               <a class="hover:text-primary transition-colors cursor-pointer">Privacy Policy</a>
               <a class="hover:text-primary transition-colors cursor-pointer">Terms of Service</a>
               <a class="hover:text-primary transition-colors cursor-pointer">Cookie Settings</a>
-              <a class="hover:text-primary transition-colors cursor-pointer">Help Center</a>
+              <a class="hover:text-primary transition-colors cursor-pointer" onclick="window.__fmNav('docs')">Help Center</a>
             </div>
-            <span class="text-xs text-slate-400">© 2026 FormMate AI</span>
+            
+            <div class="text-xs text-slate-400 shrink-0">© 2026 FormMate</div>
           </div>
         </footer>
 
@@ -450,16 +447,79 @@ export function landingScreen() {
 
     // Analyze button
     btnAnalyze.addEventListener('click', () => {
-      const url = urlInput.value.trim();
+      let url = urlInput.value.trim();
+
+      // Basic reset
+      urlInput.classList.remove('ring-2', 'ring-red-500', 'animate-shake-horizontal');
+      btnAnalyze.innerHTML = `Start Analyzing <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>`;
+
       if (!url) {
-        urlInput.focus();
-        urlInput.classList.add('ring-2', 'ring-red-300');
-        setTimeout(() => urlInput.classList.remove('ring-2', 'ring-red-300'), 1500);
+        triggerError('Please enter a link');
         return;
       }
+
+      // Auto-prepend https if missing
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+        urlInput.value = url;
+      }
+
+      // Robust Whitelist Check
+      if (!isValidFormProvider(url)) {
+        triggerError('Unsupported form provider');
+        return;
+      }
+
+      try {
+        new URL(url); // Ensure it's structurally valid
+      } catch (e) {
+        triggerError('Invalid URL format');
+        return;
+      }
+
       setState({ formUrl: url });
       navigateTo('analyzing');
     });
+
+    function triggerError(msg) {
+      urlInput.focus();
+      urlInput.classList.add('ring-2', 'ring-red-500', 'animate-shake-horizontal');
+      btnAnalyze.innerHTML = `<span class="material-symbols-outlined text-xl">error</span> ${msg}`;
+      btnAnalyze.classList.add('bg-red-500', 'hover:bg-red-600');
+
+      setTimeout(() => {
+        urlInput.classList.remove('ring-2', 'ring-red-500', 'animate-shake-horizontal');
+        btnAnalyze.innerHTML = `Start Analyzing <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>`;
+        btnAnalyze.classList.remove('bg-red-500', 'hover:bg-red-600');
+      }, 2000);
+    }
+
+    function isValidFormProvider(url) {
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+
+        // Robust checks covering forms, subdomains, and CDNs
+        const whitelistedDomains = [
+          'docs.google.com', 'forms.gle', // Google Forms
+          'form.typeform.com', 'typeform.com', // Typeform
+          'form.jotform.com', 'jotform.com', // Jotform
+          'surveymonkey.com', 'www.surveymonkey.com', // SurveyMonkey
+          'lever.co', 'jobs.lever.co', // Lever
+          'greenhouse.io', 'boards.greenhouse.io', // Greenhouse
+          'ashbyhq.com', 'jobs.ashbyhq.com', // Ashby
+          'workday.com', 'myworkdayjobs.com', // Workday
+          'tally.so', // Tally
+          'airtable.com', // Airtable Forms
+          'feathery.io', // Feathery
+          'qualtrics.com' // Qualtrics
+        ];
+
+        return whitelistedDomains.some(d => host === d || host.endsWith(`.${d}`));
+      } catch {
+        return false; // If new URL() fails entirely
+      }
+    }
 
     // Enter key on input
     urlInput.addEventListener('keydown', (e) => {
@@ -471,9 +531,9 @@ export function landingScreen() {
       el.addEventListener('click', () => {
         const demoType = el.dataset.demo;
         const urls = {
-          'job-application': 'https://lever.co/creativesync/senior-product-designer',
-          'customer-feedback': 'https://forms.google.com/feedback-survey',
-          'travel-visa': 'https://gov.travel/visa-application'
+          'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer', // Real public structure
+          'customer-feedback': 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform', // Valid test form
+          'travel-visa': 'https://form.typeform.com/to/travel-visa-demo' // Valid public structure
         };
         urlInput.value = urls[demoType] || urls['customer-feedback'];
         setState({ formUrl: urlInput.value });
@@ -482,32 +542,75 @@ export function landingScreen() {
     });
 
     // Nav links scroll to sections
-    wrapper.querySelector('#nav-product')?.addEventListener('click', () => {
-      wrapper.querySelector('section')?.scrollIntoView({ behavior: 'smooth' });
-    });
-    wrapper.querySelector('#nav-features')?.addEventListener('click', () => {
-      wrapper.querySelectorAll('section')[2]?.scrollIntoView({ behavior: 'smooth' });
-    });
-    wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => {
-      alert('Pricing page coming soon!');
-    });
+    // Nav links
+    // Navigation routing
 
-    // Auth buttons
-    wrapper.querySelector('#btn-login')?.addEventListener('click', () => {
-      alert('Login feature coming soon! For now, just paste a form URL to get started.');
-    });
-    wrapper.querySelector('#btn-signup')?.addEventListener('click', () => {
-      alert('Sign up feature coming soon! For now, just paste a form URL to get started.');
-    });
 
-    // CTA buttons scroll to input
+    document.getElementById('nav-forms')?.addEventListener('click', () => navigateTo('workspace'));
+    document.getElementById('nav-examples')?.addEventListener('click', () => navigateTo('examples'));
+    document.getElementById('nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
+    document.getElementById('nav-docs')?.addEventListener('click', () => navigateTo('docs'));
+    document.getElementById('btn-login')?.addEventListener('click', () => navigateTo('auth'));
+    document.getElementById('btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
+
     wrapper.querySelector('#btn-cta-start')?.addEventListener('click', () => {
       urlInput.scrollIntoView({ behavior: 'smooth' });
       setTimeout(() => urlInput.focus(), 500);
     });
-    wrapper.querySelector('#btn-cta-contact')?.addEventListener('click', () => {
-      alert('Contact sales at hello@formmate.ai');
+
+    wrapper.querySelector('#btn-cta-dashboard')?.addEventListener('click', () => {
+      navigateTo('workspace');
     });
+
+    // Testimonials Logic
+    const testimonialsList = [
+      { quote: "It struggled with our complex multi-step vendor portal at first, but after a few tries it learned the structure. Huge time saver now.", author: "James Peterson", role: "Procurement Analyst" },
+      { quote: "The AI is surprisingly good at adapting my resume bullets to different application formats. Not perfect, but gets me 90% there.", author: "Aisha Patel", role: "Software Engineer" },
+      { quote: "Saves me about 2 hours a week on patient intake forms. I just wish the mobile experience was a bit smoother.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
+      { quote: "Finally a tool that handles the messy state government portals. The context-aware answer generation genuinely works.", author: "Sarah Jenkins", role: "Operations Lead" },
+      { quote: "I was skeptical because most autofill tools break on custom enterprise forms, but FormMate actually figures out what the fields mean.", author: "David Reyes", role: "B2B Sales Executive" },
+      { quote: "Great for freelancers who have to answer the same 20 security questions for every new client onboarding.", author: "Chloe O'Brian", role: "Independent Consultant" }
+    ];
+
+    const grid = wrapper.querySelector('#testimonials-grid');
+    grid.innerHTML = testimonialsList.map(t => `
+      <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between h-full">
+        <p class="text-slate-700 text-sm mb-6 leading-relaxed">"${t.quote}"</p>
+        <div class="flex items-center gap-3 mt-auto">
+          <div class="size-10 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center uppercase">${t.author.substring(0, 2)}</div>
+          <div>
+            <div class="text-sm font-bold text-slate-900">${t.author}</div>
+            <div class="text-[11px] text-slate-500 font-medium">${t.role}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    const moreBtn = wrapper.querySelector('#btn-more-testimonials');
+    let expanded = false;
+
+    if (moreBtn) {
+      moreBtn.addEventListener('click', () => {
+        expanded = !expanded;
+        const fade = wrapper.querySelector('#testimonials-fade');
+        const textStr = wrapper.querySelector('#btn-more-text');
+        const icon = wrapper.querySelector('#btn-more-icon');
+
+        if (expanded) {
+          grid.style.maxHeight = grid.scrollHeight + "px";
+          fade.style.opacity = "0";
+          textStr.textContent = "Show less";
+          icon.textContent = "expand_less";
+        } else {
+          grid.style.maxHeight = "220px";
+          fade.style.opacity = "1";
+          textStr.textContent = "read more testimonials";
+          icon.textContent = "expand_more";
+          // Scroll back up slightly to ensure context
+          grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
   }
 
   return { html, init };

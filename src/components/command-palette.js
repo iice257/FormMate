@@ -1,4 +1,5 @@
 import { navigateTo } from '../router.js';
+import { getState } from '../state.js';
 
 export function initCommandPalette() {
   if (document.getElementById('command-palette')) return;
@@ -9,7 +10,7 @@ export function initCommandPalette() {
       <div class="relative w-full max-w-xl bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[60vh] animate-screen-enter">
         <div class="flex items-center px-4 border-b border-slate-100">
           <span class="material-symbols-outlined text-slate-400 text-xl mr-3">search</span>
-          <input type="text" id="cmd-input" class="flex-1 h-14 bg-transparent border-none text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-lg font-medium" placeholder="Type a command or search..." autocomplete="off">
+          <input type="text" id="cmd-input" class="flex-1 h-14 bg-transparent border-0 ring-0 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-lg font-medium" placeholder="Type a command or search..." autocomplete="off">
           <kbd class="hidden sm:inline-block px-2 py-1 text-[10px] font-mono text-slate-400 bg-slate-100 rounded border border-slate-200 font-bold uppercase tracking-wider">ESC</kbd>
         </div>
         <div class="flex-1 overflow-y-auto p-2 no-scrollbar" id="cmd-results">
@@ -28,12 +29,11 @@ export function initCommandPalette() {
 
   const commands = [
     { id: 'new-form', icon: 'add_box', title: 'Create New Form', desc: 'Start a new form via URL', route: 'landing' },
-    { id: 'active-form', icon: 'edit_document', title: 'Active Form', desc: 'Return to your current workspace', route: 'workspace' },
-    { id: 'history', icon: 'history', title: 'Form History', desc: 'View past completed forms', route: 'accounts' },
-    { id: 'vault', icon: 'lock', title: 'My Vault', desc: 'Manage your saved personal information', route: 'accounts' },
-    { id: 'settings', icon: 'settings', title: 'Settings', desc: 'App preferences and configurations', route: 'settings' },
-    { id: 'help', icon: 'help', title: 'Help & Support', desc: 'Get assistance and view FAQs', route: 'help' },
-    { id: 'toggle-dark', icon: 'dark_mode', title: 'Toggle Dark Mode', desc: 'Switch visual theme manually', action: 'toggleDark' }
+    { id: 'active-form', icon: 'edit_document', title: 'Active Form', desc: 'Return to your current workspace', route: 'workspace', authRequired: true },
+    { id: 'history', icon: 'history', title: 'Form History', desc: 'View past completed forms', route: 'accounts', authRequired: true },
+    { id: 'vault', icon: 'lock', title: 'My Vault', desc: 'Manage your saved personal information', route: 'accounts', authRequired: true },
+    { id: 'settings', icon: 'settings', title: 'Settings', desc: 'App preferences and configurations', route: 'settings', authRequired: true },
+    { id: 'help', icon: 'help', title: 'Help & Support', desc: 'Get assistance and view FAQs', route: 'help' }
   ];
 
   function renderResults(query = '') {
@@ -74,11 +74,18 @@ export function initCommandPalette() {
   }
 
   function executeCommand(cmd) {
+    if (cmd.authRequired && !getState().isAuthenticated) {
+      if (window.toast) toast.error('Please sign in to access this feature.');
+      else alert('Please sign in to access this feature.');
+      close();
+      navigateTo('auth');
+      return;
+    }
+
     close();
     if (cmd.route) navigateTo(cmd.route);
     if (cmd.action === 'toggleDark') {
-      // Toggle logic will go here
-      document.body.classList.toggle('dark-mode-override');
+      window.toggleTheme && window.toggleTheme();
     }
   }
 

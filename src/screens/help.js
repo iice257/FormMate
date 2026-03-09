@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════
 
 import { getState } from '../state.js';
-import { navigateTo } from '../router.js';
+import { navigateTo, goBack } from '../router.js';
 import { renderAccordion, renderModal, showModal } from '../components/ui-components.js';
 import { toast } from '../components/toast.js';
 
@@ -21,10 +21,10 @@ export function helpScreen() {
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
         <div class="p-6 flex items-center gap-3">
-          <div class="size-8 rounded-lg flex items-center justify-center text-white" style="background: var(--fm-primary);">
-            <span class="material-symbols-outlined">auto_awesome</span>
+          <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
-          <h1 class="text-xl font-bold tracking-tight" style="color: var(--fm-text);">FormMate</h1>
+          <h1 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h1>
         </div>
         <nav id="help-nav" class="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
           <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('landing')">
@@ -130,7 +130,6 @@ export function helpScreen() {
               <ul class="text-sm space-y-1 list-disc list-inside" style="color: var(--fm-text-secondary);">
                 <li>New persistent data layer with Accounts Center & Vault.</li>
                 <li>Comprehensive settings module with AI personality adjustments.</li>
-                <li>System-based Dark Mode and glowing focus states.</li>
                 <li>Advanced Chat Copilot with multi-turn memory.</li>
                 <li>AI generation improvements with structured JSON.</li>
               </ul>
@@ -152,7 +151,7 @@ export function helpScreen() {
 
   function init(wrapper) {
     window.__fmNav = (screen) => navigateTo(screen);
-    wrapper.querySelector('#btn-back').addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
 
     // Init components
     import('../components/ui-components.js').then(ui => {

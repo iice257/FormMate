@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════
 
 import { getState, setState } from '../state.js';
-import { navigateTo } from '../router.js';
+import { navigateTo, goBack } from '../router.js';
 
 export function successScreen() {
   const { formData, answers } = getState();
@@ -15,11 +15,11 @@ export function successScreen() {
 
         <!-- Header -->
         <header class="flex items-center justify-between border-b border-slate-200 px-6 md:px-40 py-4 bg-white">
-          <div class="flex items-center gap-3 text-primary">
-            <div class="size-8 flex items-center justify-center bg-primary/10 rounded-lg">
-              <span class="material-symbols-outlined">auto_fix_high</span>
+          <div class="flex items-center gap-3">
+            <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-slate-900 text-xl font-bold tracking-tight">FormMate</h2>
+            <h2 class="text-slate-900 text-xl font-black tracking-tighter">Form<span class="text-primary">Mate</span></h2>
           </div>
           <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
             <span class="material-symbols-outlined">close</span>
@@ -125,7 +125,7 @@ export function successScreen() {
               <div class="flex gap-6">
                 <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer">Terms of Service</a>
                 <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer">Privacy Policy</a>
-                <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer">Help Center</a>
+                <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer" onclick="window.__fmNav('docs')">Help Center</a>
               </div>
             </div>
 
@@ -156,7 +156,7 @@ export function successScreen() {
     };
     document.body.appendChild(script);
 
-    wrapper.querySelector('#btn-close').addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
 
     wrapper.querySelector('#btn-new-form').addEventListener('click', () => {
       // Reset state for new form

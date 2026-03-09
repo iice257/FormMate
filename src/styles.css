@@ -58,17 +58,15 @@ select:focus {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  @keyframes focusPulse {
+@keyframes focusPulse {
 
-    0%,
-    100% {
-      box-shadow: var(--fm-focus-glow);
-    }
+  0%,
+  100% {
+    box-shadow: var(--fm-focus-glow);
+  }
 
-    50% {
-      box-shadow: var(--fm-focus-ring), 0 0 24px rgba(139, 92, 246, 0.1);
-    }
+  50% {
+    box-shadow: var(--fm-focus-ring), 0 0 24px rgba(91, 19, 236, 0.08);
   }
 }
 
@@ -132,12 +130,6 @@ select:focus {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--fm-border-light);
-}
-
-@media (prefers-color-scheme: dark) {
-  .glass-header {
-    background: rgba(12, 10, 20, 0.85);
-  }
 }
 
 /* ─── Gradient Accents ────────────────── */
@@ -308,16 +300,7 @@ select:focus {
   animation-timing-function: linear;
 }
 
-@media (prefers-color-scheme: dark) {
-  .skeleton {
-    background: #1a1530;
-    background-image: linear-gradient(to right, #1a1530 0%, #211b3a 20%, #1a1530 40%, #1a1530 100%);
-  }
-}
-
-.dark-mode-transition {
-  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-}
+/* Deleted dark-mode-transition */
 
 @keyframes staggerIn {
   from {
@@ -509,6 +492,34 @@ select:focus {
 .card-premium:hover {
   transform: translateY(-2px);
   box-shadow: var(--fm-shadow-primary-hover);
+}
+
+/* ─── Shake horizontal ───────────────── */
+@keyframes shake-horizontal {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake-horizontal {
+  animation: shake-horizontal 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 /* ─── Slide up entrance ──────────────── */
