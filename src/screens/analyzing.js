@@ -17,11 +17,11 @@ export function analyzingScreen() {
 
         <!-- Navigation -->
         <header class="flex items-center justify-between border-b border-primary/10 px-6 py-4 md:px-20 lg:px-40 bg-white/50 backdrop-blur-md sticky top-0 z-50">
-          <div class="flex items-center gap-3 text-primary">
-            <div class="size-8 bg-primary/10 rounded-lg flex items-center justify-center">
-              <span class="material-symbols-outlined text-primary text-2xl">dynamic_form</span>
+          <div class="flex items-center gap-3">
+            <div class="size-8 flex shrink-0 items-center justify-center">
+            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-slate-900 text-xl font-bold leading-tight tracking-tight">FormMate</h2>
+            <h2 class="text-slate-900 text-xl font-black leading-tight tracking-tighter">Form<span class="text-primary">Mate</span></h2>
           </div>
           <button id="btn-cancel" class="flex items-center justify-center rounded-full size-10 bg-slate-200/50 text-slate-600 hover:bg-slate-200 transition-colors">
             <span class="material-symbols-outlined text-xl">close</span>
@@ -61,12 +61,20 @@ export function analyzingScreen() {
             </p>
 
             <!-- Progress Section -->
-            <div class="w-full bg-white rounded-2xl p-8 border border-slate-200 shadow-sm mb-8">
+            <div class="w-full bg-white rounded-[var(--fm-card-radius)] p-8 border border-slate-200 shadow-sm mb-8">
               <div class="flex flex-col gap-6">
                 <div class="flex flex-col gap-3">
-                  <div class="flex justify-between items-end">
+                  <div class="flex justify-between items-center mb-1">
                     <span id="progress-label" class="text-slate-900 font-semibold">Detecting questions</span>
-                    <span id="progress-percent" class="text-primary font-bold text-sm">0%</span>
+                    <div class="flex items-center gap-2">
+                      <div class="relative size-5">
+                        <svg class="size-full -rotate-90" viewBox="0 0 36 36">
+                          <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="4"></circle>
+                          <circle id="progress-ring" cx="18" cy="18" r="16" fill="none" class="stroke-primary transition-all duration-700 ease-out" stroke-width="4" stroke-dasharray="100" stroke-dashoffset="100" stroke-linecap="round"></circle>
+                        </svg>
+                      </div>
+                      <span id="progress-percent" class="text-primary font-bold text-sm">0%</span>
+                    </div>
                   </div>
                   <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                     <div id="progress-bar" class="h-full bg-primary rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
@@ -97,7 +105,7 @@ export function analyzingScreen() {
                     </div>
                     <div class="flex flex-col">
                       <span class="text-slate-900 font-medium leading-none">Understanding inputs</span>
-                      <span class="text-slate-500 text-sm mt-1">Mapping validation rules & types</span>
+                      <span class="text-slate-500 text-sm mt-1">Analyzing validation rules & types</span>
                     </div>
                   </div>
 
@@ -132,6 +140,7 @@ export function analyzingScreen() {
 
   function init(wrapper) {
     const progressBar = wrapper.querySelector('#progress-bar');
+    const progressRing = wrapper.querySelector('#progress-ring');
     const progressPercent = wrapper.querySelector('#progress-percent');
     const progressLabel = wrapper.querySelector('#progress-label');
     const progressStep = wrapper.querySelector('#progress-step');
@@ -149,61 +158,94 @@ export function analyzingScreen() {
     runAnalysis();
 
     async function runAnalysis() {
-      const { formUrl } = getState();
+      try {
+        const { formUrl } = getState();
 
-      // Step 1: Detecting questions
-      updateProgress(15, 'Detecting questions', 'Step 1 of 3', 'Scanning form...');
-      await delay(800);
-      if (cancelled) return;
+        // Step 1: Detecting questions
+        updateProgress(15, 'Detecting questions', 'Step 1 of 3', 'Scanning form...');
+        await delay(800);
+        if (cancelled) return;
 
-      updateProgress(35, 'Detecting questions', 'Step 1 of 3', 'Extracting fields...');
-      await delay(600);
-      if (cancelled) return;
+        updateProgress(35, 'Detecting questions', 'Step 1 of 3', 'Extracting fields...');
+        await delay(600);
+        if (cancelled) return;
 
-      // Parse form
-      const formData = await parseFormUrl(formUrl);
-      if (cancelled) return;
+        // Parse form
+        const formData = await parseFormUrl(formUrl);
+        if (cancelled) return;
 
-      completeStep(1, `Found ${formData.questions.length} distinct form fields`);
+        completeStep(1, `Found ${formData.questions.length} distinct form fields`);
 
-      // Step 2: Understanding inputs
-      activateStep(2, 'Mapping validation rules & types...');
-      updateProgress(55, 'Understanding inputs', 'Step 2 of 3', 'Analyzing types...');
-      await delay(800);
-      if (cancelled) return;
+        // Step 2: Understanding inputs
+        activateStep(2, 'Mapping validation rules & types...');
+        updateProgress(55, 'Understanding inputs', 'Step 2 of 3', 'Analyzing types...');
+        await delay(800);
+        if (cancelled) return;
 
-      updateProgress(70, 'Understanding inputs', 'Step 2 of 3', 'Almost there...');
-      await delay(600);
-      if (cancelled) return;
+        updateProgress(70, 'Understanding inputs', 'Step 2 of 3', 'Almost there...');
+        await delay(600);
+        if (cancelled) return;
 
-      completeStep(2, 'All field types mapped');
+        completeStep(2, 'All field types analyzed');
 
-      // Step 3: Generating AI answers
-      activateStep(3, 'Creating intelligent suggestions...');
-      updateProgress(80, 'Generating AI answers', 'Step 3 of 3', 'AI is thinking...');
-      await delay(500);
-      if (cancelled) return;
+        // Step 3: Generating AI answers
+        activateStep(3, 'Creating intelligent suggestions...');
+        updateProgress(80, 'Generating AI answers', 'Step 3 of 3', 'AI is thinking...');
+        await delay(500);
+        if (cancelled) return;
 
-      const answers = await generateAnswers(formData);
-      if (cancelled) return;
+        const answers = await generateAnswers(formData, (current, total) => {
+          if (!cancelled) {
+            const percent = 80 + Math.floor((current / total) * 15);
+            updateProgress(percent, 'Generating AI answers', 'Step 3 of 3', `Field ${current} of ${total}`);
+          }
+        });
+        if (cancelled) return;
 
-      updateProgress(95, 'Generating AI answers', 'Step 3 of 3', 'Finalizing...');
-      await delay(400);
-      if (cancelled) return;
+        updateProgress(95, 'Generating AI answers', 'Step 3 of 3', 'Finalizing...');
+        await delay(400);
+        if (cancelled) return;
 
-      completeStep(3, 'Suggestions ready');
-      updateProgress(100, 'Complete!', 'Done', 'Redirecting...');
+        completeStep(3, 'Suggestions ready');
+        updateProgress(100, 'Complete!', 'Done', 'Redirecting...');
 
-      // Store results
-      setState({ formData, answers });
+        // Store results
+        setState({ formData, answers });
 
-      // Navigate to workspace
-      await delay(600);
-      if (!cancelled) navigateTo('workspace');
+        // Navigate to workspace
+        await delay(600);
+        if (!cancelled) navigateTo('workspace');
+      } catch (err) {
+        if (cancelled) return;
+        console.error('[AnalyzingScreen] Pipeline Error:', err);
+
+        // Visual Error State
+        if (progressBar) {
+          progressBar.classList.remove('bg-primary');
+          progressBar.classList.add('bg-red-500');
+        }
+        if (progressRing) {
+          progressRing.classList.remove('stroke-primary');
+          progressRing.classList.add('stroke-red-500');
+        }
+
+        progressLabel.textContent = 'Error parsing form';
+        progressLabel.classList.add('text-red-600');
+        progressStep.textContent = 'Parsing Failed';
+        progressHint.textContent = err.message || 'Could not map inputs';
+
+        // Change cancel icon to back button text
+        if (btnCancel) {
+          btnCancel.innerHTML = `<span class="material-symbols-outlined text-sm">arrow_back</span> Go Back`;
+          btnCancel.classList.remove('size-10');
+          btnCancel.classList.add('px-4');
+        }
+      }
     }
 
     function updateProgress(percent, label, step, hint) {
-      progressBar.style.width = percent + '%';
+      if (progressBar) progressBar.style.width = percent + '%';
+      if (progressRing) progressRing.setAttribute('stroke-dashoffset', 100 - percent);
       progressPercent.textContent = percent + '%';
       progressLabel.textContent = label;
       progressStep.textContent = step;

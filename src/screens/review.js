@@ -28,7 +28,7 @@ export function reviewScreen() {
       const source = answer?.source || 'empty';
 
       const badgeHtml = source === 'ai'
-        ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold"><span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Mapped</span>`
+        ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold"><span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI Generated</span>`
         : source === 'user'
           ? `<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold"><span class="material-symbols-outlined text-[12px]">edit</span> User Edited</span>`
           : `<span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold"><span class="material-symbols-outlined text-[12px]">warning</span> Unanswered</span>`;
@@ -44,7 +44,7 @@ export function reviewScreen() {
       }
 
       return `
-        <div class="flex items-start gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow" data-review-id="${q.id}">
+        <div class="flex items-start gap-4 card-premium p-4 rounded-xl shadow-sm" data-review-id="${q.id}">
           <div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
             <span class="material-symbols-outlined">${icon}</span>
           </div>
@@ -100,11 +100,11 @@ export function reviewScreen() {
           <div class="flex flex-col max-w-[800px] flex-1 gap-6">
 
             <!-- Progress -->
-            <div class="flex flex-col gap-4 p-6 bg-white rounded-xl shadow-sm border border-slate-100">
+            <div class="flex flex-col gap-4 p-6 card-premium rounded-xl shadow-sm">
               <div class="flex gap-6 justify-between items-center">
                 <div class="flex flex-col">
                   <p class="text-slate-900 text-lg font-bold">Ready for Submission</p>
-                  <p class="text-slate-500 text-sm">All ${totalQuestions} fields have been mapped.</p>
+                  <p class="text-slate-500 text-sm">All ${totalQuestions} fields have been generated.</p>
                 </div>
                 <div class="flex flex-col items-end">
                   <p class="text-primary text-xl font-bold">${progress}%</p>
@@ -176,9 +176,9 @@ export function reviewScreen() {
     const fillProgressLabel = wrapper.querySelector('#fill-progress-label');
     const fillProgressField = wrapper.querySelector('#fill-progress-field');
 
-    btnBack.addEventListener('click', () => navigateTo('workspace'));
+    btnBack.addEventListener('click', () => goBack());
     btnClose.addEventListener('click', () => navigateTo('landing'));
-    btnBackWorkspace.addEventListener('click', () => navigateTo('workspace'));
+    btnBackWorkspace.addEventListener('click', () => goBack());
 
     // Inline edit
     wrapper.querySelectorAll('.btn-edit-review').forEach(btn => {
