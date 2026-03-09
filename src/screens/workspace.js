@@ -245,7 +245,7 @@ export function workspaceScreen() {
                   rows="1"
                   style="min-height: 48px; max-height: 120px;"
                 ></textarea>
-                <button id="btn-send-chat" class="absolute bottom-2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50">
+                <button id="btn-send-chat" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50">
                   <span class="material-symbols-outlined text-[18px]">send</span>
                 </button>
               </div>
@@ -552,13 +552,15 @@ export function workspaceScreen() {
     // Setup Personality selector
     const selectPersonality = wrapper.querySelector('#chat-personality');
     const { settings } = getState();
-    if (settings?.ai?.personality) {
-      selectPersonality.value = settings.ai.personality;
-      setState({ personality: settings.ai.personality });
+    if (selectPersonality) {
+      if (settings?.ai?.personality) {
+        selectPersonality.value = settings.ai.personality;
+        setState({ personality: settings.ai.personality });
+      }
+      selectPersonality.addEventListener('change', (e) => {
+        setState({ personality: e.target.value });
+      });
     }
-    selectPersonality.addEventListener('change', (e) => {
-      setState({ personality: e.target.value });
-    });
 
     // Auto-resize chat textarea
     chatInput.addEventListener('input', function () {
@@ -569,34 +571,38 @@ export function workspaceScreen() {
 
     // Chat Search
     const chatSearch = wrapper.querySelector('#chat-search');
-    chatSearch.addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase();
-      const messages = chatMessages.querySelectorAll('.animate-message-in');
-      messages.forEach(msg => {
-        if (!term || msg.textContent.toLowerCase().includes(term)) {
-          msg.style.display = 'flex';
-        } else {
-          msg.style.display = 'none';
-        }
+    if (chatSearch) {
+      chatSearch.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const messages = chatMessages.querySelectorAll('.animate-message-in');
+        messages.forEach(msg => {
+          if (!term || msg.textContent.toLowerCase().includes(term)) {
+            msg.style.display = 'flex';
+          } else {
+            msg.style.display = 'none';
+          }
+        });
       });
-    });
+    }
 
     // Chat Export
     const btnExportChat = wrapper.querySelector('#btn-export-chat');
-    btnExportChat.addEventListener('click', () => {
-      const extractText = Array.from(chatMessages.querySelectorAll('.animate-message-in')).map(node => {
-        const isUser = node.querySelector('.bg-primary.text-white');
-        const text = node.querySelector('.text-sm')?.textContent.trim() || '';
-        return `${isUser ? 'You' : 'Copilot'}: ${text}`;
-      }).join('\n\n');
+    if (btnExportChat) {
+      btnExportChat.addEventListener('click', () => {
+        const extractText = Array.from(chatMessages.querySelectorAll('.animate-message-in')).map(node => {
+          const isUser = node.querySelector('.bg-primary.text-white');
+          const text = node.querySelector('.text-sm')?.textContent.trim() || '';
+          return `${isUser ? 'You' : 'Copilot'}: ${text}`;
+        }).join('\n\n');
 
-      const blob = new Blob([extractText], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `FormMate-Chat-${new Date().toISOString().split('T')[0]}.txt`;
-      a.click();
-    });
+        const blob = new Blob([extractText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `FormMate-Chat-${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+      });
+    }
 
     async function sendMessage(text) {
       if (!text.trim()) return;

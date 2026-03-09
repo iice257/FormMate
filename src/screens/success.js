@@ -15,7 +15,7 @@ export function successScreen() {
 
         <!-- Header -->
         <header class="flex items-center justify-between border-b border-slate-200 px-6 md:px-40 py-4 bg-white">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
             <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
@@ -157,6 +157,10 @@ export function successScreen() {
     document.body.appendChild(script);
 
     wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
+
+    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
+      navigateTo('landing');
+    });
 
     wrapper.querySelector('#btn-new-form').addEventListener('click', () => {
       // Reset state for new form

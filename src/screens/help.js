@@ -20,7 +20,7 @@ export function helpScreen() {
     <div class="flex h-screen overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
-        <div class="p-6 flex items-center gap-3">
+        <div class="p-6 flex items-center gap-3 cursor-pointer" onclick="window.__fmNav && window.__fmNav('landing')">
           <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>

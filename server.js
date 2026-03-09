@@ -181,6 +181,111 @@ app.get('/api/proxy/scrape', rateLimit, async (req, res) => {
   }
 });
 
+// ─── Google Forms Multi-Strategy Proxy ────────
+
+app.get('/api/proxy/google-form', rateLimit, async (req, res) => {
+  try {
+    const { formId } = req.query;
+    if (!formId) return res.status(400).json({ error: 'formId is required' });
+
+    console.log(`[GoogleForm] Fetching form: ${formId}`);
+
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+    };
+
+    const fetchOpts = {
+      headers: fetchHeaders,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000),
+    };
+
+    // Auth signal detection
+    const authSignals = [
+      "Sign in to continue",
+      "Sign in to Google",
+      "Sign in – Google Accounts",
+      "You need permission",
+      "Can't access your Google Account",
+      "This form can only be viewed by users in the owner"
+    ];
+
+    const isAuthWall = (html) => authSignals.some(signal => html.includes(signal));
+
+    // ── Strategy 1: Standard viewform ──
+    const viewformUrl = `https://docs.google.com/forms/d/${formId}/viewform`;
+    console.log(`[GoogleForm] Strategy 1: ${viewformUrl}`);
+
+    let response = await fetch(viewformUrl, fetchOpts);
+    let html = await response.text();
+
+    if (response.ok && !isAuthWall(html)) {
+      console.log(`[GoogleForm] Strategy 1 succeeded (viewform)`);
+      const cleaned = cleanHtml(html);
+      return res.json({ html: cleaned, strategy: 'viewform', authRequired: false });
+    }
+
+    console.log(`[GoogleForm] Strategy 1 failed (auth wall or bad response). Trying formResponse...`);
+
+    // ── Strategy 2: formResponse URL ──
+    // Google Forms renders some structure at the formResponse endpoint
+    const formResponseUrl = `https://docs.google.com/forms/d/${formId}/formResponse`;
+    console.log(`[GoogleForm] Strategy 2: ${formResponseUrl}`);
+
+    try {
+      response = await fetch(formResponseUrl, fetchOpts);
+      html = await response.text();
+
+      if (response.ok && !isAuthWall(html)) {
+        console.log(`[GoogleForm] Strategy 2 succeeded (formResponse)`);
+        const cleaned = cleanHtml(html);
+        return res.json({ html: cleaned, strategy: 'formResponse', authRequired: false });
+      }
+    } catch (e) {
+      console.log(`[GoogleForm] Strategy 2 fetch error: ${e.message}`);
+    }
+
+    // ── Strategy 3: Extract FB_PUBLIC_LOAD_DATA_ ──
+    // Google sometimes embeds form structure as a JS variable even on auth-gated pages
+    console.log(`[GoogleForm] Strategy 3: Checking for FB_PUBLIC_LOAD_DATA_...`);
+
+    // Re-use the viewform HTML we already have
+    const fbDataMatch = html.match(/var\s+FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]*?);\s*<\/script>/);
+    if (fbDataMatch) {
+      console.log(`[GoogleForm] Strategy 3 succeeded — found FB_PUBLIC_LOAD_DATA_`);
+      return res.json({
+        fbPublicLoadData: fbDataMatch[1],
+        strategy: 'fb_public_load_data',
+        authRequired: true,
+        html: cleanHtml(html)
+      });
+    }
+
+    // All strategies exhausted
+    console.log(`[GoogleForm] All strategies failed for form ${formId}`);
+    return res.json({
+      html: cleanHtml(html),
+      strategy: 'fallback',
+      authRequired: true
+    });
+
+  } catch (err) {
+    console.error('[GoogleForm] Error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch Google Form', authRequired: true });
+  }
+});
+
+function cleanHtml(html) {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ─── Health Check ────────────────────────────
 
 app.get('/api/health', (req, res) => {

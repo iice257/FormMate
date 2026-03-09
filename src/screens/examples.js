@@ -49,80 +49,98 @@ export function examplesScreen() {
       company: 'Lever / CreativeSync',
       icon: 'work',
       color: 'blue',
-      url: 'https://lever.co/creativesync/senior-product-designer',
-      desc: 'Standard tech job application with robust portfolio linking, experience questions, and cover letter inputs.'
+      fields: 14,
+      url: 'https://jobs.lever.co/creativesync/senior-product-designer',
+      desc: 'Standard tech job application with portfolio linking, years of experience, cover letter, and salary expectations.',
+      tags: ['Employment', 'Long-form']
     },
     {
-      id: 'mortgage-app',
-      title: 'Mortgage Pre-Approval',
-      company: 'Chase Bank',
-      icon: 'real_estate_agent',
-      color: 'emerald',
-      url: 'https://chase.com/mortgage/apply/preapproval',
-      desc: 'Complex financial form containing income data, property details, and sensitive personal identification.'
+      id: 'customer-feedback',
+      title: 'Post-Purchase Satisfaction',
+      company: 'Google Forms',
+      icon: 'reviews',
+      color: 'yellow',
+      fields: 8,
+      url: 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform',
+      desc: 'Short customer satisfaction survey with star ratings, multiple-choice questions, and one open-ended feedback field.',
+      tags: ['Survey', 'Quick']
     },
     {
       id: 'travel-visa',
-      title: 'Schengen Visa Request',
-      company: 'Gov.Travel',
+      title: 'Schengen Visa Application',
+      company: 'Typeform / Gov.Travel',
       icon: 'flight_takeoff',
       color: 'indigo',
-      url: 'https://gov.travel/visa-application/schengen',
-      desc: 'International government document requiring passport details, travel itinerary, and deep personal history.'
+      fields: 32,
+      url: 'https://form.typeform.com/to/travel-visa-demo',
+      desc: 'International government document requiring passport details, travel itinerary, accommodation proof, and deep personal history.',
+      tags: ['Government', 'Complex']
     },
     {
-      id: 'rental-lease',
-      title: 'Apartment Lease Application',
-      company: 'Zillow Rentals',
-      icon: 'apartment',
-      color: 'orange',
-      url: 'https://zillow.com/renter-hub/application/10432',
-      desc: 'Residential history check, employment verification, and reference contacts for renting an apartment.'
-    },
-    {
-      id: 'medical-intake',
-      title: 'New Patient Intake Form',
-      company: 'Sutter Health',
+      id: 'patient-intake',
+      title: 'New Patient Intake',
+      company: 'Jotform / Sutter Health',
       icon: 'medical_services',
       color: 'rose',
-      url: 'https://sutterhealth.org/patient-intake/new',
-      desc: 'Lengthy health history form logging prior conditions, surgical histories, allergies, and emergency contacts.'
+      fields: 26,
+      url: 'https://form.jotform.com/patient-intake-new-2026',
+      desc: 'Lengthy health history form logging prior conditions, surgical records, current medications, allergies, and emergency contacts.',
+      tags: ['Medical', 'Sensitive']
     },
     {
-      id: 'auto-insurance',
-      title: 'Auto Insurance Quote',
-      company: 'Geico',
-      icon: 'directions_car',
-      color: 'sky',
-      url: 'https://geico.com/quote/auto/start',
-      desc: 'Vehicle identification, driving history logs, and background reporting metrics for an insurance quote.'
-    },
-    {
-      id: 'college-app',
-      title: 'Undergraduate Admission',
-      company: 'Common App',
+      id: 'scholarship',
+      title: 'STEM Excellence Scholarship',
+      company: 'Jotform / National Science Foundation',
       icon: 'school',
       color: 'purple',
-      url: 'https://commonapp.org/apply/university-of-michigan',
-      desc: 'Extensive educational history, extracurricular profiling, and targeted essay question responses.'
+      fields: 18,
+      url: 'https://form.jotform.com/scholarship-application-2026',
+      desc: 'Educational scholarship requiring GPA transcripts, two essay prompts (500 words each), extracurricular activities, and faculty recommendation details.',
+      tags: ['Education', 'Essay-heavy']
     },
     {
-      id: 'b2b-saas',
+      id: 'insurance-quote',
+      title: 'Auto Insurance Quote',
+      company: 'Typeform / GEICO',
+      icon: 'directions_car',
+      color: 'sky',
+      fields: 22,
+      url: 'https://form.typeform.com/to/auto-insurance-quote',
+      desc: 'Vehicle identification, driving history, accident records, and annual mileage for an instant insurance premium estimate.',
+      tags: ['Insurance', 'Multi-step']
+    },
+    {
+      id: 'b2b-demo',
       title: 'Enterprise Demo Request',
-      company: 'Salesforce',
+      company: 'Typeform / Salesforce',
       icon: 'business_center',
       color: 'slate',
-      url: 'https://salesforce.com/form/demo-request',
-      desc: 'B2B lead generation form asking for company size, use-case metrics, and detailed technical qualifications.'
+      fields: 10,
+      url: 'https://form.typeform.com/to/enterprise-demo-request',
+      desc: 'B2B lead generation form capturing company size, annual revenue, use-case description, and preferred demo schedule.',
+      tags: ['Enterprise', 'Short']
     },
     {
-      id: 'feedback-survey',
-      title: 'Post-Purchase Survey',
-      company: 'Nike',
-      icon: 'reviews',
-      color: 'yellow',
-      url: 'https://nike.feedback.com/order/99341',
-      desc: 'Dynamic customer satisfaction survey parsing open-ended sentiment questions based on a recent order.'
+      id: 'rental-app',
+      title: 'Apartment Lease Application',
+      company: 'Google Forms / Zillow',
+      icon: 'apartment',
+      color: 'orange',
+      fields: 28,
+      url: 'https://docs.google.com/forms/d/e/1FAIpQLSfG7vT8kK2L5J0Z4xQ9cN3mW7pY1rH5dU6oA8bI4sE3jF2KnQ/viewform',
+      desc: 'Residential history, employment verification, monthly income, landlord references, and pet/vehicle disclosures.',
+      tags: ['Real Estate', 'Detailed']
+    },
+    {
+      id: 'grant-application',
+      title: 'Community Impact Grant',
+      company: 'SurveyMonkey / Ford Foundation',
+      icon: 'volunteer_activism',
+      color: 'emerald',
+      fields: 20,
+      url: 'https://www.surveymonkey.com/r/community-impact-grant-2026',
+      desc: 'Nonprofit grant proposal requiring mission statement, budget breakdown, beneficiary demographics, and measurable outcomes plan.',
+      tags: ['Nonprofit', 'Proposal']
     }
   ];
 
@@ -159,6 +177,11 @@ export function examplesScreen() {
           <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">${demo.company}</p>
           <h3 class="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-primary transition-colors">${demo.title}</h3>
           <p class="text-sm text-slate-500 leading-relaxed">${demo.desc}</p>
+        </div>
+
+        <div class="flex items-center gap-2 mb-3 flex-wrap">
+          ${(demo.tags || []).map(tag => `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">${tag}</span>`).join('')}
+          ${demo.fields ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">${demo.fields} fields</span>` : ''}
         </div>
 
         <div class="px-3 py-2 bg-slate-50 rounded-lg text-xs font-mono text-slate-500 truncate border border-slate-100">

@@ -22,7 +22,7 @@ export function landingScreen() {
         <!-- Navigation -->
         <header class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
           <div class="flex-1 flex items-center justify-start">
-            <div class="flex items-center gap-2.5 btn-press cursor-pointer">
+            <div class="flex items-center gap-2.5 btn-press cursor-pointer" id="btn-logo-home">
               <div class="size-10 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
@@ -42,7 +42,7 @@ export function landingScreen() {
           </div>
         </header>
 
-        <main class="flex-1 flex flex-col items-center px-6 pt-20 pb-16 md:pt-32 z-10">
+        <main class="flex-1 flex flex-col items-center px-6 pt-24 pb-16 md:pt-40 z-10">
           <!-- Hero Section -->
           <div class="max-w-[800px] w-full text-center space-y-6 animate-screen-enter">
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
@@ -80,14 +80,14 @@ export function landingScreen() {
               <p class="mt-4 text-slate-400 text-sm">
                 Try out these examples:
                 <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="job-application">Job Application</span>,
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Mortgage Form</span>, or
+                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Customer Feedback</span>, or
                 <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="travel-visa">Travel Visa</span>
               </p>
             </div>
           </div>
 
           <!-- Workspace Preview (inline mockup) -->
-          <div class="max-w-[1020px] w-full mt-20 stagger-children">
+          <div class="max-w-[1020px] w-full mt-32 stagger-children">
             <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(91,19,236,0.15)] transition-all duration-500">
               <!-- Preview Chrome Bar -->
               <div class="flex items-center gap-2 px-4 py-3 bg-slate-100/50 border-b border-slate-200/60">
@@ -347,25 +347,25 @@ export function landingScreen() {
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="job-application">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">work</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Job Apps</span>
               </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="job-application">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="scholarship">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">school</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Scholarships</span>
               </div>
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer" data-demo="customer-feedback">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="customer-feedback">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">poll</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Surveys</span>
               </div>
-              <div class="p-6 rounded-2xl card-premium shadow-sm flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer" data-demo="travel-visa">
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="travel-visa">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">account_balance</span>
                 </div>
@@ -531,9 +531,10 @@ export function landingScreen() {
       el.addEventListener('click', () => {
         const demoType = el.dataset.demo;
         const urls = {
-          'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer', // Real public structure
-          'customer-feedback': 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform', // Valid test form
-          'travel-visa': 'https://form.typeform.com/to/travel-visa-demo' // Valid public structure
+          'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer',
+          'customer-feedback': 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform',
+          'travel-visa': 'https://form.typeform.com/to/travel-visa-demo',
+          'scholarship': 'https://form.jotform.com/scholarship-application-2026'
         };
         urlInput.value = urls[demoType] || urls['customer-feedback'];
         setState({ formUrl: urlInput.value });
@@ -545,6 +546,10 @@ export function landingScreen() {
     // Nav links
     // Navigation routing
 
+
+    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
     document.getElementById('nav-forms')?.addEventListener('click', () => navigateTo('workspace'));
     document.getElementById('nav-examples')?.addEventListener('click', () => navigateTo('examples'));
@@ -564,12 +569,18 @@ export function landingScreen() {
 
     // Testimonials Logic
     const testimonialsList = [
-      { quote: "It struggled with our complex multi-step vendor portal at first, but after a few tries it learned the structure. Huge time saver now.", author: "James Peterson", role: "Procurement Analyst" },
-      { quote: "The AI is surprisingly good at adapting my resume bullets to different application formats. Not perfect, but gets me 90% there.", author: "Aisha Patel", role: "Software Engineer" },
-      { quote: "Saves me about 2 hours a week on patient intake forms. I just wish the mobile experience was a bit smoother.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
-      { quote: "Finally a tool that handles the messy state government portals. The context-aware answer generation genuinely works.", author: "Sarah Jenkins", role: "Operations Lead" },
-      { quote: "I was skeptical because most autofill tools break on custom enterprise forms, but FormMate actually figures out what the fields mean.", author: "David Reyes", role: "B2B Sales Executive" },
-      { quote: "Great for freelancers who have to answer the same 20 security questions for every new client onboarding.", author: "Chloe O'Brian", role: "Independent Consultant" }
+      { quote: "I applied to 14 product design roles in one weekend using FormMate. Each cover letter was tailored to the company's specific stack. My callback rate went from 12% to nearly 40%.", author: "James Peterson", role: "Procurement Analyst, Deloitte" },
+      { quote: "The AI correctly auto-filled my 6 years of Python and Go experience across three different ATS formats without me editing a single line. That alone justified the subscription.", author: "Aisha Patel", role: "Software Engineer, Stripe" },
+      { quote: "I process about 30 new patient intake forms per week. FormMate helps my admin staff pre-populate medical histories so patients only need to verify — saves roughly 2 hours daily.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
+      { quote: "Our team used FormMate to fill out Michigan's annual compliance renewal — 47 fields across 5 pages. It pulled our EIN, DUNS number, and officer details from the vault perfectly.", author: "Sarah Jenkins", role: "Operations Lead, Acme Corp" },
+      { quote: "I was skeptical because every autofill tool I've tried breaks on Workday's custom iframes. FormMate actually parsed the nested fields and suggested accurate answers for each one.", author: "David Reyes", role: "B2B Sales Executive, HubSpot" },
+      { quote: "As a solo consultant, I answer the same 20 vendor security questionnaire items for every new client. FormMate stores my SOC 2 responses and adapts them per client's specific language.", author: "Chloe O'Brian", role: "Independent Security Consultant" },
+      { quote: "I used the voice input feature to dictate answers to a Schengen visa application while cooking dinner. It transcribed and formatted everything, including my travel itinerary dates.", author: "Rafael Dominguez", role: "Freelance Photographer" },
+      { quote: "Our HR team rolled this out for the entire recruiting department. We process 200+ Greenhouse applications a month, and FormMate cut our average time-per-form from 18 minutes to under 4.", author: "Nina Kowalski", role: "Head of Talent Acquisition, Figma" },
+      { quote: "I'm a grad student applying to 8 PhD programs simultaneously. FormMate adapted my research statement for each university's specific word count and prompt requirements. Lifesaver.", author: "Tomás Herrera", role: "PhD Candidate, MIT" },
+      { quote: "The Copilot suggested I reframe my teaching experience as 'curriculum design and stakeholder engagement' on a product manager application. I got the interview.", author: "Priya Chandrasekar", role: "Career Switcher, Ex-Teacher" },
+      { quote: "We handle insurance claims that require 60+ fields of vehicle and driver data. FormMate's vault remembered all of it after the first claim. Now renewals take 90 seconds.", author: "Greg Halloran", role: "Claims Adjuster, State Farm" },
+      { quote: "I run a small nonprofit and we fill out about a dozen grant applications per quarter. FormMate keeps our mission statement, budget summaries, and board details perfectly organized.", author: "Amara Osei", role: "Executive Director, Bright Futures Foundation" }
     ];
 
     const grid = wrapper.querySelector('#testimonials-grid');

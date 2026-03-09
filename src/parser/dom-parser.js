@@ -8,17 +8,35 @@ export function parseDOM(htmlString) {
     questions: [],
   };
 
-  // Auth / Cookie Wall Detection
+  // Auth / Cookie Wall Detection — don't throw, return a flag so callers can retry
   const pageText = doc.body?.textContent || '';
-  if (pageText.includes("Can't access your Google Account") || pageText.includes("Sign in to continue")) {
-    throw new Error("This form appears to require a Google sign-in. FormMate cannot access authenticated forms.");
+  const authSignals = [
+    "Can't access your Google Account",
+    "Sign in to continue",
+    "Sign in to Google",
+    "Sign in – Google Accounts",
+    "You need permission",
+    "This form can only be viewed by users in the owner"
+  ];
+  if (authSignals.some(signal => pageText.includes(signal))) {
+    return {
+      title: 'Unknown Form',
+      description: '',
+      questions: [],
+      requiresAuth: true
+    };
   }
 
   // Attempt to find actual form title and description if it's Google Forms
-  const titleEl = doc.querySelector('.F9yp7e') || doc.querySelector('div[role="heading"][aria-level="1"]');
+  const titleEl = doc.querySelector('.F9yp7e')
+    || doc.querySelector('div[role="heading"][aria-level="1"]')
+    || doc.querySelector('.freebirdFormviewerViewHeaderTitle')
+    || doc.querySelector('.Qr7Oae');
   if (titleEl) formData.title = titleEl.textContent.trim();
 
-  const descEl = doc.querySelector('.wGQFbe') || doc.querySelector('.freebirdFormviewerViewHeaderDescription');
+  const descEl = doc.querySelector('.wGQFbe')
+    || doc.querySelector('.freebirdFormviewerViewHeaderDescription')
+    || doc.querySelector('.cBGGJ');
   if (descEl) formData.description = descEl.textContent.trim();
 
   // Primary selector: role="listitem" (Google Forms primarily)
@@ -26,7 +44,7 @@ export function parseDOM(htmlString) {
 
   // Secondary fallback: typical field containers if not Google Forms
   if (items.length === 0) {
-    items = Array.from(doc.querySelectorAll('.freebirdFormviewerViewItemsItemItem, .geS5n, fieldset, .form-group'));
+    items = Array.from(doc.querySelectorAll('.freebirdFormviewerViewItemsItemItem, .geS5n, .Qr7Oae, fieldset, .form-group'));
   }
 
   // Third fallback: Just grab all labels and associate inputs

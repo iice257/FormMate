@@ -17,7 +17,7 @@ export function analyzingScreen() {
 
         <!-- Navigation -->
         <header class="flex items-center justify-between border-b border-primary/10 px-6 py-4 md:px-20 lg:px-40 bg-white/50 backdrop-blur-md sticky top-0 z-50">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
             <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
@@ -150,6 +150,11 @@ export function analyzingScreen() {
     let cancelled = false;
 
     btnCancel.addEventListener('click', () => {
+      cancelled = true;
+      navigateTo('landing');
+    });
+
+    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
       cancelled = true;
       navigateTo('landing');
     });
