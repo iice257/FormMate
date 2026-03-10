@@ -175,7 +175,7 @@ export function renderQuestionCard(question, answer, index) {
   }
 
   return `
-    <div class="group relative card-premium ${isActive ? 'border-primary ring-2 ring-primary/10 shadow-xl shadow-primary/20' : 'shadow-sm'} rounded-xl p-6 transition-all" data-card-id="${id}">
+    <div class="group relative card-premium ${isActive ? 'border-primary ring-2 ring-primary/10 shadow-xl shadow-primary/20' : 'shadow-sm'} rounded-xl p-6 transition-all" data-card-id="${id}" data-category="${category}">
 
       <!-- Drag handle -->
       <div class="drag-handle absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 -ml-2">

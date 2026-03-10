@@ -47,7 +47,7 @@ export function landingScreen() {
           <div class="max-w-[800px] w-full text-center space-y-6 animate-screen-enter">
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
               <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
-              Smart AI Copilot
+              Form Copilot
             </div>
 
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
@@ -71,17 +71,17 @@ export function landingScreen() {
                     type="text"
                   />
                 </div>
-                <button id="btn-analyze" class="bg-primary text-white px-8 h-14 rounded-full font-bold text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group">
-                  Start Analyzing
-                  <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                <button id="btn-analyze" class="bg-primary text-white px-5 sm:px-6 h-14 rounded-full font-bold text-sm sm:text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group whitespace-nowrap">
+                  Analyze
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                 </button>
               </div>
 
               <p class="mt-4 text-slate-400 text-sm">
                 Try out these examples:
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="job-application">Job Application</span>,
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Customer Feedback</span>, or
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="travel-visa">Travel Visa</span>
+                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="job-application">Job Application</span>, 
+                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Customer Feedback</span>, or 
+                <span class="text-primary cursor-pointer hover:underline font-medium inline-flex items-center gap-0.5" id="btn-view-more-examples">View more examples<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="relative top-[0.5px]"><path d="m9 18 6-6-6-6"/></svg></span>
               </p>
             </div>
           </div>
@@ -365,11 +365,11 @@ export function landingScreen() {
                 </div>
                 <span class="text-sm font-bold text-slate-900">Surveys</span>
               </div>
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="travel-visa">
-                <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <span class="material-symbols-outlined">account_balance</span>
+              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer hover:shadow-md transition-shadow group" id="btn-view-more-examples">
+                <div class="flex items-center gap-1.5 text-primary font-bold text-sm">
+                  <span>View more examples</span>
+                  <span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                 </div>
-                <span class="text-sm font-bold text-slate-900">Gov Forms</span>
               </div>
             </div>
           </section>
@@ -451,7 +451,7 @@ export function landingScreen() {
 
       // Basic reset
       urlInput.classList.remove('ring-2', 'ring-red-500', 'animate-shake-horizontal');
-      btnAnalyze.innerHTML = `Start Analyzing <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>`;
+      btnAnalyze.innerHTML = `Analyze <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>`;
 
       if (!url) {
         triggerError('Please enter a link');
@@ -489,7 +489,7 @@ export function landingScreen() {
 
       setTimeout(() => {
         urlInput.classList.remove('ring-2', 'ring-red-500', 'animate-shake-horizontal');
-        btnAnalyze.innerHTML = `Start Analyzing <span class="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>`;
+        btnAnalyze.innerHTML = `Analyze <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>`;
         btnAnalyze.classList.remove('bg-red-500', 'hover:bg-red-600');
       }, 2000);
     }
@@ -501,7 +501,7 @@ export function landingScreen() {
 
         // Robust checks covering forms, subdomains, and CDNs
         const whitelistedDomains = [
-          'docs.google.com', 'forms.gle', // Google Forms
+          'docs.google.com', 'forms.gle', 'forms.google.com', // Google Forms
           'form.typeform.com', 'typeform.com', // Typeform
           'form.jotform.com', 'jotform.com', // Jotform
           'surveymonkey.com', 'www.surveymonkey.com', // SurveyMonkey
@@ -532,7 +532,7 @@ export function landingScreen() {
         const demoType = el.dataset.demo;
         const urls = {
           'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer',
-          'customer-feedback': 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform',
+          'customer-feedback': 'https://forms.google.com/feedback-survey',
           'travel-visa': 'https://form.typeform.com/to/travel-visa-demo',
           'scholarship': 'https://form.jotform.com/scholarship-application-2026'
         };
@@ -541,6 +541,14 @@ export function landingScreen() {
         navigateTo('analyzing');
       });
     });
+
+    // View more examples link
+    const viewMoreBtn = wrapper.querySelector('#btn-view-more-examples');
+    if (viewMoreBtn) {
+      viewMoreBtn.addEventListener('click', () => {
+        navigateTo('examples');
+      });
+    }
 
     // Nav links scroll to sections
     // Nav links

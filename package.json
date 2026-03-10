@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -15,9 +14,6 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "http-proxy-middleware": "^3.0.5",
     "material-symbols": "^0.40.2"
   }
 }

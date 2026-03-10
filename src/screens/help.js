@@ -12,8 +12,7 @@ export function helpScreen() {
     { title: 'How does FormMate work?', content: 'FormMate uses advanced AI models to read form structure, understand the context of each question, and generate appropriate answers based on your profile and past history.' },
     { title: 'Is my data secure?', content: 'Yes. Your personal vault data, history, and profile information are stored entirely on your device (in localStorage). We do not store your private data on our servers.' },
     { title: 'Why did the AI answer a question wrong?', content: 'AI generation is probabilistic. If an answer seems incorrect, you can click "Regenerate" to get a new variant, or manually edit the text. FormMate learns from your edits to get better over time.' },
-    { title: 'What is the "Vault"?', content: 'The Vault is a secure storage area in your Accounts Center where you can save frequently used information (like your resume, bio, or addresses). FormMate uses this data to instantly auto-fill identical personal questions without needing to generate them from scratch.' },
-    { title: 'How do I change the Groq API key?', content: 'You can update your Groq API key by going to the main Dashboard (Landing page) and clicking the gear icon in the top right to open the setup modal.' }
+    { title: 'What is the "Vault"?', content: 'The Vault is a secure storage area in your Accounts Center where you can save frequently used information (like your resume, bio, or addresses). FormMate uses this data to instantly auto-fill identical personal questions without needing to generate them from scratch.' }
   ];
 
   const html = `
@@ -59,14 +58,17 @@ export function helpScreen() {
           <div class="p-8 rounded-[var(--fm-card-radius)] relative overflow-hidden" style="background: var(--fm-gradient-primary);">
             <div class="relative z-10 text-white">
               <h2 class="text-2xl font-bold mb-2">How can we help?</h2>
-              <p class="text-white/80 text-sm max-w-sm">Search our FAQs, check keyboard shortcuts, or contact support directly.</p>
+              <p class="text-white/80 text-sm max-w-sm">Search our FAQs, check our extensive documentation, or contact support directly.</p>
               
-              <div class="mt-6 flex gap-3">
-                <button id="btn-shortcuts" class="h-10 px-5 rounded-xl text-sm font-bold bg-white text-[var(--fm-primary)] btn-press flex items-center gap-2">
-                  <span class="material-symbols-outlined text-sm">keyboard</span> Keyboard Shortcuts
+              <div class="mt-6 flex flex-wrap gap-3">
+                <button id="btn-docs" class="h-10 px-5 rounded-xl text-sm font-bold bg-white text-[var(--fm-primary)] btn-press flex items-center gap-2">
+                  <span class="material-symbols-outlined text-sm">menu_book</span> View Documentation
                 </button>
                 <button id="btn-contact" class="h-10 px-5 rounded-xl text-sm font-bold text-white btn-press flex items-center gap-2" style="background: rgba(255,255,255,0.2);">
                   <span class="material-symbols-outlined text-sm">mail</span> Contact Us
+                </button>
+                <button id="btn-review-feedback" class="h-10 px-5 rounded-xl text-sm font-bold text-white btn-press flex items-center gap-2" style="background: rgba(255,255,255,0.2);">
+                  <span class="material-symbols-outlined text-sm">rate_review</span> Review & Feedback
                 </button>
               </div>
             </div>
@@ -91,7 +93,7 @@ export function helpScreen() {
                 <span class="material-symbols-outlined text-xl">new_releases</span>
               </div>
               <div>
-                <p class="text-sm font-bold" style="color: var(--fm-text);">FormMate v2.0 (Expansion Update)</p>
+                <p class="text-sm font-bold" style="color: var(--fm-text);">FormMate v0.9 (Beta Update)</p>
                 <p class="text-xs" style="color: var(--fm-text-tertiary);">Up to date</p>
               </div>
             </div>
@@ -101,24 +103,6 @@ export function helpScreen() {
         </div>
       </main>
 
-      <!-- Support Modal -->
-      ${renderModal('contact-modal', {
-    title: 'Contact Support',
-    content: `
-          <div class="space-y-4">
-            <div>
-              <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Subject</label>
-              <input id="support-subject" type="text" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" placeholder="Brief description of the issue" />
-            </div>
-            <div>
-              <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Message</label>
-              <textarea id="support-message" class="w-full min-h-[120px] px-4 py-3 rounded-xl text-sm resize-none" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" placeholder="How can we help you?"></textarea>
-            </div>
-            <button id="btn-submit-support" class="w-full h-11 rounded-xl text-sm font-bold text-white btn-press mt-2" style="background: var(--fm-gradient-primary);">Send Message</button>
-          </div>
-        `
-  })}
-
       <!-- Changelog Modal -->
       ${renderModal('changelog-modal', {
     title: 'Changelog',
@@ -126,21 +110,12 @@ export function helpScreen() {
           <div class="space-y-6">
             <div class="relative pl-6 border-l-2" style="border-color: var(--fm-primary);">
               <div class="absolute w-3 h-3 rounded-full top-1 -left-[7px]" style="background: var(--fm-primary);"></div>
-              <p class="text-xs font-bold mb-1" style="color: var(--fm-primary);">v2.0 — Major Expansion</p>
+              <p class="text-xs font-bold mb-1" style="color: var(--fm-primary);">v0.9 — Core Launch</p>
               <ul class="text-sm space-y-1 list-disc list-inside" style="color: var(--fm-text-secondary);">
-                <li>New persistent data layer with Accounts Center & Vault.</li>
-                <li>Comprehensive settings module with AI personality adjustments.</li>
-                <li>Advanced Chat Copilot with multi-turn memory.</li>
-                <li>AI generation improvements with structured JSON.</li>
-              </ul>
-            </div>
-            <div class="relative pl-6 border-l-2" style="border-color: var(--fm-border);">
-              <div class="absolute w-3 h-3 rounded-full top-1 -left-[7px]" style="background: var(--fm-border);"></div>
-              <p class="text-xs font-bold mb-1" style="color: var(--fm-text-secondary);">v1.0 — Initial Release</p>
-              <ul class="text-sm space-y-1 list-disc list-inside" style="color: var(--fm-text-tertiary);">
-                <li>Core form parsing engine.</li>
-                <li>Basic AI generation via Groq.</li>
-                <li>Voice-to-text input via Whisper.</li>
+                <li>Core AI form parsing engine capable of navigating complex DOM structures.</li>
+                <li>Information Vault integration for secure context retrieval.</li>
+                <li>Intelligent Chat Copilot for real-time answers and editing.</li>
+                <li>Actionable web workspace for rapid manual review.</li>
               </ul>
             </div>
           </div>
@@ -161,34 +136,16 @@ export function helpScreen() {
 
     // Support Flow
     wrapper.querySelector('#btn-contact').addEventListener('click', () => {
-      showModal('contact-modal');
+      window.__fmNav('docs#contact');
     });
 
-    wrapper.querySelector('#btn-submit-support').addEventListener('click', () => {
-      const subj = wrapper.querySelector('#support-subject').value.trim();
-      const msg = wrapper.querySelector('#support-message').value.trim();
-
-      if (!subj || !msg) {
-        toast.error('Please fill in both subject and message fields.');
-        return;
-      }
-
-      // Simulate submission
-      setTimeout(() => {
-        toast.success('Message sent! We will get back to you soon.');
-        wrapper.querySelector('#support-subject').value = '';
-        wrapper.querySelector('#support-message').value = '';
-        import('../components/ui-components.js').then(ui => ui.hideModal('contact-modal'));
-      }, 600);
+    wrapper.querySelector('#btn-review-feedback')?.addEventListener('click', () => {
+      window.__fmNav('docs#feedback');
     });
 
-    // Shortcuts
-    wrapper.querySelector('#btn-shortcuts').addEventListener('click', () => {
-      navigateTo('settings');
-      setTimeout(() => {
-        const item = document.querySelector('[data-section="shortcuts"]');
-        if (item) item.click();
-      }, 50);
+    // Documentation
+    wrapper.querySelector('#btn-docs').addEventListener('click', () => {
+      navigateTo('docs');
     });
 
     // Changelog

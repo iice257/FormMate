@@ -1,5 +1,6 @@
 import { navigateTo } from '../router.js';
 import { generate } from '../ai/ai-service.js';
+import { toast } from '../components/toast.js';
 
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -17,7 +18,7 @@ export function docsScreen() {
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
-          <span class="text-slate-400 font-medium text-sm ml-2 hidden md:inline">Help Center</span>
+          <span class="text-slate-400 font-medium text-sm ml-2 hidden md:inline">FormMate Docs</span>
         </div>
         
         <div class="flex-1 max-w-md mx-8 hidden md:block" id="docs-search-wrapper">
@@ -64,7 +65,7 @@ export function docsScreen() {
                 <h4 class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-3">Core Features</h4>
                 <div class="space-y-1">
                    <a href="#vault" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">The Information Vault</a>
-                   <a href="#copilot" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Using the AI Copilot</a>
+                   <a href="#copilot" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Using the Form Copilot</a>
                    <a href="#editing" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Reviewing & Editing</a>
                 </div>
              </div>
@@ -83,7 +84,21 @@ export function docsScreen() {
                    <a href="#faqs" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Frequently Asked Questions</a>
                 </div>
              </div>
+             
+             <div>
+                <h4 class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-3">Connect</h4>
+                <div class="space-y-1">
+                   <a href="#feedback" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Review & Feedback</a>
+                   <a href="#contact" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Contact Us Form</a>
+                </div>
+             </div>
           </nav>
+          
+          <div class="mt-auto px-4 pt-6">
+            <button id="btn-back-home-sidebar" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm btn-press">
+                <span class="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
+            </button>
+          </div>
         </aside>
 
         <!-- Left Resize Handle -->
@@ -401,7 +416,7 @@ export function docsScreen() {
       { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate is your intelligent assistant for filling out tedious, long, and complex online forms.', type: 'guide' },
       { id: 'first-form', title: 'Filling Your First Form', text: 'On the Dashboard, paste the URL of the form you want to fill into the input box.', type: 'guide' },
       { id: 'vault', title: 'The Information Vault', text: 'The Vault is your secure, personal database inside FormMate. Think of it as your brain\'s notepad.', type: 'guide' },
-      { id: 'copilot', title: 'Using the AI Copilot', text: 'On the right side of the Workspace screen sits your AI Copilot conversational assistant.', type: 'guide' },
+      { id: 'copilot', title: 'Using the Form Copilot', text: 'On the right side of the Workspace screen sits your Form Copilot conversational assistant.', type: 'guide' },
       { id: 'editing', title: 'Reviewing & Editing', text: 'In your Workspace center screen, you\'ll notice a list of question cards.', type: 'guide' },
       { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and settings are handled in the Accounts Center.', type: 'guide' },
       { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
@@ -509,7 +524,7 @@ export function docsScreen() {
       {
         role: 'system',
         content: `You are a helpful, extremely concise assistant embedded directly in FormMate's documentation page.
-Your ONLY job is to help users understand FormMate, its features (like the Vault, AI Copilot, autofilling forms, and the dashboard).
+Your ONLY job is to help users understand FormMate, its features (like the Vault, Form Copilot, autofilling forms, and the dashboard).
 Keep your answers extremely simple, non-technical, and easy for a very casual user to understand. 
 Do NOT include any code snippets, JSON objects, SDK setups, or technical API jargon. 
 If the user asks something completely beyond the scope of FormMate, FormMate's features, or general FormMate help, you MUST decline respectfully by saying that you are only here to help with FormMate and the question is beyond your scope.`
@@ -603,7 +618,8 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
           chatMessages.insertAdjacentHTML('beforeend', `
             <div class="flex flex-col gap-1 animate-message-in">
               <div class="max-w-[85%] bg-red-50 text-red-600 border border-red-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs leading-relaxed">
-                Oops, I couldn't reach the server right now.
+                <div class="flex items-center gap-1.5 font-bold mb-1"><span class="material-symbols-outlined text-[14px]">error</span> AI service is currently unavailable.</div>
+                Please check system configuration or try again later.
               </div>
             </div>
           `);
@@ -660,6 +676,57 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
     const cleanupLeft = setupResizer(handleLeft, sidebarLeft, 'left');
     const cleanupRight = setupResizer(handleRight, sidebarRight, 'right');
+
+    // Sidebar back to home
+    wrapper.querySelector('#btn-back-home-sidebar')?.addEventListener('click', () => {
+      window.__fmNav('landing');
+    });
+
+    // Rating Logic
+    let currentRating = 0;
+    const stars = wrapper.querySelectorAll('#star-rating span');
+    stars.forEach(star => {
+      star.addEventListener('click', (e) => {
+        currentRating = parseInt(e.target.dataset.val);
+        stars.forEach((s, i) => {
+          if (i < currentRating) s.classList.replace('text-slate-300', 'text-amber-400');
+          else s.classList.replace('text-amber-400', 'text-slate-300');
+        });
+      });
+    });
+
+    // Feedback Submit
+    wrapper.querySelector('#btn-submit-feedback')?.addEventListener('click', () => {
+      const text = wrapper.querySelector('#feedback-text').value.trim();
+      if (!text || currentRating === 0) {
+        toast.error('Please provide a rating and a comment.');
+        return;
+      }
+      setTimeout(() => {
+        toast.success('Thank you for your feedback! It means a lot to us.');
+        wrapper.querySelector('#feedback-text').value = '';
+        currentRating = 0;
+        stars.forEach(s => s.classList.replace('text-amber-400', 'text-slate-300'));
+      }, 500);
+    });
+
+    // Contact Submit
+    wrapper.querySelector('#btn-submit-contact')?.addEventListener('click', () => {
+      const email = wrapper.querySelector('#contact-email').value.trim();
+      const msg = wrapper.querySelector('#contact-message').value.trim();
+      if (!email || !msg) {
+        toast.error('Your Email and Message are required to contact support.');
+        return;
+      }
+      setTimeout(() => {
+        toast.success('Your message has been sent to our support team!');
+        wrapper.querySelector('#contact-name').value = '';
+        wrapper.querySelector('#contact-email').value = '';
+        wrapper.querySelector('#contact-subject').value = '';
+        wrapper.querySelector('#contact-message').value = '';
+        wrapper.querySelector('#contact-save-info').checked = false;
+      }, 500);
+    });
 
     return () => {
       sections.forEach(s => observer.unobserve(s));

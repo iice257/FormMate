@@ -17,11 +17,16 @@ export function analyzingScreen() {
 
         <!-- Navigation -->
         <header class="flex items-center justify-between border-b border-primary/10 px-6 py-4 md:px-20 lg:px-40 bg-white/50 backdrop-blur-md sticky top-0 z-50">
-          <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
-            <div class="size-8 flex shrink-0 items-center justify-center">
-            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+          <div class="flex items-center gap-3">
+            <button id="btn-back-header" class="flex items-center justify-center rounded-full size-10 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors -ml-2">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
+            </button>
+            <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
+              <div class="size-8 flex shrink-0 items-center justify-center">
+              <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+              </div>
+              <h2 class="text-slate-900 text-xl font-black leading-tight tracking-tighter">Form<span class="text-primary">Mate</span></h2>
             </div>
-            <h2 class="text-slate-900 text-xl font-black leading-tight tracking-tighter">Form<span class="text-primary">Mate</span></h2>
           </div>
           <button id="btn-cancel" class="flex items-center justify-center rounded-full size-10 bg-slate-200/50 text-slate-600 hover:bg-slate-200 transition-colors">
             <span class="material-symbols-outlined text-xl">close</span>
@@ -135,6 +140,20 @@ export function analyzingScreen() {
         <div class="fixed top-24 -right-24 size-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
       </div>
+      
+      <!-- Full Screen Error Modal -->
+      <div id="error-modal" class="fixed inset-0 z-[100] bg-white hidden flex-col items-center justify-center p-6 text-center animate-screen-enter">
+        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-6 border-4 border-white shadow-xl">
+          <span class="material-symbols-outlined text-4xl">error</span>
+        </div>
+        <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4 tracking-tight">Analysis Failed</h2>
+        <p id="error-modal-msg" class="text-slate-600 max-w-md mb-10 leading-relaxed text-lg">We encountered an unexpected issue while trying to read this form.</p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="btn-error-retry" class="px-8 py-3.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/95 shadow-lg shadow-primary/25 transition-all">Try Again</button>
+          <button id="btn-error-home" class="px-8 py-3.5 rounded-xl font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-all">Go to Dashboard</button>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -147,17 +166,30 @@ export function analyzingScreen() {
     const progressHint = wrapper.querySelector('#progress-hint');
     const btnCancel = wrapper.querySelector('#btn-cancel');
 
+    const btnBackHeader = wrapper.querySelector('#btn-back-header');
+    const errorModal = wrapper.querySelector('#error-modal');
+    const errorMsg = wrapper.querySelector('#error-modal-msg');
+    const btnErrorRetry = wrapper.querySelector('#btn-error-retry');
+    const btnErrorHome = wrapper.querySelector('#btn-error-home');
+
     let cancelled = false;
 
-    btnCancel.addEventListener('click', () => {
+    const goHome = () => {
       cancelled = true;
       navigateTo('landing');
+    };
+
+    btnCancel.addEventListener('click', goHome);
+    btnBackHeader?.addEventListener('click', goHome);
+    btnErrorHome?.addEventListener('click', goHome);
+
+    btnErrorRetry?.addEventListener('click', () => {
+      cancelled = true;
+      // Re-mount the analyzing screen to try again
+      navigateTo('analyzing');
     });
 
-    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
-      cancelled = true;
-      navigateTo('landing');
-    });
+    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', goHome);
 
     // Run analysis pipeline
     runAnalysis();
@@ -224,26 +256,19 @@ export function analyzingScreen() {
         if (cancelled) return;
         console.error('[AnalyzingScreen] Pipeline Error:', err);
 
-        // Visual Error State
-        if (progressBar) {
-          progressBar.classList.remove('bg-primary');
-          progressBar.classList.add('bg-red-500');
-        }
-        if (progressRing) {
-          progressRing.classList.remove('stroke-primary');
-          progressRing.classList.add('stroke-red-500');
-        }
+        // Stop animations
+        const radar = wrapper.querySelector('.animate-float');
+        if (radar) radar.classList.remove('animate-float');
+        const ping = wrapper.querySelector('.animate-ping');
+        if (ping) ping.classList.remove('animate-ping');
+        const scanLine = wrapper.querySelector('.animate-scan-line');
+        if (scanLine) scanLine.classList.remove('animate-scan-line');
 
-        progressLabel.textContent = 'Error parsing form';
-        progressLabel.classList.add('text-red-600');
-        progressStep.textContent = 'Parsing Failed';
-        progressHint.textContent = err.message || 'Could not map inputs';
-
-        // Change cancel icon to back button text
-        if (btnCancel) {
-          btnCancel.innerHTML = `<span class="material-symbols-outlined text-sm">arrow_back</span> Go Back`;
-          btnCancel.classList.remove('size-10');
-          btnCancel.classList.add('px-4');
+        // Show Full Screen Modal
+        if (errorModal) {
+          errorModal.classList.remove('hidden');
+          errorModal.classList.add('flex');
+          if (errorMsg) errorMsg.textContent = err.message || 'Could not map inputs from this form. Please ensure it is publicly accessible.';
         }
       }
     }

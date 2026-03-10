@@ -17,10 +17,9 @@
 
 import { getState } from '../state.js';
 
-const GROQ_BASE = 'https://api.groq.com/openai/v1';
-
 // ─── Model Registry (vendor-prefixed for Groq) ──
 
+// Model Assignment
 export const MODELS = {
   HEAVY: 'llama-3.3-70b-versatile',
   STANDARD: 'llama-3.1-8b-instant',
@@ -32,7 +31,6 @@ export const MODELS = {
 // ─── Task → Model Routing Table ──────────────
 
 export const TASK_ROUTES = {
-  'form_understanding': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'form_parsing': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'question_intent': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
   'answer_generation': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
@@ -109,18 +107,10 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
     body.response_format = { type: 'json_object' };
   }
 
-  const state = getState();
-  const apiKey = state.groqApiKey || ((typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : undefined);
-
-  if (!apiKey) {
-    throw new Error('[AIService] Missing Groq API Key. Please add VITE_GROQ_API_KEY to your .env file or input it in settings.');
-  }
-
-  const response = await fetch(`${GROQ_BASE}/chat/completions`, {
+  const response = await fetch(`/api/ai/chat`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(body),
   });
@@ -215,18 +205,8 @@ export async function transcribeAudio(audioBlob) {
   formData.append('model', MODELS.WHISPER);
   formData.append('response_format', 'json');
 
-  const state = getState();
-  const apiKey = state.groqApiKey || ((typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : undefined);
-
-  if (!apiKey) {
-    throw new Error('[AIService] Missing Groq API Key. Please add VITE_GROQ_API_KEY to your .env file or input it in settings.');
-  }
-
-  const response = await fetch(`${GROQ_BASE}/audio/transcriptions`, {
+  const response = await fetch(`/api/ai/transcribe`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-    },
     body: formData,
   });
 

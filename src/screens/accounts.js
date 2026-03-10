@@ -241,27 +241,6 @@ export function accountsScreen() {
                   </div>
                 </section>
 
-                <!-- Keyboard Shortcuts -->
-                <section id="section-shortcuts" class="settings-section space-y-5">
-                  <div>
-                    <h3 class="text-lg font-bold" style="color: var(--fm-text);">Keyboard Shortcuts</h3>
-                  </div>
-                  <div class="p-5 rounded-xl space-y-2" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
-                    ${[
-      { keys: 'Ctrl + Enter', action: 'Submit / Fill Form' },
-      { keys: 'Ctrl + Z', action: 'Undo Answer' },
-      { keys: 'Ctrl + Shift + Z', action: 'Redo Answer' },
-      { keys: 'Escape', action: 'Close Modal / Panel' },
-      { keys: 'Tab', action: 'Next Question' },
-    ].map(s => `
-                      <div class="flex items-center justify-between p-3 rounded-lg" style="background: var(--fm-surface);">
-                        <span class="text-xs" style="color: var(--fm-text-secondary);">${s.action}</span>
-                        <kbd class="text-[10px] font-mono font-bold px-2 py-0.5 rounded" style="background: var(--fm-bg-sunken); color: var(--fm-text);">${s.keys}</kbd>
-                      </div>
-                    `).join('')}
-                  </div>
-                </section>
-
                 <!-- Account -->
                 <section id="section-account" class="settings-section space-y-5">
                   <div>
@@ -298,7 +277,6 @@ export function accountsScreen() {
                   ${[
       { id: 'ai', icon: 'neurology', label: 'AI Behavior' },
       { id: 'ui', icon: 'palette', label: 'Appearance' },
-      { id: 'shortcuts', icon: 'keyboard', label: 'Shortcuts' },
       { id: 'account', icon: 'manage_accounts', label: 'Account' },
     ].map((item, i) => `
                     <a class="settings-nav-item flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors" data-section="${item.id}"

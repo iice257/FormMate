@@ -46,8 +46,7 @@ const state = {
   // Chat messages: [{ role, text, timestamp, action? }]
   chatMessages: [],
 
-  // Groq API key
-  groqApiKey: (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env.VITE_GROQ_API_KEY : '',
+  // removed groqApiKey property
 
   // UI state
   activeQuestionId: null,

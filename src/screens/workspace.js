@@ -37,13 +37,13 @@ export function workspaceScreen() {
     <div class="h-screen bg-slate-50 text-slate-900 flex flex-col font-sans overflow-hidden">
       <!-- Header -->
       <header class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative">
-        <div class="flex items-center gap-3">
-          <div id="sidebar-logo" class="size-10 rounded-xl bg-white shadow-[0_4px_12px_rgba(124,58,237,0.15)] border border-slate-100 p-[3px] flex items-center justify-center cursor-pointer btn-press">
+        <div class="flex items-center gap-3 cursor-pointer btn-press" id="btn-logo-home">
+          <div class="size-10 rounded-xl bg-white shadow-[0_4px_12px_rgba(124,58,237,0.15)] border border-slate-100 p-[3px] flex items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <div class="hidden sm:flex flex-col">
             <span class="font-black text-2xl tracking-tighter text-slate-900 leading-none">Form<span class="text-primary">Mate</span></span>
-            <span class="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mt-1">Copilot</span>
+            <span class="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mt-1">Form Copilot</span>
           </div>
         </div>
         <div class="flex items-center gap-4">
@@ -148,7 +148,7 @@ export function workspaceScreen() {
         <div class="flex-1 flex overflow-hidden relative" id="editor-container">
           <!-- Editor Center -->
           <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar" id="editor-scroll">
-            <div class="max-w-3xl mx-auto px-4 lg:px-12 py-8 lg:py-12 pb-32">
+            <div class="max-w-3xl mx-auto px-6 md:px-8 lg:px-12 py-8 lg:py-12 pb-32">
               
                 <div class="mb-4">
                   <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold tracking-wide text-slate-600 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors btn-press group" id="btn-question-categories">
@@ -158,18 +158,18 @@ export function workspaceScreen() {
                   </div>
                   
                   <div id="question-categories-panel" class="hidden mt-3 flex-wrap items-center gap-2 text-[12px] animate-screen-enter">
-                    <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-green-50 text-green-700 font-semibold border border-green-200/50">
-                      <span class="material-symbols-outlined text-[14px]">bolt</span>
-                      ${autoCount} AutoFill
-                    </div>
-                    <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200/50">
-                      <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
-                      ${aiCount} AI Fillable
-                    </div>
-                    <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-red-50 text-red-700 font-semibold border border-red-200/50">
-                      <span class="material-symbols-outlined text-[14px]">edit_document</span>
-                      ${manualCount} Manual
-                    </div>
+                    <button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-bold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="all" data-active="true">
+                      All Fields
+                    </button>
+                    ${autoCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="autofillable">
+                      <span class="material-symbols-outlined text-[14px]">bolt</span> AutoFillable <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${autoCount}</span>
+                    </button>` : ''}
+                    ${aiCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="generatable">
+                      <span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI Fillable <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${aiCount}</span>
+                    </button>` : ''}
+                    ${manualCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="manual_only">
+                      <span class="material-symbols-outlined text-[14px]">edit_document</span> Manual <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${manualCount}</span>
+                    </button>` : ''}
                   </div>
                 </div>
 
@@ -521,6 +521,31 @@ export function workspaceScreen() {
         const icon = btnQuestionCategories.querySelector('span:last-child');
         icon.textContent = categoriesPanel.classList.contains('hidden') ? 'expand_more' : 'expand_less';
       });
+
+      // Category filter pills logic
+      const filterPills = categoriesPanel.querySelectorAll('.filter-pill');
+      if (filterPills.length > 0) {
+        filterPills.forEach(pill => {
+          pill.addEventListener('click', () => {
+            // Unset all active state
+            filterPills.forEach(p => p.setAttribute('data-active', 'false'));
+            // Set current active state
+            pill.setAttribute('data-active', 'true');
+
+            const filterType = pill.dataset.filter;
+            const allCards = questionsContainer.querySelectorAll('.card-premium');
+
+            allCards.forEach(card => {
+              // Handle filtering
+              if (filterType === 'all' || card.dataset.category === filterType) {
+                card.classList.remove('hidden');
+              } else {
+                card.classList.add('hidden');
+              }
+            });
+          });
+        });
+      }
     }
 
     // ─── Active Field Tracking ───────────
@@ -715,6 +740,17 @@ export function workspaceScreen() {
       } catch (e) {
         typingEl.remove();
         console.error(e);
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'flex flex-col gap-1 animate-message-in mb-6 group';
+        errorBubble.innerHTML = `
+          <div class="max-w-[85%] bg-red-50 text-red-600 border border-red-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-4 text-[13px] leading-relaxed relative flex flex-col gap-3">
+             <div class="flex items-center gap-2 font-bold"><span class="material-symbols-outlined text-[16px]">error</span> AI service is currently unavailable.</div>
+             <p class="text-xs">Please check system configuration or try again later.</p>
+          </div>
+          <span class="text-[10px] text-slate-400 font-medium ml-2">System • ${formatTime(new Date())}</span>
+        `;
+        chatMessages.appendChild(errorBubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       } finally {
         chatInput.style.height = '48px'; // reset auto height
       }
@@ -801,7 +837,7 @@ export function workspaceScreen() {
     if (btnReviewBottom) btnReviewBottom.addEventListener('click', () => navigateTo('review'));
 
     // ─── Sidebar navigation ─────────────
-    wrapper.querySelector('#sidebar-logo')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => navigateTo('landing'));
 
     wrapper.querySelector('#nav-dashboard-sidebar')?.addEventListener('click', () => navigateTo('landing'));
 

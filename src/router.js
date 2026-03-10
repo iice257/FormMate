@@ -24,6 +24,12 @@ export function navigateTo(screen, replace = false) {
   let path = `/${screen === 'landing' ? '' : screen}`;
   if (screen === 'landing') path = '/';
 
+  // Redirect settings -> accounts
+  if (screen === 'settings') {
+    screen = 'accounts';
+    path = '/accounts';
+  }
+
   // State push
   if (!replace) {
     window.history.pushState({ screen }, '', path);
