@@ -18,8 +18,9 @@ export function analyzingScreen() {
         <!-- Navigation -->
         <header class="flex items-center justify-between border-b border-primary/10 px-6 py-4 md:px-20 lg:px-40 bg-white/50 backdrop-blur-md sticky top-0 z-50">
           <div class="flex items-center gap-3">
-            <button id="btn-back-header" class="flex items-center justify-center rounded-full size-10 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors -ml-2">
-              <span class="material-symbols-outlined text-xl">arrow_back</span>
+            <button id="btn-back-header" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              Back
             </button>
             <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
               <div class="size-8 flex shrink-0 items-center justify-center">

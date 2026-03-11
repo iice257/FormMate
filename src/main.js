@@ -33,6 +33,7 @@ import { docsScreen } from './screens/docs.js';
 import { pricingScreen } from './screens/pricing.js';
 import { helpScreen } from './screens/help.js';
 import { examplesScreen } from './screens/examples.js';
+import { newFormScreen } from './screens/new-form.js';
 
 
 // Register all screens
@@ -49,6 +50,7 @@ registerScreen('docs', docsScreen);
 registerScreen('pricing', pricingScreen);
 registerScreen('help', helpScreen);
 registerScreen('examples', examplesScreen);
+registerScreen('new-form', newFormScreen);
 
 
 

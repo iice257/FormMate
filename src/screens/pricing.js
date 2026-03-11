@@ -17,8 +17,8 @@ export function pricingScreen() {
         
         <!-- Header -->
         <div class="text-center mb-16 relative">
-          <button id="btn-back" class="absolute left-0 top-0 p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold hover:bg-black/5" style="color: var(--fm-text-secondary);">
-            <span class="material-symbols-outlined">arrow_back</span> Back
+          <button id="btn-back" class="absolute left-0 top-0 bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
+            <span class="material-symbols-outlined text-sm">arrow_back</span> Back
           </button>
           
           <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4" style="color: var(--fm-text);">${currentTier === 'free' ? 'Upgrade your' : 'Manage your'} <span class="text-primary font-cursive underline underline-offset-4 decoration-primary/30">workflow</span></h1>

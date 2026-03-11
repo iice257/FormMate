@@ -64,8 +64,9 @@ export function analyticsScreen() {
       <main class="flex-1 overflow-y-auto no-scrollbar relative" style="background: var(--fm-bg);">
         <header class="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-10 glass" style="border-color: var(--fm-border);">
           <div class="flex items-center gap-3">
-            <button id="btn-back" class="p-2 rounded-lg transition-colors" style="color: var(--fm-text-secondary);">
-              <span class="material-symbols-outlined">arrow_back</span>
+            <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              Back
             </button>
             <h2 class="text-lg font-bold" style="color: var(--fm-text);">Usage Analytics</h2>
           </div>

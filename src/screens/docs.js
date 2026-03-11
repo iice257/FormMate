@@ -95,8 +95,8 @@ export function docsScreen() {
           </nav>
           
           <div class="mt-auto px-4 pt-6">
-            <button id="btn-back-home-sidebar" class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm btn-press">
-                <span class="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
+            <button id="btn-back-home-sidebar" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press mx-3">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Back to Home
             </button>
           </div>
         </aside>

@@ -842,8 +842,7 @@ export function workspaceScreen() {
     wrapper.querySelector('#nav-dashboard-sidebar')?.addEventListener('click', () => navigateTo('landing'));
 
     wrapper.querySelector('#nav-new-form')?.addEventListener('click', () => {
-      setState({ formData: null, answers: {} });
-      navigateTo('landing');
+      navigateTo('new-form');
     });
 
     wrapper.querySelector('#nav-history')?.addEventListener('click', () => {
