@@ -45,7 +45,7 @@ export function newFormScreen() {
         </div>
       </header>
 
-      <main class="flex-1 flex flex-col items-center justify-center px-6 pb-32">
+      <main class="flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16">
         <div class="max-w-[800px] w-full text-center space-y-10 relative z-10">
           <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight">
             Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
