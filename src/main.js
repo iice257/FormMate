@@ -34,6 +34,10 @@ import { pricingScreen } from './screens/pricing.js';
 import { helpScreen } from './screens/help.js';
 import { examplesScreen } from './screens/examples.js';
 import { newFormScreen } from './screens/new-form.js';
+import { dashboardScreen } from './screens/dashboard.js';
+import { aiChatScreen } from './screens/ai-chat.js';
+import { historyScreen } from './screens/history.js';
+import { vaultScreen } from './screens/vault.js';
 
 
 // Register all screens
@@ -51,6 +55,10 @@ registerScreen('pricing', pricingScreen);
 registerScreen('help', helpScreen);
 registerScreen('examples', examplesScreen);
 registerScreen('new', newFormScreen);
+registerScreen('dashboard', dashboardScreen);
+registerScreen('ai-chat', aiChatScreen);
+registerScreen('history', historyScreen);
+registerScreen('vault', vaultScreen);
 
 
 
@@ -89,10 +97,36 @@ function initHidingHeader() {
   document.head.appendChild(style);
 }
 
+// Global transition logic
+function initTransitions() {
+  const overlay = document.createElement('div');
+  overlay.id = 'page-transition-overlay';
+  document.body.appendChild(overlay);
+
+  // Track coordinates globally
+  window.__fmClickX = window.innerWidth / 2;
+  window.__fmClickY = window.innerHeight / 2;
+
+  document.addEventListener('mousedown', (e) => {
+    window.__fmClickX = e.clientX;
+    window.__fmClickY = e.clientY;
+  }, { capture: true, passive: true });
+}
+
 // Initialize the app
 function boot() {
-  initRouter();
-  initHidingHeader();
+  initTransitions();
+  // Sync initial auth state
+  import('./auth/auth-service.js').then(({ getSession }) => {
+    const session = getSession();
+    if (session) {
+      import('./state.js').then(({ setState }) => {
+        setState({ isAuthenticated: true, authUser: session.user, tier: session.tier });
+      });
+    }
+    initRouter();
+    initHidingHeader();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', boot);

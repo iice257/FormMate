@@ -20,7 +20,7 @@ export function newFormScreen() {
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
 
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden animate-screen-enter">
+    <div class="relative flex h-screen w-full flex-col overflow-hidden animate-screen-enter">
       <!-- Aurora Background -->
       <div id="aurora-bg" class="aurora-container bg-white"></div>
 
@@ -45,7 +45,7 @@ export function newFormScreen() {
         </div>
       </header>
 
-      <main class="flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-16">
+      <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16">
         <div class="max-w-[800px] w-full text-center space-y-10 relative z-10">
           <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight">
             Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
@@ -148,11 +148,7 @@ export function newFormScreen() {
     // Navigation pills
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
-      // Chat usually opens the copilot or a specific screen. 
-      // If no 'chat' screen, we'll try 'workspace' or similar if it has the copilot.
-      // For now, let's assume 'workspace' or a dedicated 'chat' if it exists.
-      navigateTo('workspace');
-      toast.info('Opening Form Copilot...');
+      navigateTo('ai-chat');
     });
     wrapper.querySelector('#nav-help')?.addEventListener('click', () => navigateTo('docs'));
 

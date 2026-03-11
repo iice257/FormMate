@@ -1,14 +1,16 @@
 {
-  "name": "formmate",
+  "name": "formmate-ai",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
+    "dev:insecure": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vercel dev",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "jsdom": "^28.1.0",
     "vercel": "^50.31.1",
     "vite": "^6.2.0"

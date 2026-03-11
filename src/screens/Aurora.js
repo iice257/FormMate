@@ -92,17 +92,17 @@ void main() {
   vec3 rampColor;
   COLOR_RAMP(colors, uv.x, rampColor);
   
-  float height = snoise(vec2(uv.x * 2.0 + uTime * 0.1, uTime * 0.25)) * 0.5 * uAmplitude;
-  height = exp(height);
-  height = (uv.y * 6.0 - height - 2.5);
-  float intensity = 0.6 * height;
+  // Noise-based height factor (inverted so top is 1.0)
+  float noise = snoise(vec2(uv.x * 2.0 + uTime * 0.1, uTime * 0.25)) * 0.5 * uAmplitude;
+  noise = exp(noise);
   
-  float midPoint = 0.20;
-  float auroraAlpha = smoothstep(midPoint - uBlend * 0.5, midPoint + uBlend * 0.5, intensity);
+  // Height calculation tuned for ~15% at the top with no gap
+  // smoothstep(0.85, 1.0, ...) ensures it reaches 1.0 (full opacity) at the top edge.
+  float height = smoothstep(0.82, 0.98, uv.y + noise * 0.02);
   
-  vec3 auroraColor = intensity * rampColor;
-  
-  fragColor = vec4(auroraColor * auroraAlpha, auroraAlpha);
+  // No dark intensity multiplier. We blend directly to background using height as alpha.
+  // This ensures colors stay vibrant and fade into white.
+  fragColor = vec4(rampColor * height, height);
 }
 `;
 

@@ -13,35 +13,33 @@ export function docsScreen() {
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <!-- Navigation Bar -->
       <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white shrink-0 z-30">
-        <div class="flex items-center gap-2 cursor-pointer btn-press" id="btn-home">
-          <div class="size-8 flex shrink-0 items-center justify-center">
-            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
-          </div>
-          <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
-          <span class="text-slate-400 font-medium text-sm ml-2 hidden md:inline">FormMate Docs</span>
+        <div class="flex-1 flex justify-start">
         </div>
         
-        <div class="flex-1 max-w-md mx-8 hidden md:block" id="docs-search-wrapper">
-           <div class="relative w-full" id="docs-search-container">
-             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-             <input type="text" id="docs-search-input" placeholder="Search guides..." class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
-             <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors hidden">
-                <span class="material-symbols-outlined text-[16px]">close</span>
-             </button>
-             <!-- Search Results Dropdown -->
-             <div id="search-results-dropdown" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden hidden z-50">
-                <div id="search-results-list" class="max-h-[300px] overflow-y-auto p-2 space-y-1"></div>
-                <div id="search-footer" class="p-3 bg-slate-50 border-t border-slate-100 text-center">
-                   <button id="btn-ask-ai-search" class="text-[11px] font-bold text-slate-500 hover:text-primary transition-colors flex items-center justify-center gap-1.5 w-full">
-                      <span class="material-symbols-outlined text-[14px]">smart_toy</span>
-                      Cant find what youre looking for? Ask our AI
-                   </button>
-                </div>
+        <div class="flex-1 flex justify-center items-center gap-4">
+            <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span> Help Center</span>
+          <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
+          <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
+             <div class="relative w-full" id="docs-search-container">
+               <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+               <input type="text" id="docs-search-input" placeholder="Search guides..." class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
+               <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors hidden">
+                  <span class="material-symbols-outlined text-[16px]">close</span>
+               </button>
+               <div id="search-results-dropdown" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden hidden z-50">
+                  <div id="search-results-list" class="max-h-[300px] overflow-y-auto p-2 space-y-1"></div>
+                  <div id="search-footer" class="p-3 bg-slate-50 border-t border-slate-100 text-center">
+                     <button id="btn-ask-ai-search" class="text-[11px] font-bold text-slate-500 hover:text-primary transition-colors flex items-center justify-center gap-1.5 w-full">
+                        <span class="material-symbols-outlined text-[14px]">smart_toy</span>
+                        Cant find what youre looking for? Ask our AI
+                     </button>
+                  </div>
+               </div>
              </div>
-           </div>
+          </div>
         </div>
 
-        <div class="flex items-center gap-4 text-sm font-semibold">
+        <div class="flex-1 flex items-center justify-end gap-4 text-sm font-semibold">
            <a class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer" onclick="window.__fmNav('pricing')">Pricing</a>
            <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
            <button class="bg-primary text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>
@@ -94,11 +92,6 @@ export function docsScreen() {
              </div>
           </nav>
           
-          <div class="mt-auto px-4 pt-6">
-            <button id="btn-back-home-sidebar" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press mx-3">
-                <span class="material-symbols-outlined text-sm">arrow_back</span> Back to Home
-            </button>
-          </div>
         </aside>
 
         <!-- Left Resize Handle -->

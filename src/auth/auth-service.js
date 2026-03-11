@@ -263,7 +263,26 @@ export function initializeTestUser() {
         name: u.name,
         tier: u.tier,
         createdAt: Date.now(),
-        passwordHash: simpleHash('password')
+        passwordHash: simpleHash('password'),
+        // Add sample history for dashboard
+        history: [
+          { 
+            id: 'h1', 
+            title: 'Job Application - Senior Dev', 
+            url: 'https://docs.google.com/forms/job1', 
+            timestamp: Date.now() - 86400000, 
+            status: 'completed',
+            provider: 'Google Forms'
+          },
+          { 
+            id: 'h2', 
+            title: 'Event Survey 2024', 
+            url: 'https://docs.google.com/forms/survey2', 
+            timestamp: Date.now() - 172800000, 
+            status: 'completed',
+            provider: 'Typeform'
+          }
+        ]
       };
       changed = true;
     }

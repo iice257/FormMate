@@ -76,13 +76,20 @@ export function landingScreen() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                 </button>
               </div>
-
-              <p class="mt-4 text-slate-400 text-sm">
-                Try out these examples:
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="job-application">Job Application</span>, 
-                <span class="text-primary cursor-pointer hover:underline font-medium" data-demo="customer-feedback">Customer Feedback</span>, or 
-                <span class="text-primary cursor-pointer hover:underline font-medium inline-flex items-center gap-0.5" id="btn-view-more-examples">View more examples<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="relative top-[0.5px]"><path d="m9 18 6-6-6-6"/></svg></span>
-              </p>
+              <div class="mt-8 flex flex-col items-center gap-4">
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('examples')">
+                      <span class="material-symbols-outlined text-base">explore</span> Examples
+                    </button>
+                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('docs')">
+                      <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
+                    </button>
+                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('docs')">
+                      <span class="material-symbols-outlined text-base">help</span> Help Center
+                    </button>
+                </div>
+              </div>
             </div>
           </div>
 

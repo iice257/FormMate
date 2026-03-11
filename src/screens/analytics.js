@@ -63,17 +63,23 @@ export function analyticsScreen() {
       <!-- Main -->
       <main class="flex-1 overflow-y-auto no-scrollbar relative" style="background: var(--fm-bg);">
         <header class="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-10 glass" style="border-color: var(--fm-border);">
-          <div class="flex items-center gap-3">
+          <div class="flex-1 flex justify-start">
             <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
               <span class="material-symbols-outlined text-sm">arrow_back</span>
               Back
             </button>
-            <h2 class="text-lg font-bold" style="color: var(--fm-text);">Usage Analytics</h2>
           </div>
-          
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold" style="background: var(--fm-bg-elevated); border-color: var(--fm-border); color: var(--fm-text);">
-            <span class="material-symbols-outlined text-[14px]" style="color: var(--fm-warning);">local_fire_department</span>
-            ${streak} Day Streak
+          <div class="flex-1 flex justify-center items-center gap-2">
+            <div class="size-8 flex shrink-0 items-center justify-center">
+              <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+            </div>
+            <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
+          </div>
+          <div class="flex-1 flex justify-end">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold" style="background: var(--fm-bg-elevated); border-color: var(--fm-border); color: var(--fm-text);">
+              <span class="material-symbols-outlined text-[14px]" style="color: var(--fm-warning);">local_fire_department</span>
+              ${streak} Day Streak
+            </div>
           </div>
         </header>
 

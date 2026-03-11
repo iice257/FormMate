@@ -227,7 +227,16 @@ export function authScreen() {
 
       try {
         const session = await signIn(email, password);
-        setState({ isAuthenticated: true, authUser: session.user });
+        setState({ 
+          isAuthenticated: true, 
+          authUser: session.user,
+          tier: session.user.tier || 'free',
+          userProfile: { 
+            name: session.user.name || '', 
+            email: session.user.email || '',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=2298da&color=fff&bold=true`
+          }
+        });
         toast.success('Welcome back, ' + (session.user.name || session.user.email) + '!');
         navigateAfterAuth();
       } catch (err) {
@@ -261,7 +270,16 @@ export function authScreen() {
 
       try {
         const session = await signUp(email, password, name);
-        setState({ isAuthenticated: true, authUser: session.user });
+        setState({ 
+          isAuthenticated: true, 
+          authUser: session.user,
+          tier: 'free',
+          userProfile: { 
+            name: session.user.name || '', 
+            email: session.user.email || '',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=2298da&color=fff&bold=true`
+          }
+        });
         toast.success('Account created! Welcome to FormMate.');
         navigateAfterAuth();
       } catch (err) {

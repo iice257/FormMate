@@ -15,12 +15,22 @@ export function pricingScreen() {
     <div class="min-h-screen bg-mesh py-12 px-6">
       <div class="max-w-6xl mx-auto">
         
-        <!-- Header -->
-        <div class="text-center mb-16 relative">
-          <button id="btn-back" class="absolute left-0 top-0 bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
-            <span class="material-symbols-outlined text-sm">arrow_back</span> Back
-          </button>
-          
+        <header class="h-16 flex items-center justify-between mb-8">
+          <div class="flex-1 flex justify-start">
+            <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
+              <span class="material-symbols-outlined text-sm">arrow_back</span> Back
+            </button>
+          </div>
+          <div class="flex-1 flex justify-center items-center gap-2">
+             <div class="size-8 flex shrink-0 items-center justify-center">
+              <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+            </div>
+            <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
+          </div>
+          <div class="flex-1 flex justify-end"></div>
+        </header>
+        
+        <div class="text-center mb-16">
           <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4" style="color: var(--fm-text);">${currentTier === 'free' ? 'Upgrade your' : 'Manage your'} <span class="text-primary font-cursive underline underline-offset-4 decoration-primary/30">workflow</span></h1>
           <p class="text-lg max-w-xl mx-auto" style="color: var(--fm-text-secondary);">Get unlimited form processing, access to advanced AI models, and priority support.</p>
         </div>

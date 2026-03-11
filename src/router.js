@@ -18,6 +18,31 @@ export function registerScreen(name, renderFn) {
 }
 
 export function navigateTo(screen, replace = false) {
+  const overlay = document.getElementById('page-transition-overlay');
+  const isForward = !replace;
+
+  if (isForward && overlay) {
+    const circle = document.createElement('div');
+    circle.className = 'transition-circle expanding';
+    circle.style.left = `${window.__fmClickX}px`;
+    circle.style.top = `${window.__fmClickY}px`;
+    overlay.appendChild(circle);
+
+    setTimeout(() => {
+      performNavigation(screen, replace);
+      
+      setTimeout(() => {
+        circle.classList.remove('expanding');
+        circle.classList.add('fading');
+        setTimeout(() => circle.remove(), 400);
+      }, 100);
+    }, 450);
+  } else {
+    performNavigation(screen, replace);
+  }
+}
+
+function performNavigation(screen, replace = false) {
   const app = document.getElementById('app');
 
   // URL matching
@@ -37,13 +62,16 @@ export function navigateTo(screen, replace = false) {
     window.history.replaceState({ screen }, '', path);
   }
 
-  // Exit animation
+  // Standard fade-out exit for non-interactive navigations
   const currentContent = app.firstElementChild;
-  if (currentContent) {
+  if (currentContent && replace) {
     currentContent.classList.remove('screen-enter');
     currentContent.classList.add('screen-exit');
   }
 
+  // Switch content
+  const timeout = (currentContent && replace) ? 200 : 0;
+  
   setTimeout(() => {
     // Scroll to top on navigation
     window.scrollTo(0, 0);
@@ -60,12 +88,34 @@ export function navigateTo(screen, replace = false) {
     }
 
     setState({ currentScreen: screen });
+    
+    // Update Document Title
+    const titleMap = {
+      'landing': 'Home | FormMate',
+      'auth': 'Sign In | FormMate',
+      'new': 'New Form | FormMate',
+      'workspace': 'Workspace | FormMate',
+      'analyzing': 'Analyzing Form... | FormMate',
+      'review': 'Review Results | FormMate',
+      'success': 'Success! | FormMate',
+      'accounts': 'My Account | FormMate',
+      'analytics': 'Analytics | FormMate',
+      'docs': 'Documentation | FormMate',
+      'pricing': 'Pricing | FormMate',
+      'help': 'Help Center | FormMate',
+      'examples': 'Examples | FormMate',
+      'onboarding': 'Welcome | FormMate',
+      'dashboard': 'Dashboard | FormMate',
+      'ai-chat': 'AI Chat | FormMate',
+      'history': 'History | FormMate',
+      'vault': 'Vault | FormMate'
+    };
+    document.title = titleMap[screen] || 'FormMate AI — AI-Assisted Form Companion';
 
     if (routes[screen]) {
       app.innerHTML = '';
       const { html, init } = routes[screen]();
 
-      // Handle empty returns (redirects)
       if (!html && !init) return;
 
       const wrapper = document.createElement('div');
@@ -77,7 +127,7 @@ export function navigateTo(screen, replace = false) {
         currentCleanup = init(wrapper) || null;
       }
     }
-  }, currentContent ? 200 : 0);
+  }, timeout);
 }
 
 export function initRouter() {
