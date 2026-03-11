@@ -594,3 +594,29 @@ select:focus {
     display: none !important;
   }
 }
+
+/* ─── Gradient Text Animation ───────── */
+@keyframes gradient-x {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: gradient-x 3s ease infinite;
+}
+
+.text-link-gradient {
+  background: linear-gradient(to right, #8bf9f9, #00fbff, var(--fm-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}

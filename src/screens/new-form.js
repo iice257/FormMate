@@ -6,6 +6,8 @@ import { getState, setState } from '../state.js';
 import { navigateTo, goBack } from '../router.js';
 import { parseFormUrl, detectFormPlatform } from '../parser/form-parser.js';
 import { toast } from '../components/toast.js';
+import { initAurora } from './Aurora.js';
+import './Aurora.css';
 
 export function newFormScreen() {
   const { isAuthenticated, userProfile, formUrl } = getState();
@@ -18,7 +20,10 @@ export function newFormScreen() {
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
 
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh animate-screen-enter">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden animate-screen-enter">
+      <!-- Aurora Background -->
+      <div id="aurora-bg" class="aurora-container bg-white"></div>
+
       <!-- Header -->
       <header class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
         <div class="flex-1 flex items-center justify-start">
@@ -28,18 +33,25 @@ export function newFormScreen() {
           </button>
         </div>
         
+        <div class="flex-1 flex items-center justify-center">
+            <div class="flex items-center gap-2 cursor-pointer" id="logo-home">
+                <img src="/logo.png" class="size-8" alt="Logo" />
+                <span class="text-xl font-black text-slate-900 tracking-tight">FormMate</span>
+            </div>
+        </div>
+
         <div class="flex-1 flex items-center justify-end">
           ${authButtonHtml}
         </div>
       </header>
 
       <main class="flex-1 flex flex-col items-center justify-center px-6 pb-32">
-        <div class="max-w-[800px] w-full text-center space-y-10">
+        <div class="max-w-[800px] w-full text-center space-y-10 relative z-10">
           <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight">
-            Enter your form <span class="text-primary">link</span>
+            Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
           </h1>
 
-          <div class="w-full max-w-2xl mx-auto relative relative z-20">
+          <div class="w-full max-w-2xl mx-auto relative z-20">
             <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-primary/20">
               <div class="flex-1 relative">
                 <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
@@ -57,10 +69,20 @@ export function newFormScreen() {
               </button>
             </div>
             
-            <p class="mt-6 text-slate-400 text-sm font-medium">
-                Try: <span class="text-primary cursor-pointer hover:underline" data-demo="job-application">Job Application</span> or 
-                <span class="text-primary cursor-pointer hover:underline" data-demo="customer-feedback">Customer Survey</span>
-            </p>
+            <div class="mt-8 flex flex-col items-center gap-4">
+              <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
+              <div class="flex flex-wrap justify-center gap-3">
+                  <button id="nav-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">explore</span> Examples
+                  </button>
+                  <button id="nav-chat" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
+                  </button>
+                  <button id="nav-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">help</span> Help Center
+                  </button>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -78,8 +100,18 @@ export function newFormScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     const btnBack = wrapper.querySelector('#btn-back');
+    const auroraBg = wrapper.querySelector('#aurora-bg');
+
+    // Initialize Aurora
+    const cleanupAurora = initAurora(auroraBg, {
+      colorStops: ["#8bf9f9", "#c7f8ff", "#00fbff"],
+      blend: 1,
+      amplitude: 1.0,
+      speed: 0.8
+    });
 
     btnBack.addEventListener('click', () => goBack());
+    wrapper.querySelector('#logo-home')?.addEventListener('click', () => navigateTo('landing'));
 
     btnAnalyze.addEventListener('click', () => {
       let url = urlInput.value.trim();
@@ -113,19 +145,16 @@ export function newFormScreen() {
       if (e.key === 'Enter') btnAnalyze.click();
     });
 
-    // Demo links
-    wrapper.querySelectorAll('[data-demo]').forEach(el => {
-      el.addEventListener('click', () => {
-        const demoType = el.dataset.demo;
-        const urls = {
-          'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer',
-          'customer-feedback': 'https://forms.google.com/feedback-survey'
-        };
-        urlInput.value = urls[demoType];
-        setState({ formUrl: urlInput.value });
-        navigateTo('analyzing');
-      });
+    // Navigation pills
+    wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
+    wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
+      // Chat usually opens the copilot or a specific screen. 
+      // If no 'chat' screen, we'll try 'workspace' or similar if it has the copilot.
+      // For now, let's assume 'workspace' or a dedicated 'chat' if it exists.
+      navigateTo('workspace');
+      toast.info('Opening Form Copilot...');
     });
+    wrapper.querySelector('#nav-help')?.addEventListener('click', () => navigateTo('docs'));
 
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
@@ -150,6 +179,10 @@ export function newFormScreen() {
         return false;
       }
     }
+
+    return () => {
+      if (cleanupAurora) cleanupAurora();
+    };
   }
 
   return { html, init };

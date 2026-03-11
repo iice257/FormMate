@@ -50,7 +50,7 @@ registerScreen('docs', docsScreen);
 registerScreen('pricing', pricingScreen);
 registerScreen('help', helpScreen);
 registerScreen('examples', examplesScreen);
-registerScreen('new-form', newFormScreen);
+registerScreen('new', newFormScreen);
 
 
 

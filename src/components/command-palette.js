@@ -28,7 +28,7 @@ export function initCommandPalette() {
   const overlay = document.getElementById('cmd-overlay');
 
   const commands = [
-    { id: 'new-form', icon: 'add_box', title: 'Create New Form', desc: 'Start a new form via URL', route: 'landing' },
+    { id: 'new', icon: 'add_box', title: 'Create New Form', desc: 'Start a new form via URL', route: 'new' },
     { id: 'active-form', icon: 'edit_document', title: 'Active Form', desc: 'Return to your current workspace', route: 'workspace', authRequired: true },
     { id: 'history', icon: 'history', title: 'Form History', desc: 'View past completed forms', route: 'accounts', authRequired: true },
     { id: 'vault', icon: 'lock', title: 'My Vault', desc: 'Manage your saved personal information', route: 'accounts', authRequired: true },
