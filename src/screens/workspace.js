@@ -8,6 +8,7 @@ import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-
 import { renderQuestionCard } from '../components/question-card.js';
 import { categorizeField } from '../ai/field-classifier.js';
 import { withLayout, initLayout } from '../components/layout.js';
+import { toast } from '../components/toast.js';
 
 export function workspaceScreen() {
   const { formData, answers, tier } = getState();
@@ -41,11 +42,11 @@ export function workspaceScreen() {
         <div class="max-w-3xl mx-auto px-6 md:px-8 lg:px-12 py-8 lg:py-12 pb-32">
           
           <div class="mb-4">
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold tracking-wide text-slate-600 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors btn-press group" id="btn-question-categories">
+            <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold tracking-wide text-slate-600 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors btn-press group" id="btn-question-categories" aria-controls="question-categories-panel" aria-expanded="false">
               <span class="material-symbols-outlined text-primary text-[14px]">category</span>
               Question Categories
               <span class="material-symbols-outlined text-[14px] text-slate-400 group-hover:text-slate-600 ml-1">expand_more</span>
-            </div>
+            </button>
             
             <div id="question-categories-panel" class="hidden mt-3 flex-wrap items-center gap-2 text-[12px] animate-screen-enter">
               <button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-bold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="all" data-active="true">
@@ -192,10 +193,46 @@ export function workspaceScreen() {
     };
     syncUndoRedoButtons();
 
-    questionsContainer.addEventListener('click', (e) => {
+    questionsContainer.addEventListener('click', async (e) => {
       const undoBtn = e.target.closest('.btn-undo');
       const redoBtn = e.target.closest('.btn-redo');
+      const regenBtn = e.target.closest('.btn-regenerate');
       let newAns = null, qId = null;
+
+      if (regenBtn) {
+        qId = regenBtn.dataset.questionId;
+        const { formData } = getState();
+        const question = formData?.questions?.find(q => String(q.id) === String(qId));
+        if (!question) return;
+
+        const current = getState().answers?.[qId]?.text || '';
+        const originalHtml = regenBtn.innerHTML;
+        regenBtn.disabled = true;
+        regenBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Regenerating';
+        toast.info('Regenerating answer...');
+
+        try {
+          const res = await regenerateAnswer(question, current);
+          updateAnswer(qId, res.text, 'ai');
+          const textarea = wrapper.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+          if (textarea) textarea.value = res.text;
+          updateAnsweredCount();
+          syncUndoRedoButtons();
+          try {
+            const { incrementUsage } = await import('../storage/local-store.js');
+            incrementUsage('edits');
+          } catch (_) { /* no-op */ }
+          toast.success('Answer updated');
+        } catch (err) {
+          console.error(err);
+          toast.error(err?.message || 'Failed to regenerate answer');
+        } finally {
+          regenBtn.disabled = false;
+          regenBtn.innerHTML = originalHtml;
+        }
+
+        return;
+      }
 
       if (undoBtn) {
         qId = undoBtn.dataset.questionId;
@@ -217,6 +254,96 @@ export function workspaceScreen() {
         updateAnswer(e.target.dataset.questionId, e.target.value, 'user');
         updateAnsweredCount();
       }
+    });
+
+    // Radio / checkbox / scale interactions (non-input controls)
+    const applyRadioSelection = (questionId, selectedValue) => {
+      wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="radio"]`).forEach((el) => {
+        const isSelected = el.dataset.value === selectedValue;
+        el.classList.toggle('border-primary', isSelected);
+        el.classList.toggle('bg-primary/5', isSelected);
+        el.classList.toggle('border-slate-100', !isSelected);
+        const dot = el.querySelector('.radio-dot');
+        if (dot) dot.classList.toggle('hidden', !isSelected);
+        const ring = el.querySelector('.size-4');
+        if (ring) {
+          ring.classList.toggle('border-primary', isSelected);
+          ring.classList.toggle('border-slate-300', !isSelected);
+        }
+      });
+    };
+
+    const applyCheckboxSelection = (questionId, selectedValues) => {
+      const set = new Set(selectedValues);
+      wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="checkbox"]`).forEach((el) => {
+        const isChecked = set.has(el.dataset.value);
+        el.classList.toggle('border-primary', isChecked);
+        el.classList.toggle('bg-primary/5', isChecked);
+        el.classList.toggle('border-slate-100', !isChecked);
+        const mark = el.querySelector('.check-mark');
+        if (mark) mark.classList.toggle('hidden', !isChecked);
+        const box = el.querySelector('.size-4');
+        if (box) {
+          box.classList.toggle('border-primary', isChecked);
+          box.classList.toggle('bg-primary', isChecked);
+          box.classList.toggle('border-slate-300', !isChecked);
+        }
+      });
+    };
+
+    questionsContainer.addEventListener('click', (e) => {
+      const opt = e.target.closest('.option-select');
+      if (opt) {
+        const qId = opt.dataset.questionId;
+        const value = opt.dataset.value || '';
+        const type = opt.dataset.type;
+
+        if (type === 'radio') {
+          updateAnswer(qId, value, 'user');
+          applyRadioSelection(qId, value);
+          updateAnsweredCount();
+          syncUndoRedoButtons();
+          return;
+        }
+
+        if (type === 'checkbox') {
+          const current = getState().answers?.[qId]?.text || '';
+          const items = current ? current.split(', ').filter(Boolean) : [];
+          const idx = items.indexOf(value);
+          if (idx >= 0) items.splice(idx, 1);
+          else items.push(value);
+          const next = items.join(', ');
+          updateAnswer(qId, next, 'user');
+          applyCheckboxSelection(qId, items);
+          updateAnsweredCount();
+          syncUndoRedoButtons();
+          return;
+        }
+      }
+
+      const scaleBtn = e.target.closest('.scale-btn');
+      if (scaleBtn) {
+        const qId = scaleBtn.dataset.questionId;
+        const val = scaleBtn.dataset.value || '';
+        updateAnswer(qId, String(val), 'user');
+        // Update UI
+        wrapper.querySelectorAll(`.scale-btn[data-question-id="${qId}"]`).forEach((b) => {
+          const isActive = b.dataset.value === String(val);
+          b.classList.toggle('bg-primary', isActive);
+          b.classList.toggle('text-white', isActive);
+          b.classList.toggle('border-slate-200', !isActive);
+        });
+        updateAnsweredCount();
+        syncUndoRedoButtons();
+      }
+    });
+
+    questionsContainer.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const opt = e.target.closest('.option-select, .scale-btn');
+      if (!opt) return;
+      e.preventDefault();
+      opt.click();
     });
 
     // Chat logic simplified for integration
@@ -244,8 +371,12 @@ export function workspaceScreen() {
     wrapper.querySelector('#btn-review-bottom')?.addEventListener('click', () => navigateTo('review'));
     
     // Toggle Categories
-    wrapper.querySelector('#btn-question-categories')?.addEventListener('click', () => {
-      wrapper.querySelector('#question-categories-panel').classList.toggle('hidden');
+    const categoriesBtn = wrapper.querySelector('#btn-question-categories');
+    const categoriesPanel = wrapper.querySelector('#question-categories-panel');
+    categoriesBtn?.addEventListener('click', () => {
+      if (!categoriesPanel) return;
+      const isHidden = categoriesPanel.classList.toggle('hidden');
+      categoriesBtn.setAttribute('aria-expanded', String(!isHidden));
     });
 
     function updateAnsweredCount() {

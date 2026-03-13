@@ -62,9 +62,9 @@ export function buildSystemPrompt(taskType, additionalContext = '') {
     prompt += `If you are absolutely certain based on the User Profile or Vault Data, set confidence to 0.95 or higher.\n`;
     prompt += `If generating a generic but appropriate answer, set confidence between 0.70 and 0.85.\n`;
   } else if (taskType === 'regeneration') {
-    prompt += `Regenerate the answer for the provided field. Return valid JSON ONLY with {"answer": "...", "confidence": 0.9}.\n`;
+    prompt += `Regenerate the answer for the provided field. Return ONLY the new answer text (no quotes, no JSON, no explanations).\n`;
   } else if (taskType === 'quick_edit') {
-    prompt += `Apply the requested quick edit (e.g. shorten, professionalize) to the provided answer. Return valid JSON ONLY with {"answer": "...", "confidence": 0.95}.\n`;
+    prompt += `Apply the requested quick edit (e.g. shorten, professionalize) to the provided answer. Return ONLY the edited answer text (no quotes, no JSON, no explanations).\n`;
   } else if (taskType === 'copilot_chat') {
     prompt += `You are FormMate's chat copilot. You assist the user with filling out the form.\nBe helpful, provide concrete suggestions, and answer questions clearly.`;
   }

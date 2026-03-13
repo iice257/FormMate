@@ -126,6 +126,13 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
   }
 
   const data = await response.json();
+
+  // Best-effort usage tracking (local). Avoid failing the request on storage errors.
+  try {
+    const { incrementUsage } = await import('../storage/local-store.js');
+    incrementUsage('aiCalls');
+  } catch (_) { /* no-op */ }
+
   return data.choices?.[0]?.message?.content || data.text || '';
 }
 
@@ -183,6 +190,21 @@ export async function generate({
     }
   }
 
+  if (lastError?.type === 'RATE_LIMITED') {
+    const e = new Error(`[AIService] Rate limited. Try again in ${lastError.retryAfter || 2}s.`);
+    e.code = 'RATE_LIMITED';
+    e.retryAfter = lastError.retryAfter || 2;
+    throw e;
+  }
+
+  if (lastError?.type === 'API_ERROR') {
+    const e = new Error(`[AIService] Upstream error (${lastError.status}). Please retry.`);
+    e.code = 'UPSTREAM_ERROR';
+    e.status = lastError.status;
+    e.body = lastError.body;
+    throw e;
+  }
+
   throw new Error(`[AIService] All models failed for task "${task}". Last error: ${lastError?.body || lastError?.message || 'Unknown'}`);
 }
 
@@ -193,6 +215,26 @@ export function parseJsonResponse(text) {
   const jsonMatch = cleaned.match(/[[\{][\s\S]*[\]\}]/);
   if (jsonMatch) cleaned = jsonMatch[0];
   return JSON.parse(cleaned);
+}
+
+// â”€â”€â”€ Task-Safe Wrappers â”€â”€â”€
+
+export async function generateText(options) {
+  const text = await generate({ ...options, jsonMode: false });
+  return String(text || '');
+}
+
+export async function generateJson(options) {
+  const raw = await generate({ ...options, jsonMode: true });
+  try {
+    return parseJsonResponse(String(raw || ''));
+  } catch (e) {
+    const err = new Error('[AIService] Model returned invalid JSON.');
+    err.code = 'INVALID_JSON';
+    err.cause = e;
+    err.raw = String(raw || '').slice(0, 5000);
+    throw err;
+  }
 }
 
 // ─── Voice Transcription (via Proxy) ─────────

@@ -1,6 +1,7 @@
 import { navigateTo } from '../router.js';
-import { generate } from '../ai/ai-service.js';
+import { generateText } from '../ai/ai-service.js';
 import { toast } from '../components/toast.js';
+import { getState } from '../state.js';
 
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -40,7 +41,7 @@ export function docsScreen() {
         </div>
 
         <div class="flex-1 flex items-center justify-end gap-4 text-sm font-semibold">
-           <a class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer" onclick="window.__fmNav('pricing')">Pricing</a>
+           <button type="button" class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer bg-transparent border-0 p-0" id="btn-docs-pricing">Pricing</button>
            <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
            <button class="bg-primary text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>
         </div>
@@ -338,7 +339,7 @@ export function docsScreen() {
             <div class="bg-gradient-to-br from-slate-50 to-primary/5 rounded-2xl p-8 border border-primary/10 text-center mt-12 mb-8">
                <h3 class="text-xl font-bold text-slate-900 mb-2">Still need help?</h3>
                <p class="text-slate-600 mb-6 max-w-lg mx-auto">Our support team is always available to help you configure your vault or troubleshoot any issues.</p>
-               <button class="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-800 transition-colors" onclick="window.__fmNav('help')">Contact Support</button>
+               <button id="btn-docs-contact-support" class="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-slate-800 transition-colors">Contact Support</button>
             </div>
 
           </div>
@@ -391,9 +392,11 @@ export function docsScreen() {
   `;
 
   function init(wrapper) {
-    window.__fmNav = (screen) => navigateTo(screen);
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('landing'));
-    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo('workspace'));
+    const authed = getState().isAuthenticated;
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo(authed ? 'dashboard' : 'landing'));
+    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo('dashboard'));
+    wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
+    wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => navigateTo('help'));
 
     // --- Search & Chat Logic ---
     const searchInput = wrapper.querySelector('#docs-search-input');
@@ -436,7 +439,7 @@ export function docsScreen() {
 
       if (results.length > 0) {
         searchResultsList.innerHTML = results.map(item => `
-             <button class="w-full text-left p-2 hover:bg-slate-50 rounded-lg transition-colors group" onclick="document.getElementById('${item.id}').scrollIntoView({behavior:'smooth'}); document.getElementById('search-results-dropdown').classList.add('hidden');">
+             <button type="button" class="docs-search-result w-full text-left p-2 hover:bg-slate-50 rounded-lg transition-colors group" data-doc-target="${item.id}">
                 <div class="flex items-center gap-2 mb-0.5">
                    <span class="material-symbols-outlined text-[14px] text-slate-400 group-hover:text-primary">${item.type === 'faq' ? 'quiz' : 'description'}</span>
                    <span class="text-[13px] font-bold text-slate-900">${item.title}</span>
@@ -459,6 +462,15 @@ export function docsScreen() {
       if (!wrapper.querySelector('#docs-search-container')?.contains(e.target)) {
         searchDropdown.classList.add('hidden');
       }
+    });
+
+    searchResultsList?.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('button.docs-search-result[data-doc-target]');
+      if (!btn) return;
+      const targetId = btn.dataset.docTarget;
+      const target = wrapper.querySelector(`#${CSS.escape(targetId)}`) || document.getElementById(targetId);
+      target?.scrollIntoView({ behavior: 'smooth' });
+      searchDropdown?.classList.add('hidden');
     });
 
     btnAskAiSearch?.addEventListener('click', () => {
@@ -583,7 +595,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
-          const responseText = await generate({
+          const responseText = await generateText({
             task: 'docs_chat',
             messages: chatHistory,
             temperature: 0.6,
@@ -672,7 +684,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
     // Sidebar back to home
     wrapper.querySelector('#btn-back-home-sidebar')?.addEventListener('click', () => {
-      window.__fmNav('landing');
+      navigateTo(authed ? 'dashboard' : 'landing');
     });
 
     // Rating Logic
@@ -726,7 +738,6 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
       observer.disconnect();
       cleanupLeft();
       cleanupRight();
-      delete window.__fmNav;
     };
   }
 

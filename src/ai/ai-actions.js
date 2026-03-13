@@ -6,7 +6,7 @@
 // prompts using user profile, vault, and settings.
 // ═══════════════════════════════════════════
 
-import { generate, parseJsonResponse } from './ai-service.js';
+import { generateText, generateJson } from './ai-service.js';
 import { getState } from '../state.js';
 import { categorizeField } from './field-classifier.js';
 import { buildSystemPrompt } from './system-prompts.js';
@@ -53,15 +53,12 @@ Extraction Rules:
   ];
 
   try {
-    const response = await generate({
+    const parsed = await generateJson({
       task: 'form_parsing',
       messages,
       temperature: 0.2, // Low temperature for high accuracy
       maxTokens: 3000,
-      jsonMode: true,
     });
-
-    const parsed = parseJsonResponse(response);
 
     // Ensure IDs are strings and 1-indexed for internal consistency
     if (parsed.questions) {
@@ -151,12 +148,11 @@ Options: ${q.options && q.options.length ? q.options.join(', ') : 'None'}`
     ];
 
     try {
-      const responseText = await generate({
+      const responseText = await generateText({
         task: 'answer_generation',
         messages,
         temperature: settings?.ai?.temperature || 0.7,
         maxTokens: 500,
-        jsonMode: false,
       });
 
       answers[q.id] = { text: responseText.trim(), source: 'ai', confidence: 0.9 };
@@ -188,7 +184,7 @@ export async function quickEditAnswer(question, currentAnswer, instruction) {
   ];
 
   try {
-    const text = await generate({
+    const text = await generateText({
       task: 'quick_edit',
       messages,
       temperature: 0.5,
@@ -220,7 +216,7 @@ export async function regenerateAnswer(question, currentAnswer) {
   ];
 
   try {
-    const text = await generate({
+    const text = await generateText({
       task: 'regeneration',
       messages,
       temperature: 0.85,
@@ -285,7 +281,7 @@ Be helpful, provide concrete suggestions, and answer questions clearly, adapting
   ];
 
   try {
-    const responseText = await generate({
+    const responseText = await generateText({
       task: 'copilot_chat',
       messages,
       temperature: 0.7,
