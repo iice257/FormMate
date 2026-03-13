@@ -164,6 +164,15 @@ async function boot() {
       if (session) {
         const { setState } = await import('./state.js');
         setState({ isAuthenticated: true, authUser: session.user, tier: session.tier });
+
+        // Optional remote storage hydration (Supabase-ready; still uses current local auth).
+        try {
+          const { hydrateFromRemote } = await import('./storage/storage-provider.js');
+          const hydrated = await hydrateFromRemote(session.user);
+          if (hydrated) setState(hydrated);
+        } catch (hydrateErr) {
+          console.warn('[boot] Remote storage hydration failed; continuing with local cache.', hydrateErr);
+        }
       }
     } catch (authErr) {
       console.warn('[boot] Failed to load auth session; continuing unauthenticated.', authErr);

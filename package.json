@@ -4,12 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "dev:insecure": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vercel dev",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite dev --configLoader native",
+    "dev:vercel": "vercel dev",
+    "build": "vite build --configLoader native",
+    "preview": "vite preview --configLoader native",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "cross-env": "^10.1.0",
     "jsdom": "^28.1.0",
     "vercel": "^50.31.1",

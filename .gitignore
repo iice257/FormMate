@@ -9,6 +9,10 @@ node_modules/
 # Build
 dist/
 
+# Playwright
+test-results/
+playwright-report/
+
 # Editor
 .vscode/
 *.swp

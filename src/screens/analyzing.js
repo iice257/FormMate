@@ -8,6 +8,7 @@ import { parseFormUrl, detectFormPlatform } from '../parser/form-parser.js';
 import { generateAnswers } from '../ai/ai-actions.js';
 import { capturedPayloadToFormData } from '../parser/capture-parser.js';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms.js';
+import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store.js';
 
 export function analyzingScreen() {
   const { formUrl } = getState();
@@ -299,8 +300,21 @@ export function analyzingScreen() {
         completeStep(3, 'Suggestions ready');
         updateProgress(100, 'Complete!', 'Done', 'Redirecting...');
 
-        // Store results
-        setState({ formData, answers });
+        // Store results + persist lightweight history/usage
+        try { incrementUsage('formsAnalyzed'); } catch (e) { console.warn('[AnalyzingScreen] Usage tracking failed:', e); }
+        try {
+          saveFormHistory({
+            id: `f_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+            title: formData.title,
+            url: formData.url || formUrl,
+            status: 'completed',
+            provider: formData.source || platform,
+            parseStrategy: formData.parseStrategy || 'unknown',
+            fields: Array.isArray(formData.questions) ? formData.questions.length : 0
+          });
+        } catch (e) { console.warn('[AnalyzingScreen] Failed to save form history:', e); }
+
+        setState({ formData, answers, formHistory: loadFormHistory() });
 
         // Navigate to workspace
         await delay(600);

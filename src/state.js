@@ -15,6 +15,8 @@ import {
   load, save
 } from './storage/local-store.js';
 
+import { queueRemoteSync } from './storage/storage-provider.js';
+
 // ─── Event Bus ───────────────────────────
 
 const listeners = new Set();
@@ -92,9 +94,22 @@ export function setState(updates) {
   Object.assign(state, updates);
 
   // Auto-persist certain keys
-  if (updates.userProfile) saveProfile(updates.userProfile);
-  if (updates.settings) saveSettings(updates.settings);
-  if (updates.vault) saveVault(updates.vault);
+  if (updates.userProfile) {
+    saveProfile(updates.userProfile);
+    queueRemoteSync(state.authUser, { profile: updates.userProfile });
+  }
+  if (updates.settings) {
+    saveSettings(updates.settings);
+    queueRemoteSync(state.authUser, { settings: updates.settings });
+  }
+  if (updates.vault) {
+    saveVault(updates.vault);
+    queueRemoteSync(state.authUser, { vault: updates.vault });
+  }
+  if (updates.formHistory) {
+    save('form_history', updates.formHistory);
+    queueRemoteSync(state.authUser, { form_history: updates.formHistory });
+  }
   if (updates.formData) save('form_data_state', updates.formData);
 
   listeners.forEach(fn => fn(state));
