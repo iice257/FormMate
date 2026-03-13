@@ -2,7 +2,7 @@
 // FormMate — Auth Screen
 // ═══════════════════════════════════════════
 
-import { setState } from '../state.js';
+import { getState, setState } from '../state.js';
 import { navigateTo } from '../router.js';
 import { signUp, signIn, signInWithGoogle, signInWithApple, resetPassword } from '../auth/auth-service.js';
 import { isOnboardingComplete } from '../storage/local-store.js';
@@ -364,6 +364,13 @@ export function authScreen() {
 }
 
 function navigateAfterAuth() {
+  // If Assisted Capture was completed while unauthenticated, continue the import flow.
+  const { capturePayload } = getState();
+  if (capturePayload) {
+    navigateTo('analyzing');
+    return;
+  }
+
   if (!isOnboardingComplete()) {
     navigateTo('onboarding');
   } else {

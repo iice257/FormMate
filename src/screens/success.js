@@ -8,19 +8,20 @@ import { navigateTo, goBack } from '../router.js';
 export function successScreen() {
   const { formData, answers } = getState();
   const answeredCount = formData ? Object.values(answers).filter(a => a?.text).length : 0;
+  const authed = getState().isAuthenticated;
 
   const html = `
     <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Header -->
-        <header class="flex items-center justify-between border-b border-slate-200 px-6 md:px-40 py-4 bg-white">
-          <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
+        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between border-b border-slate-200 px-6 md:px-40 py-4 bg-white">
+          <button type="button" class="flex items-center gap-3 cursor-pointer bg-transparent border-0 p-0 text-left" id="btn-logo-home" aria-label="Go to home">
             <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
             <h2 class="text-slate-900 text-xl font-black tracking-tighter">Form<span class="text-primary">Mate</span></h2>
-          </div>
+          </button>
           <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -70,7 +71,7 @@ export function successScreen() {
               <h3 class="text-slate-900 text-xl font-bold leading-tight px-1">Next Steps</h3>
 
               <!-- Save to Profile -->
-              <div class="group flex items-stretch justify-between gap-6 rounded-xl bg-white p-6 shadow-sm border border-slate-200 hover:border-primary/40 transition-all cursor-pointer">
+              <div class="group flex items-stretch justify-between gap-6 rounded-xl bg-white p-6 shadow-sm border border-slate-200 hover:border-primary/40 transition-all">
                 <div class="flex flex-col justify-between gap-4 flex-1">
                   <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2 text-primary mb-1">
@@ -97,7 +98,7 @@ export function successScreen() {
               </div>
 
               <!-- Share -->
-              <div class="flex items-center justify-between p-4 rounded-xl border border-dashed border-slate-300 opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+              <div class="flex items-center justify-between p-4 rounded-xl border border-dashed border-slate-300 opacity-80 hover:opacity-100 transition-opacity">
                 <div class="flex items-center gap-4">
                   <div class="size-10 rounded-full bg-slate-100 flex items-center justify-center">
                     <span class="material-symbols-outlined text-slate-500">share</span>
@@ -120,12 +121,12 @@ export function successScreen() {
             <!-- Footer -->
             <div class="mt-12 pt-8 border-t border-slate-200 flex flex-col items-center gap-4">
               <p class="text-slate-400 text-xs text-center">
-                Encrypted with 256-bit SSL security. Your data is never shared without your explicit consent.
+                Your data is stored locally in your browser unless you explicitly choose to export or share it.
               </p>
               <div class="flex gap-6">
-                <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer">Terms of Service</a>
-                <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer">Privacy Policy</a>
-                <a class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer" onclick="window.__fmNav('docs')">Help Center</a>
+                <button type="button" class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
+                <button type="button" class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
+                <button type="button" class="text-slate-400 hover:text-primary transition-colors text-xs font-medium cursor-pointer bg-transparent border-0 p-0" id="btn-success-help">Help Center</button>
               </div>
             </div>
 
@@ -159,7 +160,11 @@ export function successScreen() {
     wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
 
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
-      navigateTo('landing');
+      navigateTo(authed ? 'dashboard' : 'landing');
+    });
+
+    wrapper.querySelector('#btn-success-help')?.addEventListener('click', () => {
+      navigateTo('docs');
     });
 
     wrapper.querySelector('#btn-new-form').addEventListener('click', () => {
@@ -171,7 +176,7 @@ export function successScreen() {
         chatMessages: [],
         analysisProgress: { step: 0, percent: 0, message: '' }
       });
-      navigateTo('landing');
+      navigateTo(authed ? 'new' : 'landing');
     });
   }
 

@@ -57,7 +57,7 @@ export function reviewScreen() {
               <p class="review-answer text-slate-900 text-base font-medium ${!answerText ? 'text-slate-300 italic' : ''}" data-question-id="${q.id}">
                 ${answerText ? escapeHtml(answerText) : 'No answer provided'}
               </p>
-              <input type="text" class="review-edit hidden w-full mt-1 rounded-lg border-slate-200 focus:ring-primary focus:border-primary text-sm py-2 px-3"
+              <input type="text" aria-label="${escapeAttr(`Edit answer: ${q.text}`)}" class="review-edit hidden w-full mt-1 rounded-lg border-slate-200 focus:ring-primary focus:border-primary text-sm py-2 px-3"
                 data-question-id="${q.id}" value="${escapeAttr(answerText)}" />
             </div>
           </div>

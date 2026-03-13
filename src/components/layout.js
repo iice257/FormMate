@@ -4,6 +4,7 @@
 
 import { getState } from '../state.js';
 import { navigateTo } from '../router.js';
+import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
 
 /**
  * Wraps a screen's content with the shared Sidebar and Header.
@@ -13,6 +14,11 @@ import { navigateTo } from '../router.js';
  */
 export function withLayout(pageId, contentHtml) {
   const { isAuthenticated, userProfile, tier } = getState();
+  const displayName = escapeHtml(userProfile?.name || 'User');
+  const displayFirstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
+  const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = avatarFromProfile || fallbackAvatar;
 
   const sidebarLinks = [
     { id: 'dashboard', icon: 'space_dashboard', label: 'Dashboard', route: 'dashboard' },
@@ -41,8 +47,8 @@ export function withLayout(pageId, contentHtml) {
   return `
     <div class="h-screen bg-slate-50 text-slate-900 flex flex-col font-sans overflow-hidden">
       <!-- Header -->
-      <header class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative">
-        <div class="flex items-center gap-3 cursor-pointer btn-press" id="btn-logo-home">
+      <header data-fm-hide-on-scroll="true" class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative">
+        <button type="button" class="flex items-center gap-3 cursor-pointer btn-press bg-transparent border-0 p-0 text-left" id="btn-logo-home" aria-label="Go to home">
           <div class="size-10 rounded-xl bg-white shadow-[0_4px_12px_rgba(124,58,237,0.15)] border border-slate-100 p-[3px] flex items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
@@ -50,15 +56,15 @@ export function withLayout(pageId, contentHtml) {
             <span class="font-black text-2xl tracking-tighter text-slate-900 leading-none">Form<span class="text-primary">Mate</span></span>
             <span class="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mt-1">Form Copilot</span>
           </div>
-        </div>
+        </button>
         
         <div class="flex items-center gap-4">
           <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
           
           ${isAuthenticated && userProfile ? `
           <button id="btn-profile-header" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-            <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-            <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+            <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+            <span class="truncate max-w-[100px]">${displayFirstName}</span>
           </button>
           ` : `
           <button id="btn-login-header" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-slate-800 transition-all shadow-sm btn-press">Sign In</button>
@@ -85,11 +91,11 @@ export function withLayout(pageId, contentHtml) {
              <div class="flex items-center justify-between p-2 lg:p-3 rounded-2xl bg-white/50 border border-slate-100/50 shadow-sm mb-3">
                 <div class="flex items-center gap-2.5 min-w-0">
                    <div class="relative shrink-0">
-                      <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-8 lg:size-10 rounded-full object-cover border-2 border-white shadow-sm" alt="Avatar" />
+                      <img src="${avatarSrc}" class="size-8 lg:size-10 rounded-full object-cover border-2 border-white shadow-sm" alt="Avatar" />
                       ${tier !== 'free' ? '<div class="absolute -bottom-1 -right-1 size-4 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"><span class="material-symbols-outlined text-[10px]">bolt</span></div>' : ''}
                    </div>
                    <div class="hidden lg:flex flex-col min-w-0">
-                      <span class="text-[13px] font-bold text-slate-900 truncate">${userProfile?.name || 'User'}</span>
+                      <span class="text-[13px] font-bold text-slate-900 truncate">${displayName}</span>
                       <span class="text-[10px] font-heavy ${tier === 'free' ? 'text-slate-400' : 'text-primary'} uppercase tracking-tighter">${tier === 'free' ? 'Free Plan' : 'Pro Member'}</span>
                    </div>
                 </div>
@@ -141,7 +147,8 @@ export function initLayout(wrapper) {
   });
 
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
-    import('../router.js').then(r => r.navigateTo('landing'));
+    const authed = getState().isAuthenticated;
+    import('../router.js').then(r => r.navigateTo(authed ? 'dashboard' : 'landing'));
   });
 
   wrapper.querySelector('#btn-profile-header')?.addEventListener('click', () => {

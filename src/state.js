@@ -26,6 +26,9 @@ const state = {
   currentScreen: 'landing',
   formUrl: '',
 
+  // Assisted Capture payload (bookmarklet import)
+  capturePayload: null,
+
   // Form data from parser
   formData: load('form_data_state') || null,
 

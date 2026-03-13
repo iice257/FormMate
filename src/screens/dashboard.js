@@ -5,9 +5,11 @@
 import { getState } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { navigateTo } from '../router.js';
+import { escapeAttr, escapeHtml } from '../utils/escape.js';
 
 export function dashboardScreen() {
-  const { userProfile, formHistory, tier } = getState();
+  const { userProfile, formHistory, tier, formData } = getState();
+  const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
 
   const mockStats = [
     { label: 'Total Forms', value: formHistory.length || 0, icon: 'description', color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -18,18 +20,18 @@ export function dashboardScreen() {
 
   const recentFormsHtml = formHistory.length > 0 
     ? formHistory.slice(0, 5).map(form => `
-        <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group cursor-pointer" onclick="window.__fmNav('workspace', '${form.url}')">
+        <div class="recent-form-item flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group cursor-pointer" data-form-url="${escapeAttr(form.url || '')}" role="button" tabindex="0">
           <div class="flex items-center gap-4">
             <div class="size-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
               <span class="material-symbols-outlined">edit_document</span>
             </div>
             <div class="flex flex-col">
-              <span class="text-sm font-bold text-slate-900 truncate max-w-[200px]">${form.title || 'Untitled Form'}</span>
-              <span class="text-[11px] text-slate-400 font-medium">${new Date(form.timestamp).toLocaleDateString()} • ${form.provider || 'Google Forms'}</span>
+              <span class="text-sm font-bold text-slate-900 truncate max-w-[200px]">${escapeHtml(form.title || 'Untitled Form')}</span>
+              <span class="text-[11px] text-slate-400 font-medium">${new Date(form.timestamp).toLocaleDateString()} • ${escapeHtml(form.provider || 'Google Forms')}</span>
             </div>
           </div>
           <div class="flex items-center gap-3">
-             <span class="text-[10px] font-bold px-2 py-1 rounded-full ${form.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'} uppercase tracking-tight">${form.status || 'In Progress'}</span>
+             <span class="text-[10px] font-bold px-2 py-1 rounded-full ${form.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'} uppercase tracking-tight">${escapeHtml(form.status || 'In Progress')}</span>
              <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
           </div>
         </div>
@@ -41,7 +43,7 @@ export function dashboardScreen() {
           </div>
           <h3 class="text-base font-bold text-slate-900 mb-1">No forms yet</h3>
           <p class="text-xs text-slate-500 max-w-[200px]">Start by pasting a link to analyze your first form.</p>
-          <button class="mt-6 px-6 py-2 bg-primary text-white rounded-full text-xs font-bold shadow-sm btn-press" onclick="window.__fmNav('new')">Start New Form</button>
+          <button id="btn-empty-new" class="mt-6 px-6 py-2 bg-primary text-white rounded-full text-xs font-bold shadow-sm btn-press">Start New Form</button>
         </div>
       `;
 
@@ -52,13 +54,21 @@ export function dashboardScreen() {
         <!-- Welcome Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Welcome back, ${userProfile?.name?.split(' ')[0] || 'User'}!</h1>
+            <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Welcome back, ${firstName}!</h1>
             <p class="text-sm text-slate-500 mt-1">Here's what's happening with your forms today.</p>
           </div>
-          <button id="btn-dashboard-new" class="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all btn-press">
-            <span class="material-symbols-outlined text-[20px]">add</span>
-            New Form
-          </button>
+          <div class="flex items-center gap-3">
+            ${formData ? `
+              <button id="btn-dashboard-resume" class="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all btn-press">
+                <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                Resume Active Form
+              </button>
+            ` : ''}
+            <button id="btn-dashboard-new" class="flex items-center gap-2 ${formData ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-primary text-white hover:bg-primary/90'} px-6 py-3 rounded-2xl font-bold shadow-lg ${formData ? 'shadow-slate-900/10' : 'shadow-primary/20'} hover:shadow-xl hover:-translate-y-0.5 transition-all btn-press">
+              <span class="material-symbols-outlined text-[20px]">add</span>
+              New Form
+            </button>
+          </div>
         </div>
 
         <!-- Stats Grid -->
@@ -82,7 +92,7 @@ export function dashboardScreen() {
                 <span class="material-symbols-outlined text-primary">history</span>
                 Recent Forms
               </h3>
-              <button class="text-xs font-bold text-primary hover:underline" onclick="window.__fmNav('history')">View All</button>
+              <button id="btn-dashboard-view-all" class="text-xs font-bold text-primary hover:underline">View All</button>
             </div>
             <div class="space-y-4">
               ${recentFormsHtml}
@@ -92,7 +102,7 @@ export function dashboardScreen() {
           <!-- Side Cards -->
           <div class="space-y-6">
             <!-- AI Pro Card -->
-            <div class="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white group cursor-pointer" onclick="window.__fmNav('pricing')">
+            <button type="button" id="btn-upgrade-card" class="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white group cursor-pointer text-left w-full">
               <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-primary/30 transition-colors"></div>
               <div class="relative z-10">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-primary text-[10px] font-black uppercase tracking-widest border border-white/10 mb-6">
@@ -106,7 +116,7 @@ export function dashboardScreen() {
                   <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </div>
               </div>
-            </div>
+            </button>
 
             <!-- Quick Tips -->
             <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -115,7 +125,7 @@ export function dashboardScreen() {
                 Quick Tip
               </h4>
               <p class="text-xs text-slate-600 leading-relaxed mb-4">Did you know you can type <strong>"Make it professional"</strong> in the chat to rewrite your summaries?</p>
-              <button class="w-full py-2.5 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors" onclick="window.__fmNav('ai-chat')">Try AI Chat</button>
+              <button id="btn-dashboard-try-chat" class="w-full py-2.5 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors">Try AI Chat</button>
             </div>
           </div>
         </div>
@@ -132,12 +142,37 @@ export function dashboardScreen() {
       navigateTo('new');
     });
 
-    // Handle global nav helper if not already defined
-    if (!window.__fmNav) {
-      window.__fmNav = (route, params) => {
-        navigateTo(route, params);
-      };
-    }
+    wrapper.querySelector('#btn-dashboard-resume')?.addEventListener('click', () => {
+      navigateTo('workspace');
+    });
+
+    wrapper.querySelector('#btn-empty-new')?.addEventListener('click', () => {
+      navigateTo('new');
+    });
+
+    wrapper.querySelector('#btn-dashboard-view-all')?.addEventListener('click', () => {
+      navigateTo('history');
+    });
+
+    wrapper.querySelector('#btn-dashboard-try-chat')?.addEventListener('click', () => {
+      navigateTo('ai-chat');
+    });
+
+    wrapper.querySelectorAll('.recent-form-item').forEach((el) => {
+      el.addEventListener('click', () => {
+        // Keep data flow as-is for now (no param hydration yet).
+        navigateTo('workspace');
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        el.click();
+      });
+    });
+
+    wrapper.querySelector('#btn-upgrade-card')?.addEventListener('click', () => {
+      navigateTo('pricing');
+    });
   }
 
   return { html, init };

@@ -6,6 +6,32 @@ import { MOCK_FORMS } from './mock-forms.js';
 import { parseDOM } from './dom-parser.js';
 import { parseFormHtml } from '../ai/ai-actions.js';
 
+const RENDER_REQUIRED_PLATFORMS = new Set([
+  'Typeform',
+  'JotForm',
+  'SurveyMonkey',
+  'Workday',
+  'Qualtrics',
+  'Airtable Forms',
+  'Tally',
+  'Feathery'
+]);
+
+function createParseError(code, message, details = {}) {
+  const err = new Error(message);
+  err.code = code;
+  err.details = details;
+  return err;
+}
+
+function isDemoUrl(url) {
+  return String(url || '').toLowerCase().startsWith('demo://');
+}
+
+function getDemoId(url) {
+  return String(url || '').slice('demo://'.length).trim();
+}
+
 // ─── Google Forms URL Normalization ──────────
 
 /**
@@ -25,7 +51,7 @@ export function extractGoogleFormId(url) {
   // Short link: forms.gle/XXXXX — we can't resolve these server-side without following redirects
   // But we try anyway, returning the short code
   const shortMatch = url.match(/forms\.gle\/([a-zA-Z0-9_-]+)/);
-  if (shortMatch) return shortMatch[1];
+  if (shortMatch) return null;
 
   return null;
 }
@@ -127,12 +153,21 @@ function parseFbPublicLoadData(dataString) {
  * and generic scraping + DOM parsing for everything else.
  */
 export async function parseFormUrl(url) {
-  const urlLower = url.toLowerCase();
-
-  // 1. Check if it's a known demo URL
-  if (urlLower.includes('lever.co/creativesync')) return { ...MOCK_FORMS['job-application'] };
-  if (urlLower.includes('forms.google.com/feedback')) return { ...MOCK_FORMS['customer-feedback'] };
-  if (urlLower.includes('gov.travel/visa')) return { ...MOCK_FORMS['travel-visa'] };
+  if (isDemoUrl(url)) {
+    const demoId = getDemoId(url);
+    const demo = MOCK_FORMS[demoId];
+    if (!demo) {
+      throw createParseError('PARSE_FAILED', 'Unknown demo form.', { demoId });
+    }
+    return {
+      ...demo,
+      url,
+      source: 'Demo',
+      demoId,
+      parseStrategy: 'demo',
+      authRequired: false
+    };
+  }
 
   // 2. Google Forms — use dedicated multi-strategy pipeline
   if (isGoogleFormUrl(url)) {
@@ -162,13 +197,21 @@ async function parseGoogleForm(url) {
     const response = await fetch(proxyUrl);
 
     if (!response.ok) {
-      throw new Error(`Google Form proxy failed: ${response.statusText}`);
+      throw createParseError('NETWORK', `Google Form fetch failed: ${response.statusText}`, { platform: 'Google Forms', url });
     }
 
     const result = await response.json();
 
+    if (result.authRequired) {
+      throw createParseError(
+        'AUTH_REQUIRED',
+        'This Google Form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.',
+        { platform: 'Google Forms', url }
+      );
+    }
+
     // ── Handle FB_PUBLIC_LOAD_DATA_ strategy ──
-    if (result.fbPublicLoadData) {
+    if (false && result.fbPublicLoadData) {
       console.log('[FormParser] Attempting FB_PUBLIC_LOAD_DATA_ parse...');
       const fbParsed = parseFbPublicLoadData(result.fbPublicLoadData);
       if (fbParsed && fbParsed.questions.length > 0) {
@@ -184,20 +227,13 @@ async function parseGoogleForm(url) {
     if (result.html) {
       let formData = parseDOM(result.html);
 
-      // If DOM parser detected auth wall, it returns { requiresAuth: true }
+      // If DOM parser detected auth wall, stop early (AI fallback won't fix permissions).
       if (formData.requiresAuth && formData.questions.length === 0) {
-        // Try AI fallback on whatever HTML we got
-        console.log('[FormParser] DOM parser hit auth wall. Trying AI fallback on partial HTML...');
-        try {
-          formData = await parseFormHtml(result.html, url);
-        } catch (_) {
-          // AI also failed — throw a user-friendly error
-          throw new Error(
-            'This Google Form requires sign-in to access. ' +
-            'FormMate cannot parse forms that are restricted to specific users or organizations. ' +
-            'Try making the form public, or paste the form questions manually.'
-          );
-        }
+        throw createParseError(
+          'AUTH_REQUIRED',
+          'This Google Form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.',
+          { platform: 'Google Forms', url }
+        );
       }
 
       // If still no questions, try AI fallback
@@ -216,9 +252,10 @@ async function parseGoogleForm(url) {
     }
 
     // Nothing worked
-    throw new Error(
-      'Could not extract form fields from this Google Form. ' +
-      'The form may require sign-in or be restricted to specific users.'
+    throw createParseError(
+      'PARSE_FAILED',
+      'Could not extract form fields from this Google Form. The form may be restricted or use an unsupported layout.',
+      { platform: 'Google Forms', url }
     );
 
   } catch (err) {
@@ -238,34 +275,61 @@ async function parseGenericForm(url) {
     const response = await fetch(proxyUrl);
 
     if (!response.ok) {
-      throw new Error(`Proxy fetch failed: ${response.statusText}`);
+      throw createParseError('NETWORK', `Proxy fetch failed: ${response.statusText}`, { platform: detectFormPlatform(url), url });
     }
 
     const html = await response.text();
+    const platform = detectFormPlatform(url);
 
     // Parse HTML into structured data deterministically
     let formData = parseDOM(html);
 
     // If DOM parser returned auth wall result, try AI fallback
     if (formData.requiresAuth && formData.questions.length === 0) {
-      console.log('[FormParser] Auth wall detected. Trying AI fallback...');
-      formData = await parseFormHtml(html, url);
+      throw createParseError(
+        'AUTH_REQUIRED',
+        'This form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.',
+        { platform: detectFormPlatform(url), url }
+      );
+    }
+
+    // If the HTML looks like a JS shell, ask for Assisted Capture instead of retry loops.
+    if (formData.requiresRender && formData.questions.length === 0) {
+      throw createParseError(
+        'RENDER_REQUIRED',
+        "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
+        { platform, url }
+      );
     }
 
     // Fallback lightweight AI parser if deterministic fails completely
     if (!formData.questions || formData.questions.length === 0) {
+      if (RENDER_REQUIRED_PLATFORMS.has(platform)) {
+        throw createParseError(
+          'RENDER_REQUIRED',
+          "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
+          { platform, url }
+        );
+      }
+
       console.log('[FormParser] Deterministic parser found 0 questions. Trying AI fallback...');
-      formData = await parseFormHtml(html, url);
+      try {
+        formData = await parseFormHtml(html, url);
+      } catch (e) {
+        throw createParseError('PARSE_FAILED', 'Failed to extract fields from this page.', { platform, url });
+      }
     }
 
     // Final explicit check
     if (!formData || !formData.questions || formData.questions.length === 0) {
-      throw new Error("No form fields detected on this page.");
+      throw createParseError('PARSE_FAILED', 'No form fields detected on this page.', { platform, url });
     }
 
     // Add metadata
     formData.url = url;
-    formData.source = detectFormPlatform(url);
+    formData.source = platform;
+    formData.parseStrategy = 'proxy_html';
+    formData.authRequired = false;
 
     return formData;
 
@@ -281,6 +345,7 @@ async function parseGenericForm(url) {
  * Detect the type of form platform from a URL
  */
 export function detectFormPlatform(url) {
+  if (isDemoUrl(url)) return 'Demo';
   if (url.includes('google.com/forms') || url.includes('docs.google.com') || url.includes('forms.gle')) return 'Google Forms';
   if (url.includes('typeform.com')) return 'Typeform';
   if (url.includes('jotform.com')) return 'JotForm';

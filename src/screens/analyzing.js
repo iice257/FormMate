@@ -6,10 +6,14 @@ import { getState, setState } from '../state.js';
 import { navigateTo } from '../router.js';
 import { parseFormUrl, detectFormPlatform } from '../parser/form-parser.js';
 import { generateAnswers } from '../ai/ai-actions.js';
+import { capturedPayloadToFormData } from '../parser/capture-parser.js';
+import { MOCK_AI_ANSWERS } from '../parser/mock-forms.js';
 
 export function analyzingScreen() {
   const { formUrl } = getState();
   const platform = detectFormPlatform(formUrl);
+  const authed = getState().isAuthenticated;
+  const homeLabel = authed ? 'Go to Dashboard' : 'Go Home';
 
   const html = `
     <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
@@ -22,12 +26,12 @@ export function analyzingScreen() {
               <span class="material-symbols-outlined text-sm">arrow_back</span>
               Back
             </button>
-            <div class="flex items-center gap-3 cursor-pointer" id="btn-logo-home">
+            <button type="button" class="flex items-center gap-3 cursor-pointer bg-transparent border-0 p-0 text-left" id="btn-logo-home" aria-label="Go to home">
               <div class="size-8 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
               <h2 class="text-slate-900 text-xl font-black leading-tight tracking-tighter">Form<span class="text-primary">Mate</span></h2>
-            </div>
+            </button>
           </div>
           <button id="btn-cancel" class="flex items-center justify-center rounded-full size-10 bg-slate-200/50 text-slate-600 hover:bg-slate-200 transition-colors">
             <span class="material-symbols-outlined text-xl">close</span>
@@ -151,7 +155,22 @@ export function analyzingScreen() {
         <p id="error-modal-msg" class="text-slate-600 max-w-md mb-10 leading-relaxed text-lg">We encountered an unexpected issue while trying to read this form.</p>
         <div class="flex flex-col sm:flex-row gap-3">
           <button id="btn-error-retry" class="px-8 py-3.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/95 shadow-lg shadow-primary/25 transition-all">Try Again</button>
-          <button id="btn-error-home" class="px-8 py-3.5 rounded-xl font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-all">Go to Dashboard</button>
+          <button id="btn-error-home" class="px-8 py-3.5 rounded-xl font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-all">${homeLabel}</button>
+        </div>
+      </div>
+
+      <!-- Assisted Capture Modal (Auth/Render required) -->
+      <div id="capture-modal" class="fixed inset-0 z-[101] bg-white hidden flex-col items-center justify-center p-6 text-center animate-screen-enter">
+        <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6 border-4 border-white shadow-xl">
+          <span class="material-symbols-outlined text-4xl">lock</span>
+        </div>
+        <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4 tracking-tight">Assisted Capture Needed</h2>
+        <p id="capture-modal-msg" class="text-slate-600 max-w-md mb-10 leading-relaxed text-lg">
+          This form requires sign-in or is rendered client-side. Use Assisted Capture to import fields while you’re already signed in.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="btn-capture-start" class="px-8 py-3.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/95 shadow-lg shadow-primary/25 transition-all">Use Assisted Capture</button>
+          <button id="btn-capture-demo" class="px-8 py-3.5 rounded-xl font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-all">Try a Demo Instead</button>
         </div>
       </div>
 
@@ -173,11 +192,16 @@ export function analyzingScreen() {
     const btnErrorRetry = wrapper.querySelector('#btn-error-retry');
     const btnErrorHome = wrapper.querySelector('#btn-error-home');
 
+    const captureModal = wrapper.querySelector('#capture-modal');
+    const captureMsg = wrapper.querySelector('#capture-modal-msg');
+    const btnCaptureStart = wrapper.querySelector('#btn-capture-start');
+    const btnCaptureDemo = wrapper.querySelector('#btn-capture-demo');
+
     let cancelled = false;
 
     const goHome = () => {
       cancelled = true;
-      navigateTo('landing');
+      navigateTo(authed ? 'dashboard' : 'landing');
     };
 
     btnCancel.addEventListener('click', goHome);
@@ -191,6 +215,16 @@ export function analyzingScreen() {
     });
 
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', goHome);
+
+    btnCaptureStart?.addEventListener('click', () => {
+      cancelled = true;
+      navigateTo('capture');
+    });
+
+    btnCaptureDemo?.addEventListener('click', () => {
+      cancelled = true;
+      navigateTo('examples');
+    });
 
     // Run analysis pipeline
     runAnalysis();
@@ -208,8 +242,19 @@ export function analyzingScreen() {
         await delay(600);
         if (cancelled) return;
 
-        // Parse form
-        const formData = await parseFormUrl(formUrl);
+        // Parse / import form
+        const { capturePayload } = getState();
+        let formData;
+        if (capturePayload) {
+          updateProgress(40, 'Importing capture', 'Step 1 of 3', 'Normalizing captured fields...');
+          await delay(250);
+          if (cancelled) return;
+          formData = capturedPayloadToFormData(capturePayload);
+          // Clear after use to prevent accidental reuse
+          setState({ capturePayload: null });
+        } else {
+          formData = await parseFormUrl(formUrl);
+        }
         if (cancelled) return;
 
         completeStep(1, `Found ${formData.questions.length} distinct form fields`);
@@ -232,12 +277,19 @@ export function analyzingScreen() {
         await delay(500);
         if (cancelled) return;
 
-        const answers = await generateAnswers(formData, (current, total) => {
-          if (!cancelled) {
-            const percent = 80 + Math.floor((current / total) * 15);
-            updateProgress(percent, 'Generating AI answers', 'Step 3 of 3', `Field ${current} of ${total}`);
-          }
-        });
+        let answers;
+        if (formData.parseStrategy === 'demo' && formData.demoId && MOCK_AI_ANSWERS[formData.demoId]) {
+          answers = MOCK_AI_ANSWERS[formData.demoId];
+          updateProgress(96, 'Loading demo suggestions', 'Step 3 of 3', 'Using built-in demo answers...');
+          await delay(250);
+        } else {
+          answers = await generateAnswers(formData, (current, total) => {
+            if (!cancelled) {
+              const percent = 80 + Math.floor((current / total) * 15);
+              updateProgress(percent, 'Generating AI answers', 'Step 3 of 3', `Field ${current} of ${total}`);
+            }
+          });
+        }
         if (cancelled) return;
 
         updateProgress(95, 'Generating AI answers', 'Step 3 of 3', 'Finalizing...');
@@ -265,7 +317,18 @@ export function analyzingScreen() {
         const scanLine = wrapper.querySelector('.animate-scan-line');
         if (scanLine) scanLine.classList.remove('animate-scan-line');
 
-        // Show Full Screen Modal
+        const code = err?.code;
+        if ((code === 'AUTH_REQUIRED' || code === 'RENDER_REQUIRED') && captureModal) {
+          captureModal.classList.remove('hidden');
+          captureModal.classList.add('flex');
+          if (captureMsg) {
+            const platform = err?.details?.platform ? ` (${err.details.platform})` : '';
+            captureMsg.textContent = (err.message || 'Assisted Capture is required to import this form.') + platform;
+          }
+          return;
+        }
+
+        // Show Full Screen Error Modal
         if (errorModal) {
           errorModal.classList.remove('hidden');
           errorModal.classList.add('flex');

@@ -4,7 +4,7 @@
 
 import { getState, setState, updateProfile, updateVault, updateSettings } from '../state.js';
 import { navigateTo, goBack } from '../router.js';
-import { loadFormHistory, saveVault, loadVault, saveProfile, clearAll } from '../storage/local-store.js';
+import { loadFormHistory, loadVault, clearAll } from '../storage/local-store.js';
 import { signOut, deleteAccount } from '../auth/auth-service.js';
 import { toast } from '../components/toast.js';
 import { renderTabs, initTabs, renderEmptyState, renderToggle } from '../components/ui-components.js';
@@ -22,25 +22,25 @@ export function accountsScreen() {
     <div class="flex h-screen overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
-        <div class="p-6 flex items-center gap-3 cursor-pointer" onclick="window.__fmNav && window.__fmNav('landing')">
+        <button type="button" class="p-6 flex items-center gap-3 cursor-pointer bg-transparent border-0 text-left" id="btn-accounts-home">
           <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <h1 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h1>
-        </div>
+        </button>
         <nav class="flex-1 px-4 space-y-1">
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('landing')">
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="dashboard">
             <span class="material-symbols-outlined">dashboard</span> Dashboard
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer" style="background: var(--fm-primary-50); color: var(--fm-primary);">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer w-full text-left" style="background: var(--fm-primary-50); color: var(--fm-primary);" aria-current="page">
             <span class="material-symbols-outlined">person</span> Account
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" id="sidebar-nav-settings">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" id="sidebar-nav-settings">
             <span class="material-symbols-outlined">settings</span> Settings
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('docs')">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="docs">
             <span class="material-symbols-outlined">help_outline</span> Help
-          </a>
+          </button>
         </nav>
       </aside>
 
@@ -70,9 +70,9 @@ export function accountsScreen() {
               ${(userProfile.name || 'U').charAt(0).toUpperCase()}
             </div>
             <div class="flex-1">
-              <h3 class="text-xl font-bold" style="color: var(--fm-text);">${userProfile.name || 'User'}</h3>
-              <p class="text-sm" style="color: var(--fm-text-tertiary);">${userProfile.email || 'No email set'}</p>
-              <p class="text-xs mt-1" style="color: var(--fm-text-tertiary);">${userProfile.occupation || 'No occupation set'} • ${userProfile.experience || 'N/A'} experience</p>
+            <h3 class="text-xl font-bold" style="color: var(--fm-text);">${escapeHtml(userProfile.name || 'User')}</h3>
+            <p class="text-sm" style="color: var(--fm-text-tertiary);">${escapeHtml(userProfile.email || 'No email set')}</p>
+            <p class="text-xs mt-1" style="color: var(--fm-text-tertiary);">${escapeHtml(userProfile.occupation || 'No occupation set')} • ${escapeHtml(userProfile.experience || 'N/A')} experience</p>
             </div>
           </div>
 
@@ -153,7 +153,7 @@ export function accountsScreen() {
                 ${formHistory.length ? `
                   <div class="space-y-3">
                     ${formHistory.slice(0, 20).map(h => `
-                      <div class="flex items-center gap-4 p-3 rounded-lg transition-colors cursor-pointer" style="background: var(--fm-surface);">
+                      <div class="flex items-center gap-4 p-3 rounded-lg transition-colors" style="background: var(--fm-surface);">
                         <div class="size-10 rounded-lg flex items-center justify-center" style="background: var(--fm-primary-50); color: var(--fm-primary);">
                           <span class="material-symbols-outlined text-sm">description</span>
                         </div>
@@ -272,9 +272,9 @@ export function accountsScreen() {
                      <h4 class="font-bold text-sm" style="color: var(--fm-text);">Got more questions?</h4>
                      <p class="text-xs mt-1" style="color: var(--fm-text-tertiary);">Visit our Help Center for detailed guides and FAQs.</p>
                    </div>
-                   <button onclick="window.__fmNav('docs')" class="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 transition-all btn-press shadow-sm">
-                     Visit Help Center
-                   </button>
+                  <button id="btn-accounts-help" class="px-5 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110 transition-all btn-press shadow-sm">
+                    Visit Help Center
+                  </button>
                 </section>
               </div>
 
@@ -286,10 +286,10 @@ export function accountsScreen() {
       { id: 'ui', icon: 'palette', label: 'Appearance' },
       { id: 'account', icon: 'manage_accounts', label: 'Account' },
     ].map((item, i) => `
-                    <a class="settings-nav-item flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors" data-section="${item.id}"
+                    <button type="button" class="settings-nav-item flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" data-section="${item.id}"
                       style="${i === 0 ? 'background: var(--fm-primary-50); color: var(--fm-primary); font-weight: 600;' : 'color: var(--fm-text-secondary);'}">
                       <span class="material-symbols-outlined text-base">${item.icon}</span> <span class="text-xs">${item.label}</span>
-                    </a>
+                    </button>
                   `).join('')}
                 </nav>
               </aside>
@@ -303,8 +303,14 @@ export function accountsScreen() {
 
   function init(wrapper) {
     // Navigation
-    window.__fmNav = (screen) => navigateTo(screen);
     wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
+
+    wrapper.querySelector('#btn-accounts-home')?.addEventListener('click', () => navigateTo('dashboard'));
+    wrapper.querySelectorAll('button[data-nav]').forEach((btn) => {
+      btn.addEventListener('click', () => navigateTo(btn.dataset.nav));
+    });
+
+    wrapper.querySelector('#btn-accounts-help')?.addEventListener('click', () => navigateTo('docs'));
 
     wrapper.querySelector('#sidebar-nav-settings')?.addEventListener('click', () => {
       const settingsTabBtn = wrapper.querySelector('[data-tab-index="4"]');
@@ -338,7 +344,6 @@ export function accountsScreen() {
         const v = { ...getState().vault };
         delete v[key];
         setState({ vault: v });
-        saveVault(v);
         btn.closest('div').remove();
         toast.info(`"${key}" removed from vault.`);
       });
@@ -473,7 +478,7 @@ export function accountsScreen() {
       }
     });
 
-    return () => { delete window.__fmNav; };
+    return () => { };
   }
 
   return { html, init };

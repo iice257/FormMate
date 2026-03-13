@@ -269,7 +269,7 @@ export function initializeTestUser() {
           { 
             id: 'h1', 
             title: 'Job Application - Senior Dev', 
-            url: 'https://docs.google.com/forms/job1', 
+            url: 'demo://job-application', 
             timestamp: Date.now() - 86400000, 
             status: 'completed',
             provider: 'Google Forms'
@@ -277,10 +277,10 @@ export function initializeTestUser() {
           { 
             id: 'h2', 
             title: 'Event Survey 2024', 
-            url: 'https://docs.google.com/forms/survey2', 
+            url: 'demo://customer-feedback', 
             timestamp: Date.now() - 172800000, 
             status: 'completed',
-            provider: 'Typeform'
+            provider: 'Demo'
           }
         ]
       };

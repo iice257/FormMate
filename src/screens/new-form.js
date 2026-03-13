@@ -8,14 +8,20 @@ import { parseFormUrl, detectFormPlatform } from '../parser/form-parser.js';
 import { toast } from '../components/toast.js';
 import { initAurora } from './Aurora.js';
 import './Aurora.css';
+import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
 
 export function newFormScreen() {
   const { isAuthenticated, userProfile, formUrl } = getState();
 
+  const displayFirstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
+  const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = avatarFromProfile || fallbackAvatar;
+
   const authButtonHtml = isAuthenticated
     ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-         <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
 
@@ -34,10 +40,10 @@ export function newFormScreen() {
         </div>
         
         <div class="flex-1 flex items-center justify-center">
-            <div class="flex items-center gap-2 cursor-pointer" id="logo-home">
+            <button type="button" class="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0" id="logo-home" aria-label="Go to home">
                 <img src="/logo.png" class="size-8" alt="Logo" />
                 <span class="text-xl font-black text-slate-900 tracking-tight">FormMate</span>
-            </div>
+            </button>
         </div>
 
         <div class="flex-1 flex items-center justify-end">
@@ -55,7 +61,7 @@ export function newFormScreen() {
             <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-primary/20">
               <div class="flex-1 relative">
                 <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
-                <input
+                <input aria-label="Form URL"
                   id="url-input"
                   class="w-full pl-14 pr-4 h-14 rounded-full border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-base bg-transparent font-medium"
                   placeholder="paste link..."
@@ -111,7 +117,9 @@ export function newFormScreen() {
     });
 
     btnBack.addEventListener('click', () => goBack());
-    wrapper.querySelector('#logo-home')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#logo-home')?.addEventListener('click', () => {
+      navigateTo(getState().isAuthenticated ? 'dashboard' : 'landing');
+    });
 
     btnAnalyze.addEventListener('click', () => {
       let url = urlInput.value.trim();

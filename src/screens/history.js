@@ -5,6 +5,7 @@
 import { getState } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { navigateTo } from '../router.js';
+import { escapeAttr, escapeHtml } from '../utils/escape.js';
 
 export function historyScreen() {
   const { formHistory } = getState();
@@ -40,15 +41,15 @@ export function historyScreen() {
                       <div class="size-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                         <span class="material-symbols-outlined text-[18px]">edit_document</span>
                       </div>
-                      <span class="font-bold text-slate-900">${form.title || 'Untitled Form'}</span>
+                      <span class="font-bold text-slate-900">${escapeHtml(form.title || 'Untitled Form')}</span>
                     </div>
                   </td>
                   <td class="px-6 py-5 text-slate-500 font-medium font-mono text-[12px]">${new Date(form.timestamp).toLocaleDateString()}</td>
                   <td class="px-6 py-5">
-                    <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-tight">${form.provider || 'Google Forms'}</span>
+                    <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-tight">${escapeHtml(form.provider || 'Google Forms')}</span>
                   </td>
                   <td class="px-6 py-5 text-right">
-                    <button class="text-primary font-bold hover:underline" onclick="window.__fmNav('workspace', '${form.url}')">Open</button>
+                    <button type="button" class="btn-open-history text-primary font-bold hover:underline" data-form-url="${escapeAttr(form.url || '')}">Open</button>
                   </td>
                 </tr>
               `).join('') : `
@@ -67,6 +68,12 @@ export function historyScreen() {
 
   function init(wrapper) {
     initLayout(wrapper);
+
+    wrapper.querySelectorAll('.btn-open-history').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        navigateTo('workspace');
+      });
+    });
   }
 
   return { html, init };

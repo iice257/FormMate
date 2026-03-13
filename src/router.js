@@ -11,7 +11,7 @@ let currentCleanup = null;
 const historyStack = [];
 
 // Screens that don't require auth
-const PUBLIC_SCREENS = ['auth', 'landing'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
 
 export function registerScreen(name, renderFn) {
   routes[name] = renderFn;
@@ -49,10 +49,32 @@ function performNavigation(screen, replace = false) {
   let path = `/${screen === 'landing' ? '' : screen}`;
   if (screen === 'landing') path = '/';
 
+  // Preserve query string for direct-entry screens (e.g. /capture?t=...) on initial load.
+  // Assisted Capture relies on the token in the query string.
+  if (replace) {
+    const currentPath = window.location.pathname;
+    const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
+    if (window.location.search && currentScreen === screen) {
+      path = `${currentPath}${window.location.search}`;
+    }
+  }
+
   // Redirect settings -> accounts
   if (screen === 'settings') {
     screen = 'accounts';
     path = '/accounts';
+  }
+
+  // Route guard (in-app navigations too)
+  const authed = isAuthenticated();
+  if (!authed && !PUBLIC_SCREENS.includes(screen)) {
+    screen = 'auth';
+    path = '/auth';
+    replace = true;
+  } else if (authed && screen === 'auth') {
+    screen = 'dashboard';
+    path = '/dashboard';
+    replace = true;
   }
 
   // State push
@@ -108,7 +130,8 @@ function performNavigation(screen, replace = false) {
       'dashboard': 'Dashboard | FormMate',
       'ai-chat': 'AI Chat | FormMate',
       'history': 'History | FormMate',
-      'vault': 'Vault | FormMate'
+      'vault': 'Vault | FormMate',
+      'capture': 'Assisted Capture | FormMate'
     };
     document.title = titleMap[screen] || 'FormMate AI — AI-Assisted Form Companion';
 
@@ -165,6 +188,11 @@ export function initRouter() {
   } else if (!onboarded) {
     navigateTo('onboarding', true);
   } else {
+    // Signed-in users should land on the app dashboard by default
+    if (initialScreen === 'landing') {
+      navigateTo('dashboard', true);
+      return;
+    }
     // if requested a valid route, go there, else home
     if (routes[initialScreen]) {
       navigateTo(initialScreen, true);

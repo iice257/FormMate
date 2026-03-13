@@ -6,6 +6,8 @@ export function parseDOM(htmlString) {
     title: doc.title || 'Unknown Form',
     description: '',
     questions: [],
+    requiresAuth: false,
+    requiresRender: false,
   };
 
   // Auth / Cookie Wall Detection — don't throw, return a flag so callers can retry
@@ -23,8 +25,23 @@ export function parseDOM(htmlString) {
       title: 'Unknown Form',
       description: '',
       questions: [],
-      requiresAuth: true
+      requiresAuth: true,
+      requiresRender: false
     };
+  }
+
+  // JS-rendered shell detection (client-side forms that won't parse reliably from HTML snapshots)
+  const shellSignals = [
+    'enable javascript',
+    'please enable javascript',
+    'you need to enable javascript to run this app',
+    'this application requires javascript',
+    'javascript is disabled'
+  ];
+  const noscriptText = (doc.querySelector('noscript')?.textContent || '').toLowerCase();
+  const lowerPage = String(pageText || '').toLowerCase();
+  if (shellSignals.some(s => lowerPage.includes(s) || noscriptText.includes(s))) {
+    formData.requiresRender = true;
   }
 
   // Attempt to find actual form title and description if it's Google Forms
@@ -47,10 +64,36 @@ export function parseDOM(htmlString) {
     items = Array.from(doc.querySelectorAll('.freebirdFormviewerViewItemsItemItem, .geS5n, .Qr7Oae, fieldset, .form-group'));
   }
 
-  // Third fallback: Just grab all labels and associate inputs
+  // Third fallback: derive containers from actual form controls (generic web forms)
   if (items.length === 0) {
-    const labels = Array.from(doc.querySelectorAll('label'));
-    items = labels.map(label => label.parentElement);
+    const forms = Array.from(doc.querySelectorAll('form'));
+    const target = forms.sort((a, b) =>
+      b.querySelectorAll('input,textarea,select').length - a.querySelectorAll('input,textarea,select').length
+    )[0] || doc.body;
+
+    const controls = Array.from(target?.querySelectorAll('input,textarea,select') || []).filter((el) => {
+      if (!el || el.disabled) return false;
+      if (el.getAttribute('aria-hidden') === 'true') return false;
+      if (el.tagName?.toLowerCase() === 'input') {
+        const t = String(el.getAttribute('type') || '').toLowerCase();
+        if (['hidden', 'submit', 'button', 'reset', 'image'].includes(t)) return false;
+      }
+      return true;
+    });
+
+    const containerSet = new Set();
+    controls.forEach((el) => {
+      const container =
+        el.closest('fieldset') ||
+        el.closest('.form-group') ||
+        el.closest('.field') ||
+        el.closest('.input-group') ||
+        el.closest('label') ||
+        el.parentElement;
+      if (container) containerSet.add(container);
+    });
+
+    items = Array.from(containerSet);
   }
 
   items.forEach((item, index) => {
@@ -60,19 +103,31 @@ export function parseDOM(htmlString) {
       || item.querySelector('label')
       || item.querySelector('.question-title');
 
-    let text = textEl ? textEl.textContent.trim() : `Question ${index + 1}`;
-    text = text.replace(/\s*\*\s*$/, ''); // Remove required star
+    const rawText = textEl ? textEl.textContent.trim() : `Question ${index + 1}`;
+    const requiredFromText = /\*\s*$/.test(rawText);
+    let text = rawText.replace(/\s*\*\s*$/, '').trim(); // Remove required star
 
-    // Determine required
-    const required = item.innerHTML.includes('aria-required="true"') ||
-      item.innerHTML.includes('required') ||
-      item.innerHTML.includes('*');
+    // Determine required (avoid item.innerHTML heuristics)
+    const required = requiredFromText || Boolean(
+      item.querySelector('[aria-required="true"], input[required], textarea[required], select[required]')
+    );
 
     // Determine field type
     let type = 'short_text';
     let options = [];
 
-    const inputs = Array.from(item.querySelectorAll('input, textarea, select, [role="radio"], [role="checkbox"]'));
+    // Google Forms ARIA-based radio/checkbox extraction (preferred)
+    const ariaRadios = Array.from(item.querySelectorAll('[role="radio"]'));
+    const ariaChecks = Array.from(item.querySelectorAll('[role="checkbox"]'));
+    if (ariaRadios.length > 0) {
+      type = 'radio';
+      options = ariaRadios.map(i => i.getAttribute('aria-label') || i.textContent.trim()).filter(Boolean);
+    } else if (ariaChecks.length > 0) {
+      type = 'checkbox';
+      options = ariaChecks.map(i => i.getAttribute('aria-label') || i.textContent.trim()).filter(Boolean);
+    }
+
+    const inputs = Array.from(item.querySelectorAll('input, textarea, select'));
     if (inputs.length > 0) {
       const firstInput = inputs[0];
       const tag = firstInput.tagName.toLowerCase();
@@ -86,25 +141,21 @@ export function parseDOM(htmlString) {
         const inputType = firstInput.getAttribute('type');
         if (inputType === 'radio') {
           type = 'radio';
-          options = inputs.map(i => item.querySelector(`label[for="${i.id}"]`)?.textContent || i.value).filter(Boolean);
+          options = inputs
+            .filter(i => i.tagName?.toLowerCase() === 'input' && String(i.getAttribute('type') || '').toLowerCase() === 'radio')
+            .map(i => item.querySelector(`label[for="${i.id}"]`)?.textContent || i.value)
+            .filter(Boolean);
         } else if (inputType === 'checkbox') {
           type = 'checkbox';
-          options = inputs.map(i => item.querySelector(`label[for="${i.id}"]`)?.textContent || i.value).filter(Boolean);
+          options = inputs
+            .filter(i => i.tagName?.toLowerCase() === 'input' && String(i.getAttribute('type') || '').toLowerCase() === 'checkbox')
+            .map(i => item.querySelector(`label[for="${i.id}"]`)?.textContent || i.value)
+            .filter(Boolean);
         } else if (inputType === 'date') {
           type = 'date';
         } else {
           type = 'short_text';
         }
-      }
-
-      // Google Forms ARIA-based radio/checkbox extraction
-      const role = firstInput.getAttribute('role');
-      if (role === 'radio') {
-        type = 'radio';
-        options = inputs.map(i => i.getAttribute('aria-label') || i.textContent.trim()).filter(Boolean);
-      } else if (role === 'checkbox') {
-        type = 'checkbox';
-        options = inputs.map(i => i.getAttribute('aria-label') || i.textContent.trim()).filter(Boolean);
       }
     } else {
       type = 'unknown_type';

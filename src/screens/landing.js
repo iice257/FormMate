@@ -4,14 +4,20 @@
 
 import { setState, getState } from '../state.js';
 import { navigateTo } from '../router.js';
+import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
 
 export function landingScreen() {
   const { isAuthenticated, userProfile } = getState();
 
+  const displayFirstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
+  const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = avatarFromProfile || fallbackAvatar;
+
   const authButtonHtml = isAuthenticated
     ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-         <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
 
@@ -20,21 +26,21 @@ export function landingScreen() {
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
           <div class="flex-1 flex items-center justify-start">
-            <div class="flex items-center gap-2.5 btn-press cursor-pointer" id="btn-logo-home">
+            <button type="button" class="flex items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
               <h2 class="text-slate-900 text-2xl font-black tracking-tighter" style="font-family: var(--fm-font-sans)">Form<span class="text-primary">Mate</span></h2>
-            </div>
+            </button>
           </div>
           
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Forms</a>
-            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</a>
-            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-pricing">${(getState().tier && getState().tier !== 'free') ? 'Subscription' : 'Pricing'}</a>
-            <a class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</a>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Forms</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-pricing">${(getState().tier && getState().tier !== 'free') ? 'Subscription' : 'Pricing'}</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
           </nav>
  
           <div class="flex-1 flex items-center justify-end gap-3">
@@ -64,7 +70,7 @@ export function landingScreen() {
               <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
                 <div class="flex-1 relative">
                   <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
-                  <input
+                  <input aria-label="Form URL"
                     id="url-input"
                     class="w-full pl-14 pr-4 h-14 rounded-full border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-base bg-transparent font-medium focus-glow"
                     placeholder="Paste your form link here..."
@@ -79,13 +85,13 @@ export function landingScreen() {
               <div class="mt-8 flex flex-col items-center gap-4">
                 <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
                 <div class="flex flex-wrap justify-center gap-3">
-                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('examples')">
+                    <button id="btn-hero-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">explore</span> Examples
                     </button>
-                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('docs')">
+                    <button id="btn-hero-chat" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
                     </button>
-                    <button class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2" onclick="window.__fmNav('docs')">
+                    <button id="btn-hero-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">help</span> Help Center
                     </button>
                 </div>
@@ -123,7 +129,7 @@ export function landingScreen() {
                   <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-900 text-[13px] font-bold shadow-sm">
                     <span class="material-symbols-outlined text-[18px] text-primary">edit_document</span> Active Form
                   </div>
-                  <div class="flex items-center gap-2 px-3 py-2 text-slate-500 text-[13px] font-medium hover:bg-slate-100/50 rounded-lg cursor-pointer transition-colors">
+                  <div class="flex items-center gap-2 px-3 py-2 text-slate-500 text-[13px] font-medium rounded-lg">
                     <span class="material-symbols-outlined text-[18px]">history</span> History
                   </div>
                 </div>
@@ -354,30 +360,30 @@ export function landingScreen() {
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="job-application">
+              <button type="button" class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="job-application" aria-label="Try the Job Apps example">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">work</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Job Apps</span>
-              </div>
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="scholarship">
+              </button>
+              <button type="button" class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="scholarship" aria-label="Try the Scholarships example">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">school</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Scholarships</span>
-              </div>
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="customer-feedback">
+              </button>
+              <button type="button" class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" data-demo="customer-feedback" aria-label="Try the Surveys example">
                 <div class="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <span class="material-symbols-outlined">poll</span>
                 </div>
                 <span class="text-sm font-bold text-slate-900">Surveys</span>
-              </div>
-              <div class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer hover:shadow-md transition-shadow group" id="btn-view-more-examples">
+              </button>
+              <button type="button" class="p-6 rounded-[var(--fm-card-radius)] card-premium shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer hover:shadow-md transition-shadow group" id="btn-view-more-examples" aria-label="View more examples">
                 <div class="flex items-center gap-1.5 text-primary font-bold text-sm">
                   <span>View more examples</span>
                   <span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                 </div>
-              </div>
+              </button>
             </div>
           </section>
 
@@ -430,10 +436,10 @@ export function landingScreen() {
             </div>
             
             <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
-              <a class="hover:text-primary transition-colors cursor-pointer">Privacy Policy</a>
-              <a class="hover:text-primary transition-colors cursor-pointer">Terms of Service</a>
-              <a class="hover:text-primary transition-colors cursor-pointer">Cookie Settings</a>
-              <a class="hover:text-primary transition-colors cursor-pointer" onclick="window.__fmNav('docs')">Help Center</a>
+              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
+              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
+              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Cookie Settings</button>
+              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0" id="btn-footer-help">Help Center</button>
             </div>
             
             <div class="text-xs text-slate-400 shrink-0">© 2026 FormMate</div>
@@ -447,6 +453,14 @@ export function landingScreen() {
   function init(wrapper) {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
+    wrapper.querySelector('#btn-footer-help')?.addEventListener('click', () => navigateTo('docs'));
+
+    const authed = getState().isAuthenticated;
+    const goAuthedHome = () => navigateTo(authed ? 'dashboard' : 'landing');
+
+    wrapper.querySelector('#btn-hero-examples')?.addEventListener('click', () => navigateTo('examples'));
+    wrapper.querySelector('#btn-hero-chat')?.addEventListener('click', () => navigateTo('ai-chat'));
+    wrapper.querySelector('#btn-hero-help')?.addEventListener('click', () => navigateTo('docs'));
 
     // Restore saved URL
     const state = getState();
@@ -491,7 +505,7 @@ export function landingScreen() {
     function triggerError(msg) {
       urlInput.focus();
       urlInput.classList.add('ring-2', 'ring-red-500', 'animate-shake-horizontal');
-      btnAnalyze.innerHTML = `<span class="material-symbols-outlined text-xl">error</span> ${msg}`;
+      btnAnalyze.innerHTML = `<span class="material-symbols-outlined text-xl">error</span> ${escapeHtml(msg)}`;
       btnAnalyze.classList.add('bg-red-500', 'hover:bg-red-600');
 
       setTimeout(() => {
@@ -538,10 +552,10 @@ export function landingScreen() {
       el.addEventListener('click', () => {
         const demoType = el.dataset.demo;
         const urls = {
-          'job-application': 'https://jobs.lever.co/creativesync/senior-product-designer',
-          'customer-feedback': 'https://forms.google.com/feedback-survey',
-          'travel-visa': 'https://form.typeform.com/to/travel-visa-demo',
-          'scholarship': 'https://form.jotform.com/scholarship-application-2026'
+          'job-application': 'demo://job-application',
+          'customer-feedback': 'demo://customer-feedback',
+          'travel-visa': 'demo://travel-visa',
+          'scholarship': 'demo://scholarship'
         };
         urlInput.value = urls[demoType] || urls['customer-feedback'];
         setState({ formUrl: urlInput.value });
@@ -566,12 +580,14 @@ export function landingScreen() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    document.getElementById('nav-forms')?.addEventListener('click', () => navigateTo('workspace'));
-    document.getElementById('nav-examples')?.addEventListener('click', () => navigateTo('examples'));
-    document.getElementById('nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
-    document.getElementById('nav-docs')?.addEventListener('click', () => navigateTo('docs'));
-    document.getElementById('btn-login')?.addEventListener('click', () => navigateTo('auth'));
-    document.getElementById('btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
+    wrapper.querySelector('#nav-forms')?.addEventListener('click', () => {
+      navigateTo(authed ? 'dashboard' : 'auth');
+    });
+    wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
+    wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
+    wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
+    wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
+    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
 
     wrapper.querySelector('#btn-cta-start')?.addEventListener('click', () => {
       urlInput.scrollIntoView({ behavior: 'smooth' });
@@ -579,7 +595,7 @@ export function landingScreen() {
     });
 
     wrapper.querySelector('#btn-cta-dashboard')?.addEventListener('click', () => {
-      navigateTo('workspace');
+      goAuthedHome();
     });
 
     // Testimonials Logic

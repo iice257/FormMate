@@ -5,6 +5,7 @@
 import { getState, updateVault } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { toast } from '../components/toast.js';
+import { escapeAttr } from '../utils/escape.js';
 
 export function vaultScreen() {
   const { vault } = getState();
@@ -55,10 +56,10 @@ export function vaultScreen() {
                 ${section.fields.map(field => `
                   <div class="space-y-1.5">
                     <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">${field.label}</label>
-                    <input 
+                    <input aria-label="${escapeAttr(field.label)}"
                       type="text" 
                       data-vault-key="${field.key}" 
-                      value="${vault[field.key] || ''}" 
+                      value="${escapeAttr(vault[field.key] || '')}" 
                       placeholder="${field.placeholder}"
                       class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm focus:bg-white transition-all outline-none"
                     />

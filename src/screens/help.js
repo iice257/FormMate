@@ -19,25 +19,25 @@ export function helpScreen() {
     <div class="flex h-screen overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
-        <div class="p-6 flex items-center gap-3 cursor-pointer" onclick="window.__fmNav && window.__fmNav('landing')">
+        <button type="button" class="p-6 flex items-center gap-3 cursor-pointer bg-transparent border-0 text-left" id="btn-help-home">
           <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <h1 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h1>
-        </div>
+        </button>
         <nav id="help-nav" class="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('landing')">
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="dashboard">
             <span class="material-symbols-outlined">dashboard</span> Dashboard
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('accounts')">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts">
             <span class="material-symbols-outlined">person</span> Account
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors" style="color: var(--fm-text-secondary);" onclick="window.__fmNav && window.__fmNav('settings')">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts">
             <span class="material-symbols-outlined">settings</span> Settings
-          </a>
-          <a class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer" style="background: var(--fm-primary-50); color: var(--fm-primary);">
+          </button>
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer w-full text-left" style="background: var(--fm-primary-50); color: var(--fm-primary);" aria-current="page">
             <span class="material-symbols-outlined">help_outline</span> Help
-          </a>
+          </button>
         </nav>
       </aside>
 
@@ -125,8 +125,12 @@ export function helpScreen() {
   `;
 
   function init(wrapper) {
-    window.__fmNav = (screen) => navigateTo(screen);
     wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
+
+    wrapper.querySelector('#btn-help-home')?.addEventListener('click', () => navigateTo('dashboard'));
+    wrapper.querySelectorAll('button[data-nav]').forEach((btn) => {
+      btn.addEventListener('click', () => navigateTo(btn.dataset.nav));
+    });
 
     // Init components
     import('../components/ui-components.js').then(ui => {
@@ -136,11 +140,13 @@ export function helpScreen() {
 
     // Support Flow
     wrapper.querySelector('#btn-contact').addEventListener('click', () => {
-      window.__fmNav('docs#contact');
+      navigateTo('docs');
+      setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 400);
     });
 
     wrapper.querySelector('#btn-review-feedback')?.addEventListener('click', () => {
-      window.__fmNav('docs#feedback');
+      navigateTo('docs');
+      setTimeout(() => document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' }), 400);
     });
 
     // Documentation
@@ -153,7 +159,7 @@ export function helpScreen() {
       showModal('changelog-modal');
     });
 
-    return () => { delete window.__fmNav; };
+    return () => { };
   }
 
   return { html, init };

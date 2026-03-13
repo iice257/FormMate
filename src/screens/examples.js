@@ -1,5 +1,6 @@
-import { setState } from '../state.js';
+import { getState, setState } from '../state.js';
 import { navigateTo } from '../router.js';
+import { MOCK_FORMS } from '../parser/mock-forms.js';
 
 export function examplesScreen() {
   const html = `
@@ -12,12 +13,12 @@ export function examplesScreen() {
           Back
         </button>
         <div class="flex-1"></div>
-        <div class="flex items-center gap-2 btn-press cursor-pointer" id="btn-home">
+        <button type="button" class="flex items-center gap-2 btn-press cursor-pointer bg-transparent border-0 p-0" id="btn-home" aria-label="Go to home">
           <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
-        </div>
+        </button>
       </header>
 
       <!-- Main Content -->
@@ -49,8 +50,8 @@ export function examplesScreen() {
       company: 'Lever / CreativeSync',
       icon: 'work',
       color: 'blue',
-      fields: 14,
-      url: 'https://jobs.lever.co/creativesync/senior-product-designer',
+      fields: MOCK_FORMS['job-application']?.questions?.length || 0,
+      url: 'demo://job-application',
       desc: 'Standard tech job application with portfolio linking, years of experience, cover letter, and salary expectations.',
       tags: ['Employment', 'Long-form']
     },
@@ -60,8 +61,8 @@ export function examplesScreen() {
       company: 'Google Forms',
       icon: 'reviews',
       color: 'yellow',
-      fields: 8,
-      url: 'https://docs.google.com/forms/d/e/1FAIpQLSdOmt3wE7D-EOfYXYx-0k6rK0S225_P1nJz_z4X26tT_w20tA/viewform',
+      fields: MOCK_FORMS['customer-feedback']?.questions?.length || 0,
+      url: 'demo://customer-feedback',
       desc: 'Short customer satisfaction survey with star ratings, multiple-choice questions, and one open-ended feedback field.',
       tags: ['Survey', 'Quick']
     },
@@ -71,8 +72,8 @@ export function examplesScreen() {
       company: 'Typeform / Gov.Travel',
       icon: 'flight_takeoff',
       color: 'indigo',
-      fields: 32,
-      url: 'https://form.typeform.com/to/travel-visa-demo',
+      fields: MOCK_FORMS['travel-visa']?.questions?.length || 0,
+      url: 'demo://travel-visa',
       desc: 'International government document requiring passport details, travel itinerary, accommodation proof, and deep personal history.',
       tags: ['Government', 'Complex']
     },
@@ -82,8 +83,8 @@ export function examplesScreen() {
       company: 'Jotform / Sutter Health',
       icon: 'medical_services',
       color: 'rose',
-      fields: 26,
-      url: 'https://form.jotform.com/patient-intake-new-2026',
+      fields: MOCK_FORMS['patient-intake']?.questions?.length || 0,
+      url: 'demo://patient-intake',
       desc: 'Lengthy health history form logging prior conditions, surgical records, current medications, allergies, and emergency contacts.',
       tags: ['Medical', 'Sensitive']
     },
@@ -93,8 +94,8 @@ export function examplesScreen() {
       company: 'Jotform / National Science Foundation',
       icon: 'school',
       color: 'purple',
-      fields: 18,
-      url: 'https://form.jotform.com/scholarship-application-2026',
+      fields: MOCK_FORMS['scholarship']?.questions?.length || 0,
+      url: 'demo://scholarship',
       desc: 'Educational scholarship requiring GPA transcripts, two essay prompts (500 words each), extracurricular activities, and faculty recommendation details.',
       tags: ['Education', 'Essay-heavy']
     },
@@ -104,8 +105,8 @@ export function examplesScreen() {
       company: 'Typeform / GEICO',
       icon: 'directions_car',
       color: 'sky',
-      fields: 22,
-      url: 'https://form.typeform.com/to/auto-insurance-quote',
+      fields: MOCK_FORMS['insurance-quote']?.questions?.length || 0,
+      url: 'demo://insurance-quote',
       desc: 'Vehicle identification, driving history, accident records, and annual mileage for an instant insurance premium estimate.',
       tags: ['Insurance', 'Multi-step']
     },
@@ -115,8 +116,8 @@ export function examplesScreen() {
       company: 'Typeform / Salesforce',
       icon: 'business_center',
       color: 'slate',
-      fields: 10,
-      url: 'https://form.typeform.com/to/enterprise-demo-request',
+      fields: MOCK_FORMS['b2b-demo']?.questions?.length || 0,
+      url: 'demo://b2b-demo',
       desc: 'B2B lead generation form capturing company size, annual revenue, use-case description, and preferred demo schedule.',
       tags: ['Enterprise', 'Short']
     },
@@ -126,8 +127,8 @@ export function examplesScreen() {
       company: 'Google Forms / Zillow',
       icon: 'apartment',
       color: 'orange',
-      fields: 28,
-      url: 'https://docs.google.com/forms/d/e/1FAIpQLSfG7vT8kK2L5J0Z4xQ9cN3mW7pY1rH5dU6oA8bI4sE3jF2KnQ/viewform',
+      fields: MOCK_FORMS['rental-app']?.questions?.length || 0,
+      url: 'demo://rental-app',
       desc: 'Residential history, employment verification, monthly income, landlord references, and pet/vehicle disclosures.',
       tags: ['Real Estate', 'Detailed']
     },
@@ -137,8 +138,8 @@ export function examplesScreen() {
       company: 'SurveyMonkey / Ford Foundation',
       icon: 'volunteer_activism',
       color: 'emerald',
-      fields: 20,
-      url: 'https://www.surveymonkey.com/r/community-impact-grant-2026',
+      fields: MOCK_FORMS['grant-application']?.questions?.length || 0,
+      url: 'demo://grant-application',
       desc: 'Nonprofit grant proposal requiring mission statement, budget breakdown, beneficiary demographics, and measurable outcomes plan.',
       tags: ['Nonprofit', 'Proposal']
     }
@@ -147,7 +148,9 @@ export function examplesScreen() {
   function init(wrapper) {
     // Navigation
     wrapper.querySelector('#btn-back').addEventListener('click', () => history.back());
-    wrapper.querySelector('#btn-home').addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-home').addEventListener('click', () => {
+      navigateTo(getState().isAuthenticated ? 'dashboard' : 'landing');
+    });
 
     // Render grid
     const grid = wrapper.querySelector('#examples-grid');
@@ -165,7 +168,7 @@ export function examplesScreen() {
     };
 
     grid.innerHTML = demos.map(demo => `
-      <div class="demo-card bg-white border border-slate-200 rounded-2xl p-6 cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col" data-url="${demo.url}">
+      <div class="demo-card bg-white border border-slate-200 rounded-2xl p-6 cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col" data-url="${demo.url}" role="button" tabindex="0" aria-label="Use demo: ${demo.title}">
         <div class="flex items-start justify-between mb-4">
           <div class="flex items-center justify-center size-12 rounded-xl border ${colorClasses[demo.color]} shadow-sm scale-100 group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-2xl">${demo.icon}</span>
@@ -185,7 +188,7 @@ export function examplesScreen() {
         </div>
 
         <div class="px-3 py-2 bg-slate-50 rounded-lg text-xs font-mono text-slate-500 truncate border border-slate-100">
-          ${demo.url.replace('https://', '')}
+          ${demo.url.startsWith('demo://') ? demo.url : demo.url.replace('https://', '')}
         </div>
       </div>
     `).join('');
@@ -195,6 +198,11 @@ export function examplesScreen() {
       card.addEventListener('click', () => {
         setState({ formUrl: card.dataset.url });
         navigateTo('analyzing');
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        card.click();
       });
     });
   }

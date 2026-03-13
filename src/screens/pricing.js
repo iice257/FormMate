@@ -117,7 +117,10 @@ export function pricingScreen() {
         
         <!-- FAQ & Cancel -->
         <div class="text-center space-y-4">
-          <p class="text-sm" style="color: var(--fm-text-tertiary);">Have questions? <a href="#" onclick="window.__fmNav('docs')" class="font-semibold hover:underline" style="color: var(--fm-primary);">Visit our Help Center</a></p>
+          <p class="text-sm" style="color: var(--fm-text-tertiary);">
+            Have questions?
+            <button type="button" id="btn-pricing-help" class="font-semibold hover:underline bg-transparent border-0 p-0" style="color: var(--fm-primary);">Visit our Help Center</button>
+          </p>
           ${currentTier !== 'free' ? `
             <button id="btn-cancel-membership" class="text-xs text-slate-400 hover:text-slate-600 underline transition-colors cursor-pointer block mx-auto">Cancel Subscription</button>
           ` : ''}
@@ -140,19 +143,19 @@ export function pricingScreen() {
               <span class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">Reason for leaving</span>
               <div class="space-y-2">
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer bg-slate-50/50">
-                  <input type="checkbox" name="reason" value="expensive" class="accent-primary" />
+                  <input type="checkbox" name="reason" value="expensive" class="accent-primary" aria-label="Too expensive" />
                   <span class="text-sm text-slate-600">Too expensive</span>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer bg-slate-50/50">
-                  <input type="checkbox" name="reason" value="not-useful" class="accent-primary" />
+                  <input type="checkbox" name="reason" value="not-useful" class="accent-primary" aria-label="Not useful for me" />
                   <span class="text-sm text-slate-600">Not useful for me</span>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer bg-slate-50/50">
-                  <input type="checkbox" name="reason" value="buggy" class="accent-primary" />
+                  <input type="checkbox" name="reason" value="buggy" class="accent-primary" aria-label="Encountered bugs" />
                   <span class="text-sm text-slate-600">Encountered bugs</span>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer bg-slate-50/50">
-                  <input type="checkbox" name="reason" value="other" class="accent-primary" />
+                  <input type="checkbox" name="reason" value="other" class="accent-primary" aria-label="Other" />
                   <span class="text-sm text-slate-600">Other</span>
                 </label>
               </div>
@@ -188,6 +191,7 @@ export function pricingScreen() {
 
   function init(wrapper) {
     wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-pricing-help')?.addEventListener('click', () => navigateTo('docs'));
 
     const handleUpgrade = (tier) => {
       if (!isAuthenticated) {

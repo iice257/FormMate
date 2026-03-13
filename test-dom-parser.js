@@ -41,6 +41,14 @@ setState({
 });
 
 const mockHtmlPath = resolve(__dirname, 'mock-google-form.html');
+const authWallPath = resolve(__dirname, 'fixtures', 'auth-wall.html');
+const jsShellPath = resolve(__dirname, 'fixtures', 'js-shell.html');
+
+function assert(condition, message) {
+  if (condition) return;
+  console.error(`ASSERTION FAILED: ${message}`);
+  process.exitCode = 1;
+}
 
 async function runTests() {
   console.log('--- FORM PARSER STRESS TEST ---');
@@ -55,6 +63,9 @@ async function runTests() {
     console.log(`TITLE: ${result.title}`);
     console.log(`DESC:  ${result.description}`);
     console.log(`QUESTIONS FOUND: ${result.questions.length}\n`);
+
+    assert(result.questions.length > 0, 'mock-google-form.html should produce questions');
+    assert(result.requiresAuth !== true, 'mock-google-form.html should not be requiresAuth');
 
     if (result.questions.length > 0) {
       result.questions.forEach((q, i) => {
@@ -73,8 +84,23 @@ async function runTests() {
     } else {
       console.warn('⚠️ WARNING: Deterministic parser found 0 questions. This will trigger the AI Fallback.');
     }
+
+    // Fixture: auth wall should be detected
+    const authHtml = fs.readFileSync(authWallPath, 'utf8');
+    const authResult = parseDOM(authHtml);
+    console.log(`\nAUTH WALL FIXTURE: requiresAuth=${authResult.requiresAuth}, questions=${authResult.questions.length}`);
+    assert(authResult.requiresAuth === true, 'auth-wall.html should be requiresAuth');
+    assert(authResult.questions.length === 0, 'auth-wall.html should have 0 questions');
+
+    // Fixture: JS shell should be detected
+    const shellHtml = fs.readFileSync(jsShellPath, 'utf8');
+    const shellResult = parseDOM(shellHtml);
+    console.log(`JS SHELL FIXTURE: requiresRender=${shellResult.requiresRender}, questions=${shellResult.questions.length}`);
+    assert(shellResult.requiresRender === true, 'js-shell.html should be requiresRender');
+
   } catch (err) {
     console.error(`Error processing file:`, err);
+    process.exitCode = 1;
   }
 }
 
