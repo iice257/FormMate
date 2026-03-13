@@ -67,7 +67,7 @@ export function renderQuestionCard(question, answer, index) {
   switch (type) {
     case 'short_text':
       inputHtml = `
-        <input
+        <input aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="text"
           class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
           data-question-id="${id}"
@@ -83,6 +83,7 @@ export function renderQuestionCard(question, answer, index) {
           class="answer-textarea w-full min-h-[120px] rounded-xl border-2 border-primary/20 bg-primary/5 text-slate-800 text-base leading-relaxed p-4 focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
           data-question-id="${id}"
           placeholder="Type your answer..."
+          aria-label="${escapeAttr(`Answer: ${text}`)}"
         >${escapeHtml(answerText)}</textarea>
       `;
       break;
@@ -92,7 +93,7 @@ export function renderQuestionCard(question, answer, index) {
         ${options.map(opt => {
         const selected = answerText === opt;
         return `
-            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${selected ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${selected ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" role="button" tabindex="0" aria-label="${escapeAttr(`Select option: ${opt}`)}"
                  data-question-id="${id}" data-value="${escapeAttr(opt)}" data-type="radio">
               <div class="size-4 border-2 ${selected ? 'border-primary' : 'border-slate-300'} rounded-full flex items-center justify-center">
                 <div class="radio-dot size-2 bg-primary rounded-full ${selected ? '' : 'hidden'}"></div>
@@ -110,7 +111,7 @@ export function renderQuestionCard(question, answer, index) {
         ${options.map(opt => {
         const checked = selectedItems.includes(opt);
         return `
-            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${checked ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${checked ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" role="button" tabindex="0" aria-label="${escapeAttr(`Toggle option: ${opt}`)}"
                  data-question-id="${id}" data-value="${escapeAttr(opt)}" data-type="checkbox">
               <div class="size-4 border-2 ${checked ? 'border-primary bg-primary' : 'border-slate-300'} rounded flex items-center justify-center">
                 <span class="check-mark material-symbols-outlined text-white text-xs ${checked ? '' : 'hidden'}">check</span>
@@ -127,6 +128,7 @@ export function renderQuestionCard(question, answer, index) {
         <select
           class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
           data-question-id="${id}"
+          aria-label="${escapeAttr(`Answer: ${text}`)}"
         >
           <option value="">Select an option...</option>
           ${options.map(opt => `<option value="${escapeAttr(opt)}" ${answerText === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
@@ -136,7 +138,7 @@ export function renderQuestionCard(question, answer, index) {
 
     case 'date':
       inputHtml = `
-        <input
+        <input aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="date"
           class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
           data-question-id="${id}"
@@ -149,16 +151,16 @@ export function renderQuestionCard(question, answer, index) {
       const selectedVal = parseInt(answerText) || 0;
       inputHtml = `<div class="flex gap-1">
         ${Array.from({ length: 10 }, (_, i) => i + 1).map(num => `
-          <button class="scale-btn flex-1 h-10 flex items-center justify-center border rounded-lg text-xs font-bold transition-colors
+          <button type="button" class="scale-btn flex-1 h-10 flex items-center justify-center border rounded-lg text-xs font-bold transition-colors
             ${num === selectedVal ? 'bg-primary text-white' : 'border-slate-200 hover:bg-slate-50'}"
-            data-question-id="${id}" data-value="${num}">${num}</button>
+            data-question-id="${id}" data-value="${num}" aria-label="${escapeAttr(`Answer: ${text} - ${num}`)}">${num}</button>
         `).join('')}
       </div>`;
       break;
 
     case 'file_upload':
       inputHtml = `
-        <div class="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl hover:border-primary/40 transition-colors cursor-pointer">
+        <div class="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl hover:border-primary/40 transition-colors cursor-pointer" role="button" tabindex="0" aria-label="${escapeAttr(`Upload file for: ${text}`)}">
           <div class="text-center">
             <span class="material-symbols-outlined text-slate-400 text-2xl">cloud_upload</span>
             <p class="text-xs text-slate-400 mt-1">Click to upload or drag & drop</p>
@@ -169,7 +171,7 @@ export function renderQuestionCard(question, answer, index) {
 
     default:
       inputHtml = `
-        <input type="text" class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
+        <input type="text" aria-label="${escapeAttr(`Answer: ${text}`)}" class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
           data-question-id="${id}" value="${escapeAttr(answerText)}" placeholder="Type your answer..." />
       `;
   }
@@ -231,5 +233,11 @@ function escapeHtml(text) {
 }
 
 function escapeAttr(text) {
-  return (text || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return String(text ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+    .replaceAll('`', '&#96;');
 }

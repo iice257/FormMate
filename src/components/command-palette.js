@@ -1,5 +1,6 @@
 import { navigateTo } from '../router.js';
 import { getState } from '../state.js';
+import { escapeHtml } from '../utils/escape.js';
 
 export function initCommandPalette() {
   if (document.getElementById('command-palette')) return;
@@ -43,10 +44,11 @@ export function initCommandPalette() {
     );
 
     if (filtered.length === 0) {
+      const safeQuery = escapeHtml(query);
       resultsContainer.innerHTML = `
         <div class="py-8 text-center text-slate-500">
           <span class="material-symbols-outlined text-3xl mb-2 opacity-50">search_off</span>
-          <p class="text-sm font-medium">No commands found for "${query}"</p>
+          <p class="text-sm font-medium">No commands found for "${safeQuery}"</p>
         </div>
       `;
       return;

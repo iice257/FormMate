@@ -5,6 +5,7 @@
 import { getState, setState, addChatMessage } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { processChatMessage } from '../ai/ai-actions.js';
+import { escapeAttr, escapeHtml, escapeHtmlWithLineBreaks } from '../utils/escape.js';
 
 // Persistence helpers for chat sessions
 const CHAT_SESSIONS_KEY = 'chat_sessions';
@@ -42,7 +43,7 @@ export function aiChatScreen() {
               <span class="material-symbols-outlined">smart_toy</span>
             </div>
             <div>
-              <h2 class="text-sm font-black text-slate-900 tracking-tight" id="session-title-display">${currentSession.title}</h2>
+              <h2 class="text-sm font-black text-slate-900 tracking-tight" id="session-title-display">${escapeHtml(currentSession.title)}</h2>
               <div class="flex items-center gap-1.5">
                 <span class="size-1.5 rounded-full bg-green-500 animate-pulse"></span>
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Copilot Active</span>
@@ -123,14 +124,14 @@ export function aiChatScreen() {
         
         <div class="flex-1 overflow-y-auto p-4 space-y-1" id="sessions-list">
           ${sessions.map(s => `
-            <div data-session-id="${s.id}" class="session-item group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${s.id === currentSessionId ? 'bg-white shadow-sm border border-slate-100 text-slate-900' : 'text-slate-500 hover:bg-white/50'}">
+            <div data-session-id="${escapeAttr(s.id)}" class="session-item group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${s.id === currentSessionId ? 'bg-white shadow-sm border border-slate-100 text-slate-900' : 'text-slate-500 hover:bg-white/50'}" role="button" tabindex="0" aria-label="Open conversation: ${escapeAttr(s.title)}">
                <div class="flex items-center gap-3 min-w-0">
                   <span class="material-symbols-outlined text-[18px] ${s.id === currentSessionId ? 'text-primary' : 'text-slate-300'}">chat_bubble_outline</span>
-                  <span class="text-xs font-bold truncate">${s.title}</span>
+                  <span class="text-xs font-bold truncate">${escapeHtml(s.title)}</span>
                </div>
                <div class="hidden group-hover:flex items-center gap-1">
-                  <button class="size-6 rounded-md flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-slate-900 btn-rename-session" data-id="${s.id}"><span class="material-symbols-outlined text-[14px]">edit</span></button>
-                  <button class="size-6 rounded-md flex items-center justify-center hover:bg-red-50 text-slate-400 hover:text-red-600 btn-delete-session" data-id="${s.id}"><span class="material-symbols-outlined text-[14px]">delete</span></button>
+                  <button type="button" class="size-6 rounded-md flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-slate-900 btn-rename-session" data-id="${escapeAttr(s.id)}" aria-label="Rename conversation"><span class="material-symbols-outlined text-[14px]">edit</span></button>
+                  <button type="button" class="size-6 rounded-md flex items-center justify-center hover:bg-red-50 text-slate-400 hover:text-red-600 btn-delete-session" data-id="${escapeAttr(s.id)}" aria-label="Delete conversation"><span class="material-symbols-outlined text-[14px]">delete</span></button>
                </div>
             </div>
           `).join('')}
@@ -159,6 +160,7 @@ export function aiChatScreen() {
 
   function renderMessage(msg) {
     const isUser = msg.role === 'user';
+    const safeContent = escapeHtmlWithLineBreaks(msg.content);
     return `
       <div class="flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} max-w-4xl mx-auto w-full group">
         <div class="flex items-center gap-2 mb-1">
@@ -166,7 +168,7 @@ export function aiChatScreen() {
            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${isUser ? 'You' : 'Copilot'}</span>
         </div>
         <div class="max-w-[85%] ${isUser ? 'bg-primary text-white rounded-2xl rounded-tr-none' : 'bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none'} px-5 py-4 text-sm font-medium leading-relaxed shadow-sm relative">
-          ${msg.content}
+          ${safeContent}
           ${!isUser ? `
             <button class="absolute -right-10 top-0 p-2 text-slate-300 hover:text-slate-900 opacity-0 group-hover:opacity-100 transition-all">
               <span class="material-symbols-outlined text-[18px]">content_copy</span>
@@ -272,6 +274,11 @@ export function aiChatScreen() {
         const sessionId = item.dataset.sessionId;
         localStorage.setItem('current_chat_session_id', sessionId);
         import('../router.js').then(r => r.navigateTo('ai-chat'));
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        item.click();
       });
     });
 

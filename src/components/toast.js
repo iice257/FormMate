@@ -4,6 +4,15 @@
 
 let toastContainer = null;
 
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function ensureContainer() {
   if (toastContainer && document.body.contains(toastContainer)) return;
 
@@ -69,9 +78,10 @@ export function showToast(message, type = 'info', duration = 3500) {
     max-width: 100%;
   `;
 
+  const safeMessage = escapeHtml(message);
   toast.innerHTML = `
     <span class="material-symbols-outlined" style="color: ${colors.text}; font-size: 1.25rem; flex-shrink: 0;">${icon}</span>
-    <span style="color: var(--fm-text, #0f172a); font-size: 0.8125rem; font-weight: 500; line-height: 1.4; flex: 1;">${message}</span>
+    <span style="color: var(--fm-text, #0f172a); font-size: 0.8125rem; font-weight: 500; line-height: 1.4; flex: 1;">${safeMessage}</span>
     <button style="color: var(--fm-text-tertiary); cursor: pointer; background: none; border: none; padding: 0.25rem; flex-shrink: 0; display: flex; border-radius: 0.375rem;" class="toast-close">
       <span class="material-symbols-outlined" style="font-size: 1rem;">close</span>
     </button>

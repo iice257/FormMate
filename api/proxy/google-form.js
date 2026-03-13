@@ -3,6 +3,53 @@ export const config = {
   maxDuration: 10,
 };
 
+const RATE_LIMIT = { max: 60, windowMs: 60_000 }; // best-effort per instance
+const buckets = new Map(); // ip -> { count, resetAt }
+
+function getClientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+function rateLimit(req) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const entry = buckets.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    buckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return { allowed: true };
+  }
+  if (entry.count >= RATE_LIMIT.max) {
+    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  entry.count++;
+  return { allowed: true };
+}
+
+function getAllowedOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return null;
+
+  const allow = new Set(
+    String(process.env.FORMMATE_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
+
+  allow.add('http://localhost:5173');
+  allow.add('http://127.0.0.1:5173');
+  allow.add('http://localhost:5174');
+  allow.add('http://127.0.0.1:5174');
+
+  if (process.env.VERCEL_URL) {
+    allow.add(`https://${process.env.VERCEL_URL}`);
+  }
+
+  return allow.has(origin) ? origin : null;
+}
+
 function cleanHtml(html) {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -13,14 +60,29 @@ function cleanHtml(html) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigin = getAllowedOrigin(req);
+  if (allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
+    const rl = rateLimit(req);
+    if (!rl.allowed) {
+      res.setHeader('Retry-After', String(rl.retryAfterSec || 2));
+      return res.status(429).json({ error: 'Rate limit exceeded', authRequired: false });
+    }
+
+    if (req.headers.origin && !allowedOrigin) {
+      return res.status(403).json({ error: 'Origin not allowed', authRequired: false });
+    }
+
     const { formId } = req.query;
     if (!formId) return res.status(400).json({ error: 'formId is required' });
 
