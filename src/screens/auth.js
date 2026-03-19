@@ -3,12 +3,32 @@
 // ═══════════════════════════════════════════
 
 import { getState, setState } from '../state.js';
-import { navigateTo } from '../router.js';
-import { signUp, signIn, signInWithGoogle, signInWithApple, resetPassword } from '../auth/auth-service.js';
+import { getDashboardActionScreenForUser, navigateTo } from '../router.js';
+import { getDevTestUsers, isDevAuthEnabled, signUp, signIn, signInWithGoogle, signInWithApple, resetPassword } from '../auth/auth-service.js';
 import { isOnboardingComplete } from '../storage/local-store.js';
 import { toast } from '../components/toast.js';
 
 export function authScreen() {
+  const devUsers = getDevTestUsers();
+  const devAccessHtml = isDevAuthEnabled() ? `
+            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-700">Dev Quick Access</h3>
+                  <p class="text-[11px] text-slate-500 mt-1">One-click sign-in for local testing. Password: <strong>password</strong></p>
+                </div>
+              </div>
+              <div class="grid gap-2">
+                ${devUsers.map((user) => `
+                  <button type="button" class="btn-dev-user flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-xs font-semibold text-slate-700 hover:border-primary/30 hover:bg-primary/5 transition-all btn-press" data-email="${user.email}">
+                    <span>${user.name}</span>
+                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-500">${user.tier}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+  ` : '';
+
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh">
       <!-- Left decorative panel (desktop) -->
@@ -112,6 +132,7 @@ export function authScreen() {
             <p class="text-center text-xs mt-6" style="color: var(--fm-text-tertiary);">
               Don't have an account? <button id="btn-to-signup" class="font-semibold hover:underline" style="color: var(--fm-primary);">Create one</button>
             </p>
+            ${devAccessHtml}
           </div>
 
           <!-- Signup Form (hidden) -->
@@ -210,6 +231,21 @@ export function authScreen() {
       forgotForm.classList.add('hidden');
     });
 
+    const applySessionState = (session) => {
+      const user = session.user;
+      setState({
+        isAuthenticated: true,
+        authUser: user,
+        tier: user.tier || 'free',
+        userProfile: {
+          ...getState().userProfile,
+          name: user.name || '',
+          email: user.email || '',
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2298da&color=fff&bold=true`
+        }
+      });
+    };
+
     // Login
     wrapper.querySelector('#btn-login').addEventListener('click', async () => {
       const email = wrapper.querySelector('#login-email').value.trim();
@@ -227,16 +263,7 @@ export function authScreen() {
 
       try {
         const session = await signIn(email, password);
-        setState({ 
-          isAuthenticated: true, 
-          authUser: session.user,
-          tier: session.user.tier || 'free',
-          userProfile: { 
-            name: session.user.name || '', 
-            email: session.user.email || '',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=2298da&color=fff&bold=true`
-          }
-        });
+        applySessionState(session);
         toast.success('Welcome back, ' + (session.user.name || session.user.email) + '!');
         navigateAfterAuth();
       } catch (err) {
@@ -270,16 +297,7 @@ export function authScreen() {
 
       try {
         const session = await signUp(email, password, name);
-        setState({ 
-          isAuthenticated: true, 
-          authUser: session.user,
-          tier: 'free',
-          userProfile: { 
-            name: session.user.name || '', 
-            email: session.user.email || '',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=2298da&color=fff&bold=true`
-          }
-        });
+        applySessionState(session);
         toast.success('Account created! Welcome to FormMate.');
         navigateAfterAuth();
       } catch (err) {
@@ -321,7 +339,7 @@ export function authScreen() {
       e.preventDefault();
       try {
         const session = await signInWithGoogle();
-        setState({ isAuthenticated: true, authUser: session.user });
+        applySessionState(session);
         toast.success('Signed in with Google!');
         navigateAfterAuth();
       } catch (err) {
@@ -333,7 +351,7 @@ export function authScreen() {
       e.preventDefault();
       try {
         const session = await signInWithApple();
-        setState({ isAuthenticated: true, authUser: session.user });
+        applySessionState(session);
         toast.success('Signed in with Apple!');
         navigateAfterAuth();
       } catch (err) {
@@ -358,6 +376,19 @@ export function authScreen() {
         if (e.key === 'Enter') wrapper.querySelector('#btn-signup').click();
       });
     });
+
+    wrapper.querySelectorAll('.btn-dev-user').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          const session = await signIn(button.dataset.email, 'password');
+          applySessionState(session);
+          toast.success(`Signed in as ${session.user.name}`);
+          navigateAfterAuth();
+        } catch (error) {
+          toast.error(error.message || 'Dev sign-in failed.');
+        }
+      });
+    });
   }
 
   return { html, init };
@@ -374,7 +405,7 @@ function navigateAfterAuth() {
   if (!isOnboardingComplete()) {
     navigateTo('onboarding');
   } else {
-    navigateTo('landing');
+    navigateTo(getDashboardActionScreenForUser());
   }
 }
 

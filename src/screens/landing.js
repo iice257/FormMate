@@ -3,11 +3,12 @@
 // ═══════════════════════════════════════════
 
 import { setState, getState } from '../state.js';
-import { navigateTo } from '../router.js';
+import { getDashboardActionScreenForUser, getFormsEntryScreenForUser, navigateTo } from '../router.js';
 import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
 
 export function landingScreen() {
   const { isAuthenticated, userProfile } = getState();
+  const dashboardActionLabel = isAuthenticated ? 'Go to Dashboard' : 'Sign In';
 
   const displayFirstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
@@ -417,7 +418,7 @@ export function landingScreen() {
                   Get Started Now
                 </button>
                 <button id="btn-cta-dashboard" class="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold text-base hover:bg-white/20 transition-all">
-                  Go to Dashboard
+                  ${dashboardActionLabel}
                 </button>
               </div>
             </div>
@@ -454,9 +455,6 @@ export function landingScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     wrapper.querySelector('#btn-footer-help')?.addEventListener('click', () => navigateTo('docs'));
-
-    const authed = getState().isAuthenticated;
-    const goAuthedHome = () => navigateTo(authed ? 'dashboard' : 'landing');
 
     wrapper.querySelector('#btn-hero-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#btn-hero-chat')?.addEventListener('click', () => navigateTo('ai-chat'));
@@ -581,7 +579,7 @@ export function landingScreen() {
     });
 
     wrapper.querySelector('#nav-forms')?.addEventListener('click', () => {
-      navigateTo(authed ? 'dashboard' : 'auth');
+      navigateTo(getFormsEntryScreenForUser());
     });
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
@@ -595,7 +593,7 @@ export function landingScreen() {
     });
 
     wrapper.querySelector('#btn-cta-dashboard')?.addEventListener('click', () => {
-      goAuthedHome();
+      navigateTo(getDashboardActionScreenForUser());
     });
 
     // Testimonials Logic

@@ -1,4 +1,4 @@
-import { navigateTo } from '../router.js';
+import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo } from '../router.js';
 import { generateText } from '../ai/ai-service.js';
 import { toast } from '../components/toast.js';
 import { getState } from '../state.js';
@@ -10,11 +10,18 @@ function escapeHtml(text) {
 }
 
 export function docsScreen() {
+  const authed = getState().isAuthenticated;
+  const dashboardLabel = authed ? 'Go to Dashboard' : 'Sign In';
+
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <!-- Navigation Bar -->
       <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
+          <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-slate-300 hover:text-slate-900 transition-colors btn-press" id="btn-home">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+            Back to Home
+          </button>
         </div>
         
         <div class="flex-1 flex justify-center items-center gap-4">
@@ -43,7 +50,7 @@ export function docsScreen() {
         <div class="flex-1 flex items-center justify-end gap-4 text-sm font-semibold">
            <button type="button" class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer bg-transparent border-0 p-0" id="btn-docs-pricing">Pricing</button>
            <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
-           <button class="bg-primary text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>
+           <button class="bg-primary text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
         </div>
       </header>
 
@@ -392,9 +399,8 @@ export function docsScreen() {
   `;
 
   function init(wrapper) {
-    const authed = getState().isAuthenticated;
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo(authed ? 'dashboard' : 'landing'));
-    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo('dashboard'));
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo(getHomeScreenForUser()));
+    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
     wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => navigateTo('help'));
 

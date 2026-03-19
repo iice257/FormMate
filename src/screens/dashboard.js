@@ -71,11 +71,38 @@ export function dashboardScreen() {
           </div>
         </div>
 
+        <div class="mb-8 rounded-3xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
+          <div class="grid gap-3 md:grid-cols-3">
+            <button id="btn-dashboard-focus-new" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
+              <span class="material-symbols-outlined text-primary">link</span>
+              <span>
+                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Start</span>
+                <span class="block text-sm font-bold text-slate-900">Paste a new form link</span>
+              </span>
+            </button>
+            <button id="btn-dashboard-focus-history" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
+              <span class="material-symbols-outlined text-primary">history</span>
+              <span>
+                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Review</span>
+                <span class="block text-sm font-bold text-slate-900">Open recent form history</span>
+              </span>
+            </button>
+            <button id="btn-dashboard-focus-chat" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
+              <span class="material-symbols-outlined text-primary">forum</span>
+              <span>
+                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Refine</span>
+                <span class="block text-sm font-bold text-slate-900">Ask Copilot for help</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
         <!-- Stats Grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           ${mockStats.map(stat => `
-            <div class="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-              <div class="size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4">
+            <div class="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden">
+              <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary/20 to-transparent"></div>
+              <div class="size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm">
                 <span class="material-symbols-outlined text-[22px]">${stat.icon}</span>
               </div>
               <div class="text-2xl font-black text-slate-900">${stat.value}</div>
@@ -152,6 +179,18 @@ export function dashboardScreen() {
 
     wrapper.querySelector('#btn-dashboard-view-all')?.addEventListener('click', () => {
       navigateTo('history');
+    });
+
+    wrapper.querySelector('#btn-dashboard-focus-new')?.addEventListener('click', () => {
+      navigateTo('new');
+    });
+
+    wrapper.querySelector('#btn-dashboard-focus-history')?.addEventListener('click', () => {
+      navigateTo('history');
+    });
+
+    wrapper.querySelector('#btn-dashboard-focus-chat')?.addEventListener('click', () => {
+      navigateTo('ai-chat');
     });
 
     wrapper.querySelector('#btn-dashboard-try-chat')?.addEventListener('click', () => {

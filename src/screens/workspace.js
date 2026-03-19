@@ -346,25 +346,88 @@ export function workspaceScreen() {
       opt.click();
     });
 
-    // Chat logic simplified for integration
-    async function sendMessage(text) {
-      if (!text.trim()) return;
-      const userBubble = document.createElement('div');
-      userBubble.className = 'flex flex-col gap-1 items-end animate-message-in';
-      userBubble.innerHTML = `
-        <div class="max-w-[85%] bg-primary text-white rounded-2xl rounded-tr-none px-4 py-3 text-[13px] font-bold shadow-sm">
-          ${escapeHtml(text)}
+    const chatHistory = [];
+
+    const appendChatBubble = (role, text) => {
+      const isUser = role === 'user';
+      const bubble = document.createElement('div');
+      bubble.className = `flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'} animate-message-in`;
+      bubble.innerHTML = `
+        <div class="max-w-[85%] ${isUser ? 'bg-primary text-white rounded-2xl rounded-tr-none' : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-2xl rounded-tl-none'} px-4 py-3 text-[13px] leading-relaxed shadow-sm">
+          ${escapeHtml(text).replace(/\n/g, '<br>')}
         </div>
       `;
-      chatMessages.appendChild(userBubble);
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    async function sendMessage(text) {
+      if (!text.trim()) return;
+
+      appendChatBubble('user', text);
+      addChatMessage('user', text);
+      chatHistory.push({ role: 'user', content: text });
+
+      btnSend.disabled = true;
+      chatInput.disabled = true;
+
+      const typingEl = document.createElement('div');
+      typingEl.className = 'flex flex-col gap-1 items-start animate-message-in';
+      typingEl.innerHTML = `
+        <div class="max-w-[85%] bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none px-3 py-2 flex items-center justify-center gap-1.5 h-10 w-16">
+          <div class="typing-dot bg-slate-400"></div>
+          <div class="typing-dot bg-slate-400" style="animation-delay: 0.2s"></div>
+          <div class="typing-dot bg-slate-400" style="animation-delay: 0.4s"></div>
+        </div>
+      `;
+      chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
-      // ... existing chat logic ...
+      try {
+        const response = await processChatMessage(text, formData, chatHistory, getState().activeQuestionId);
+        const cleanResponse = String(response || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim() || 'I did not generate a response.';
+        typingEl.remove();
+        appendChatBubble('assistant', cleanResponse);
+        addChatMessage('assistant', cleanResponse);
+        chatHistory.push({ role: 'assistant', content: cleanResponse });
+      } catch (error) {
+        typingEl.remove();
+        const message = error?.message || 'AI service is unavailable right now.';
+        appendChatBubble('assistant', message);
+        toast.error(message);
+      } finally {
+        btnSend.disabled = !chatInput.value.trim();
+        chatInput.disabled = false;
+        chatInput.focus();
+      }
     }
+
+    chatInput?.addEventListener('input', () => {
+      btnSend.disabled = !chatInput.value.trim();
+      chatInput.style.height = 'auto';
+      chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
+    });
 
     btnSend?.addEventListener('click', () => {
       sendMessage(chatInput.value);
       chatInput.value = '';
+      chatInput.style.height = 'auto';
+    });
+
+    chatInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        btnSend.click();
+      }
+    });
+
+    wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const text = chip.dataset.msg || '';
+        chatInput.value = text;
+        btnSend.disabled = !text.trim();
+        btnSend.click();
+      });
     });
 
     // Review redirection

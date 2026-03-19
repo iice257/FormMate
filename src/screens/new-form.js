@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════
 
 import { getState, setState } from '../state.js';
-import { navigateTo, goBack } from '../router.js';
+import { getHomeScreenForUser, navigateTo, goBack } from '../router.js';
 import { parseFormUrl, detectFormPlatform } from '../parser/form-parser.js';
 import { toast } from '../components/toast.js';
 import { initAurora } from './Aurora.js';
@@ -118,7 +118,7 @@ export function newFormScreen() {
 
     btnBack.addEventListener('click', () => goBack());
     wrapper.querySelector('#logo-home')?.addEventListener('click', () => {
-      navigateTo(getState().isAuthenticated ? 'dashboard' : 'landing');
+      navigateTo(getHomeScreenForUser());
     });
 
     btnAnalyze.addEventListener('click', () => {

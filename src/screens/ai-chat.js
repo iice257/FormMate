@@ -6,6 +6,7 @@ import { getState, setState, addChatMessage } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { processChatMessage } from '../ai/ai-actions.js';
 import { escapeAttr, escapeHtml, escapeHtmlWithLineBreaks } from '../utils/escape.js';
+import { toast } from '../components/toast.js';
 
 // Persistence helpers for chat sessions
 const CHAT_SESSIONS_KEY = 'chat_sessions';
@@ -247,6 +248,13 @@ export function aiChatScreen() {
       } catch (err) {
         typingEl.remove();
         console.error(err);
+        const message = err?.message || 'AI service is unavailable right now.';
+        const errorMsg = { role: 'assistant', content: message, timestamp: Date.now() };
+        currentSession.messages.push(errorMsg);
+        saveSessions(sessions);
+        messagesContainer.innerHTML += renderMessage(errorMsg);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        toast.error(message);
       }
     }
 

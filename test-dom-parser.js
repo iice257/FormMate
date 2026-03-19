@@ -18,7 +18,7 @@ global.localStorage = {
 // Now import the modules using dynamic import so globals are set first
 const { parseDOM } = await import('./src/parser/dom-parser.js');
 const { categorizeField } = await import('./src/ai/field-classifier.js');
-const { getState, setState } = await import('./src/state.js');
+const { setState } = await import('./src/state.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,6 +43,9 @@ setState({
 const mockHtmlPath = resolve(__dirname, 'mock-google-form.html');
 const authWallPath = resolve(__dirname, 'fixtures', 'auth-wall.html');
 const jsShellPath = resolve(__dirname, 'fixtures', 'js-shell.html');
+const labelForPath = resolve(__dirname, 'fixtures', 'label-for-form.html');
+const groupedInputsPath = resolve(__dirname, 'fixtures', 'grouped-inputs-form.html');
+const ariaFallbackPath = resolve(__dirname, 'fixtures', 'aria-fallback-form.html');
 
 function assert(condition, message) {
   if (condition) return;
@@ -82,7 +85,7 @@ async function runTests() {
         console.log('');
       });
     } else {
-      console.warn('⚠️ WARNING: Deterministic parser found 0 questions. This will trigger the AI Fallback.');
+      console.warn('WARNING: Deterministic parser found 0 questions. This will trigger the AI fallback.');
     }
 
     // Fixture: auth wall should be detected
@@ -98,8 +101,38 @@ async function runTests() {
     console.log(`JS SHELL FIXTURE: requiresRender=${shellResult.requiresRender}, questions=${shellResult.questions.length}`);
     assert(shellResult.requiresRender === true, 'js-shell.html should be requiresRender');
 
+    // Fixture: label[for] extraction
+    const labelForHtml = fs.readFileSync(labelForPath, 'utf8');
+    const labelForResult = parseDOM(labelForHtml);
+    const fullNameQuestion = labelForResult.questions.find((q) => q.text === 'Full Name');
+    const emailQuestion = labelForResult.questions.find((q) => q.text === 'Email Address');
+    console.log(`LABEL-FOR FIXTURE: questions=${labelForResult.questions.length}`);
+    assert(Boolean(fullNameQuestion), 'label-for-form.html should include "Full Name"');
+    assert(fullNameQuestion?.required === true, '"Full Name" should be required');
+    assert(emailQuestion?.type === 'email', '"Email Address" should be parsed as email');
+
+    // Fixture: grouped radio/checkbox extraction without duplicates
+    const groupedHtml = fs.readFileSync(groupedInputsPath, 'utf8');
+    const groupedResult = parseDOM(groupedHtml);
+    const radioGroup = groupedResult.questions.find((q) => q.type === 'radio');
+    const checkboxGroup = groupedResult.questions.find((q) => q.type === 'checkbox');
+    console.log(`GROUPED INPUTS FIXTURE: questions=${groupedResult.questions.length}`);
+    assert(groupedResult.questions.length === 2, 'grouped-inputs-form.html should produce 2 grouped questions');
+    assert(radioGroup?.options?.length === 2, 'radio group should contain 2 options');
+    assert(checkboxGroup?.options?.length === 2, 'checkbox group should contain 2 options');
+
+    // Fixture: aria-label / placeholder fallback labels
+    const ariaHtml = fs.readFileSync(ariaFallbackPath, 'utf8');
+    const ariaResult = parseDOM(ariaHtml);
+    const portfolioQuestion = ariaResult.questions.find((q) => q.text === 'Portfolio URL');
+    const motivationQuestion = ariaResult.questions.find((q) => q.text === 'Share your motivation');
+    console.log(`ARIA FALLBACK FIXTURE: questions=${ariaResult.questions.length}`);
+    assert(Boolean(portfolioQuestion), 'aria-fallback-form.html should use aria-label as question text');
+    assert(portfolioQuestion?.type === 'short_text', 'aria-label text input should map to short_text');
+    assert(motivationQuestion?.type === 'long_text', 'textarea placeholder should map to long_text');
+
   } catch (err) {
-    console.error(`Error processing file:`, err);
+    console.error('Error processing file:', err);
     process.exitCode = 1;
   }
 }

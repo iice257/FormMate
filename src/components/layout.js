@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════
 
 import { getState } from '../state.js';
-import { navigateTo } from '../router.js';
+import { getHomeScreenForUser, navigateTo } from '../router.js';
 import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
 
 /**
@@ -34,12 +34,13 @@ export function withLayout(pageId, contentHtml) {
     return `
       <button id="nav-${link.id}" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative overflow-hidden ${
         isActive 
-          ? 'bg-white shadow-sm border border-slate-100/50 text-slate-900' 
-          : 'text-slate-600 hover:bg-white hover:shadow hover:text-slate-900'
+          ? 'bg-white shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-primary/10 text-slate-900'
+          : 'text-slate-600 hover:bg-white hover:shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:text-slate-900 border border-transparent hover:border-slate-100'
       }">
+        ${isActive ? '<div class="absolute inset-0 bg-gradient-to-r from-primary/8 via-transparent to-transparent pointer-events-none"></div>' : ''}
         ${isActive ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1 bg-primary rounded-r-md"></div>' : ''}
-        <span class="material-symbols-outlined ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors text-[20px]">${link.icon}</span>
-        <span class="${isActive ? 'font-bold' : 'font-semibold'} text-[14px] hidden lg:block tracking-wide ${isActive ? 'ml-1' : ''}">${link.label}</span>
+        <span class="material-symbols-outlined ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors text-[20px] relative z-10">${link.icon}</span>
+        <span class="${isActive ? 'font-black' : 'font-semibold'} text-[14px] hidden lg:block tracking-wide ${isActive ? 'ml-1' : ''} relative z-10">${link.label}</span>
       </button>
     `;
   }).join('');
@@ -140,26 +141,23 @@ export function initLayout(wrapper) {
 
   links.forEach(link => {
     wrapper.querySelector(`#${link.id}`)?.addEventListener('click', () => {
-      // Small optimization: don't navigate if already there
-      // (This requires router to expose current route, for now let's just let it be)
-      import('../router.js').then(r => r.navigateTo(link.route));
+      navigateTo(link.route);
     });
   });
 
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
-    const authed = getState().isAuthenticated;
-    import('../router.js').then(r => r.navigateTo(authed ? 'dashboard' : 'landing'));
+    navigateTo(getHomeScreenForUser());
   });
 
   wrapper.querySelector('#btn-profile-header')?.addEventListener('click', () => {
-    import('../router.js').then(r => r.navigateTo('accounts'));
+    navigateTo('accounts');
   });
 
   wrapper.querySelector('#btn-login-header')?.addEventListener('click', () => {
-    import('../router.js').then(r => r.navigateTo('auth'));
+    navigateTo('auth');
   });
 
   wrapper.querySelector('#btn-upgrade-sidebar')?.addEventListener('click', () => {
-    import('../router.js').then(r => r.navigateTo('pricing'));
+    navigateTo('pricing');
   });
 }

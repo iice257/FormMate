@@ -1,6 +1,4 @@
-// ═══════════════════════════════════════════
-// FormMate — AI Service Layer (Multi-Model Router)
-// ═══════════════════════════════════════════
+// FormMate AI Service Layer (Multi-Model Router)
 //
 // Central router for all AI operations.
 // Routes through the backend proxy (/api/ai/*) to keep
@@ -8,16 +6,15 @@
 // caching, rate limiting, and input validation.
 //
 // Model Assignment (Groq vendor-prefixed IDs):
-//   openai/gpt-oss-120b   → heavy reasoning
-//   openai/gpt-oss-20b    → standard generation
-//   qwen/qwen3-32b        → conversational copilot
-//   llama-3.1-8b-instant  → fast lightweight
-//   whisper-large-v3      → speech-to-text
-// ═══════════════════════════════════════════
+//   openai/gpt-oss-120b   -> heavy reasoning
+//   openai/gpt-oss-20b    -> standard generation
+//   qwen/qwen3-32b        -> conversational copilot
+//   llama-3.1-8b-instant  -> fast lightweight
+//   whisper-large-v3      -> speech-to-text
 
 import { getState } from '../state.js';
 
-// ─── Model Registry (vendor-prefixed for Groq) ──
+// Model registry (vendor-prefixed for Groq)
 
 // Model Assignment
 export const MODELS = {
@@ -28,7 +25,7 @@ export const MODELS = {
   WHISPER: 'whisper-large-v3',
 };
 
-// ─── Task → Model Routing Table ──────────────
+// Task -> model routing table
 
 export const TASK_ROUTES = {
   'form_parsing': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
@@ -41,7 +38,7 @@ export const TASK_ROUTES = {
   'voice_transcription': { model: MODELS.WHISPER, fallback: [] },
 };
 
-// ─── Client-Side Rate Limiter ────────────────
+// Client-side rate limiter
 
 const RATE_LIMIT = { maxRequests: 20, windowMs: 60_000 };
 const requestTimestamps = [];
@@ -52,12 +49,12 @@ function checkRateLimit() {
     requestTimestamps.shift();
   }
   if (requestTimestamps.length >= RATE_LIMIT.maxRequests) {
-    throw new Error('[AIService] Client rate limit exceeded — please wait a moment');
+    throw new Error('[AIService] Client rate limit exceeded - please wait a moment');
   }
   requestTimestamps.push(now);
 }
 
-// ─── Input Validation ────────────────────────
+// Input validation
 
 const MAX_INPUT_LENGTH = 15_000;
 
@@ -68,7 +65,7 @@ function validateInput(messages) {
   }
 }
 
-// ─── Response Cache (LRU) ────────────────────
+// Response cache (LRU)
 
 const CACHE_MAX = 100;
 const cache = new Map();
@@ -98,7 +95,7 @@ function setCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-// ─── Core API Request (via Proxy) ────────────
+// Core API request (via proxy)
 
 async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 1024, jsonMode = false }) {
   const body = { model, messages, temperature, max_tokens: maxTokens };
@@ -107,13 +104,18 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
     body.response_format = { type: 'json_object' };
   }
 
-  const response = await fetch(`/api/ai/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`/api/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw { type: 'NETWORK_ERROR', message: error?.message || 'Network request failed' };
+  }
 
   if (response.status === 429) {
     const retryAfter = parseInt(response.headers.get('retry-after') || '2', 10);
@@ -136,7 +138,7 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
   return data.choices?.[0]?.message?.content || data.text || '';
 }
 
-// ─── Public API: generate() ──────────────────
+// Public API: generate()
 
 export async function generate({
   task,
@@ -168,7 +170,7 @@ export async function generate({
 
   for (const model of modelChain) {
     try {
-      console.log(`[AIService] ${task} → ${model}`);
+      console.log(`[AIService] ${task} -> ${model}`);
       const result = await proxyRequest({ model, messages, temperature, maxTokens, jsonMode });
       if (useCache) setCache(cacheKey, result);
       return result;
@@ -190,6 +192,14 @@ export async function generate({
     }
   }
 
+  if (isDevAiFallbackEnabled()) {
+    const fallbackResult = getDevFallbackResponse(task, messages, jsonMode);
+    if (fallbackResult !== null) {
+      console.warn(`[AIService] Falling back to dev mock response for ${task}`);
+      return fallbackResult;
+    }
+  }
+
   if (lastError?.type === 'RATE_LIMITED') {
     const e = new Error(`[AIService] Rate limited. Try again in ${lastError.retryAfter || 2}s.`);
     e.code = 'RATE_LIMITED';
@@ -205,10 +215,16 @@ export async function generate({
     throw e;
   }
 
+  if (lastError?.type === 'NETWORK_ERROR') {
+    const e = new Error('[AIService] Unable to reach the AI service. Start the API server or try again.');
+    e.code = 'NETWORK_ERROR';
+    throw e;
+  }
+
   throw new Error(`[AIService] All models failed for task "${task}". Last error: ${lastError?.body || lastError?.message || 'Unknown'}`);
 }
 
-// ─── JSON Response Parser ────────────────────
+// JSON response parser
 
 export function parseJsonResponse(text) {
   let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -217,7 +233,7 @@ export function parseJsonResponse(text) {
   return JSON.parse(cleaned);
 }
 
-// â”€â”€â”€ Task-Safe Wrappers â”€â”€â”€
+// Task-safe wrappers
 
 export async function generateText(options) {
   const text = await generate({ ...options, jsonMode: false });
@@ -237,7 +253,7 @@ export async function generateJson(options) {
   }
 }
 
-// ─── Voice Transcription (via Proxy) ─────────
+// Voice transcription (via proxy)
 
 export async function transcribeAudio(audioBlob) {
   checkRateLimit();
@@ -257,7 +273,42 @@ export async function transcribeAudio(audioBlob) {
   return data.text || '';
 }
 
-// ─── Utilities ───────────────────────────────
+// Utilities
+
+function isDevAiFallbackEnabled() {
+  const host = typeof window !== 'undefined' ? window.location.hostname : '';
+  return Boolean(import.meta.env.DEV) || host === 'localhost' || host === '127.0.0.1';
+}
+
+function getDevFallbackResponse(task, messages, jsonMode) {
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
+
+  if (jsonMode && task === 'form_parsing') {
+    return JSON.stringify({
+      title: 'Dev Parsed Form',
+      description: 'Fallback response generated in local development.',
+      questions: [
+        { id: '1', text: 'Full name', type: 'short_text', options: [], required: true },
+        { id: '2', text: 'Why are you interested?', type: 'long_text', options: [], required: false }
+      ]
+    });
+  }
+
+  const taskResponses = {
+    answer_generation: 'Drafted a concise, professional answer based on your saved profile.',
+    regeneration: 'Here is a fresh alternative with a slightly different emphasis and tone.',
+    quick_edit: 'Updated the answer to better match your instruction while keeping the same meaning.',
+    copilot_chat: `Dev Copilot fallback: I could not reach the live AI service, but I understood your request: "${truncate(lastUserMessage, 120)}".`,
+    docs_chat: 'Dev Docs fallback: the live AI service is unavailable, but the Accounts, Vault, and Workspace guides cover the main flows.'
+  };
+
+  return taskResponses[task] || (jsonMode ? null : 'Dev fallback response');
+}
+
+function truncate(value, maxLength) {
+  if (!value || value.length <= maxLength) return value;
+  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
+}
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

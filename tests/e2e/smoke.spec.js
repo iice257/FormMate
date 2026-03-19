@@ -30,6 +30,13 @@ test('demo flow: examples -> analyzing -> workspace renders cards', async ({ pag
   await expect(page.locator('[data-card-id]')).toHaveCount(5);
 });
 
+test('protected routes redirect unauthenticated users to auth', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await page.goto('/dashboard');
+  await page.waitForURL('**/auth');
+  await expect(page.locator('#btn-login')).toBeVisible();
+});
+
 test('auth-required flow: shows Assisted Capture modal', async ({ page }) => {
   await seedOnboardingComplete(page);
   await login(page);
@@ -102,4 +109,13 @@ test('ai contract sanity: regenerate uses text output and updates UI', async ({ 
   await regenerate.click();
 
   await expect(page.locator(`.answer-textarea[data-question-id="${qId}"]`)).toHaveValue('Mock regenerated answer');
+});
+
+test('docs home button routes signed-in users back to dashboard', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await login(page);
+
+  await page.goto('/docs');
+  await page.click('#btn-home');
+  await page.waitForURL('**/dashboard');
 });

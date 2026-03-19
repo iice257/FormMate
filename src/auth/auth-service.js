@@ -11,6 +11,7 @@ import { save, load, remove } from '../storage/local-store.js';
 
 const AUTH_KEY = 'auth_session';
 const USERS_KEY = 'auth_users';
+const DEV_TEST_PASSWORD = 'password';
 
 // ─── Session Management ──────────────────
 
@@ -37,6 +38,20 @@ export function isAuthenticated() {
 export function getCurrentUser() {
   const session = getSession();
   return session?.user || null;
+}
+
+export function isDevAuthEnabled() {
+  const host = typeof window !== 'undefined' ? window.location.hostname : '';
+  return Boolean(import.meta.env.DEV) || host === 'localhost' || host === '127.0.0.1';
+}
+
+export function getDevTestUsers() {
+  if (!isDevAuthEnabled()) return [];
+  return [
+    { email: 'free@formmate.ai', name: 'Free User', tier: 'free' },
+    { email: 'weekly@formmate.ai', name: 'Pro Weekly User', tier: 'weekly' },
+    { email: 'monthly@formmate.ai', name: 'Pro Monthly User', tier: 'monthly' }
+  ];
 }
 
 // ─── Auth Actions ────────────────────────
@@ -67,11 +82,7 @@ export async function signUp(email, password, name = '') {
   save(USERS_KEY, users);
 
   // Create session
-  const session = { user, isAuthenticated: true, tier: 'free', createdAt: Date.now() };
-  save(AUTH_KEY, session);
-
-  notifyListeners(session);
-  return session;
+  return persistSession(user);
 }
 
 /**
@@ -91,12 +102,8 @@ export async function signIn(email, password) {
     throw new Error('Incorrect password. Please try again.');
   }
 
-  const user = { id: stored.id, email: stored.email, name: stored.name, tier: stored.tier || 'free' };
-  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
-  save(AUTH_KEY, session);
-
-  notifyListeners(session);
-  return session;
+  const user = normalizeUser(stored);
+  return persistSession(user);
 }
 
 /**
@@ -122,12 +129,8 @@ export async function signInWithGoogle() {
     save(USERS_KEY, users);
   }
 
-  const user = { id: users[email].id, email, name: users[email].name, tier: users[email].tier || 'free' };
-  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
-  save(AUTH_KEY, session);
-
-  notifyListeners(session);
-  return session;
+  const user = normalizeUser(users[email]);
+  return persistSession(user);
 }
 
 /**
@@ -151,19 +154,15 @@ export async function signInWithApple() {
     save(USERS_KEY, users);
   }
 
-  const user = { id: users[email].id, email, name: users[email].name, tier: users[email].tier || 'free' };
-  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
-  save(AUTH_KEY, session);
-
-  notifyListeners(session);
-  return session;
+  const user = normalizeUser(users[email]);
+  return persistSession(user);
 }
 
 /**
  * Sign out.
  */
 export function signOut() {
-  remove('auth_session');
+  remove(AUTH_KEY);
   notifyListeners(null);
 }
 
@@ -244,18 +243,30 @@ function simpleHash(str) {
   return 'h_' + Math.abs(hash).toString(36);
 }
 
-// Ensure test users exist
+function normalizeUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    tier: user.tier || 'free',
+    provider: user.provider || 'email'
+  };
+}
+
+function persistSession(user) {
+  const session = { user, isAuthenticated: true, tier: user.tier, createdAt: Date.now() };
+  save(AUTH_KEY, session);
+  notifyListeners(session);
+  return session;
+}
+
+// Ensure dev test users exist in local development only.
 export function initializeTestUser() {
+  if (!isDevAuthEnabled()) return;
   const users = load(USERS_KEY) || {};
 
-  const testUsers = [
-    { email: 'free@formmate.ai', name: 'Free User', tier: 'free' },
-    { email: 'weekly@formmate.ai', name: 'Pro Weekly User', tier: 'weekly' },
-    { email: 'monthly@formmate.ai', name: 'Pro Monthly User', tier: 'monthly' }
-  ];
-
   let changed = false;
-  testUsers.forEach(u => {
+  getDevTestUsers().forEach(u => {
     if (!users[u.email]) {
       users[u.email] = {
         id: generateId(),
@@ -263,7 +274,7 @@ export function initializeTestUser() {
         name: u.name,
         tier: u.tier,
         createdAt: Date.now(),
-        passwordHash: simpleHash('password'),
+        passwordHash: simpleHash(DEV_TEST_PASSWORD),
         // Add sample history for dashboard
         history: [
           { 

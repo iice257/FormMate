@@ -1,5 +1,5 @@
 import { getState, setState } from '../state.js';
-import { navigateTo } from '../router.js';
+import { getHomeScreenForUser, navigateTo } from '../router.js';
 import { MOCK_FORMS } from '../parser/mock-forms.js';
 
 export function examplesScreen() {
@@ -149,7 +149,7 @@ export function examplesScreen() {
     // Navigation
     wrapper.querySelector('#btn-back').addEventListener('click', () => history.back());
     wrapper.querySelector('#btn-home').addEventListener('click', () => {
-      navigateTo(getState().isAuthenticated ? 'dashboard' : 'landing');
+      navigateTo(getHomeScreenForUser());
     });
 
     // Render grid

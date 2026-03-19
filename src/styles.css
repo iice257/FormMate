@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════
-   FormMate — Global Styles (Enhanced)
-   ═══════════════════════════════════════════ */
+/* FormMate Global Styles (Enhanced) */
 
 /* Scrollbar hiding */
 .no-scrollbar::-webkit-scrollbar {
@@ -34,7 +32,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ─── Input Focus States ───────────────── */
+/* Input Focus States */
 /* Thicker border + soft glow + faint pulsing shadow */
 input:focus,
 textarea:focus,
@@ -58,19 +56,7 @@ select:focus {
   }
 }
 
-@keyframes focusPulse {
-
-  0%,
-  100% {
-    box-shadow: var(--fm-focus-glow);
-  }
-
-  50% {
-    box-shadow: var(--fm-focus-ring), 0 0 24px rgba(91, 19, 236, 0.08);
-  }
-}
-
-/* ─── Button Micro-interactions ────────── */
+/* Button Micro-interactions */
 .btn-press {
   transition: all var(--fm-transition-fast);
   position: relative;
@@ -117,7 +103,7 @@ select:focus {
   transition: 0s;
 }
 
-/* ─── Glassmorphism ───────────────────── */
+/* Glassmorphism */
 .glass-panel {
   background: var(--fm-glass-bg);
   backdrop-filter: blur(var(--fm-glass-blur));
@@ -132,7 +118,7 @@ select:focus {
   border-bottom: 1px solid var(--fm-border-light);
 }
 
-/* ─── Gradient Accents ────────────────── */
+/* Gradient Accents */
 .text-gradient {
   background: var(--fm-gradient-primary);
   -webkit-background-clip: text;
@@ -147,7 +133,7 @@ select:focus {
   background-size: cover;
 }
 
-/* ─── Spin animation ──────────────────── */
+/* Spin animation */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -162,7 +148,7 @@ select:focus {
   animation: spin 1s linear infinite;
 }
 
-/* ─── Screen transitions (directional) ── */
+/* Screen transitions (directional) */
 
 /* Forward: slide in from right */
 .screen-enter-forward {
@@ -235,7 +221,7 @@ select:focus {
   }
 }
 
-/* ─── Pulse animation ────────────────── */
+/* Pulse animation */
 @keyframes gentlePulse {
 
   0%,
@@ -252,7 +238,7 @@ select:focus {
   animation: gentlePulse 2s ease-in-out infinite;
 }
 
-/* ─── Scanning line ──────────────────── */
+/* Scanning line */
 @keyframes scanLine {
   0% {
     transform: translateY(0);
@@ -271,7 +257,7 @@ select:focus {
   animation: scanLine 2.5s ease-in-out infinite;
 }
 
-/* ─── Stagger children ───────────────── */
+/* Stagger children */
 .stagger-children>* {
   opacity: 0;
   animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -317,29 +303,6 @@ select:focus {
   animation-delay: 0.5s;
 }
 
-/* ─── Skeleton Loading ───────────────── */
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.skeleton {
-  background: #f6f7f8;
-  background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-  background-repeat: no-repeat;
-  background-size: 800px 100%;
-  animation-duration: 1.5s;
-  animation-fill-mode: forwards;
-  animation-iteration-count: infinite;
-  animation-name: shimmer;
-  animation-timing-function: linear;
-}
-
 /* Deleted dark-mode-transition */
 
 @keyframes staggerIn {
@@ -354,7 +317,7 @@ select:focus {
   }
 }
 
-/* ─── Typing indicator ───────────────── */
+/* Typing indicator */
 @keyframes typingDot {
 
   0%,
@@ -382,7 +345,7 @@ select:focus {
   animation-delay: 0.4s;
 }
 
-/* ─── Progress bar ───────────────────── */
+/* Progress bar */
 @keyframes progressGrow {
   from {
     width: 0%;
@@ -393,7 +356,7 @@ select:focus {
   animation: progressGrow 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Float animation ────────────────── */
+/* Float animation */
 @keyframes float {
 
   0%,
@@ -410,7 +373,7 @@ select:focus {
   animation: float 3s ease-in-out infinite;
 }
 
-/* ─── Checkmark pop ──────────────────── */
+/* Checkmark pop */
 @keyframes checkPop {
   0% {
     transform: scale(0);
@@ -431,7 +394,7 @@ select:focus {
   animation: checkPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* ─── Message slide-in ───────────────── */
+/* Message slide-in */
 @keyframes messageSlideIn {
   from {
     opacity: 0;
@@ -448,7 +411,7 @@ select:focus {
   animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Confetti ───────────────────────── */
+/* Confetti */
 @keyframes confettiFall {
   0% {
     transform: translateY(-100vh) rotate(0deg);
@@ -472,7 +435,7 @@ select:focus {
   z-index: 9999;
 }
 
-/* ─── Skeleton loading ───────────────── */
+/* Skeleton loading */
 @keyframes skeletonShimmer {
   0% {
     background-position: -200% 0;
@@ -490,7 +453,7 @@ select:focus {
   border-radius: var(--fm-radius-md);
 }
 
-/* ─── Glassmorphism ──────────────────── */
+/* Glassmorphism */
 .glass {
   background: var(--fm-glass-bg);
   backdrop-filter: blur(var(--fm-glass-blur));
@@ -498,12 +461,12 @@ select:focus {
   border: 1px solid var(--fm-glass-border);
 }
 
-/* ─── Background mesh ────────────────── */
+/* Background mesh */
 .bg-mesh {
   background-image: var(--fm-gradient-mesh);
 }
 
-/* ─── Gradient accent text ───────────── */
+/* Gradient accent text */
 .text-gradient {
   background: var(--fm-gradient-primary);
   -webkit-background-clip: text;
@@ -511,7 +474,7 @@ select:focus {
   background-clip: text;
 }
 
-/* ─── Card hover lift ────────────────── */
+/* Card hover lift */
 .card-hover {
   transition: all var(--fm-transition-normal);
 }
@@ -534,7 +497,7 @@ select:focus {
   box-shadow: var(--fm-shadow-primary-hover);
 }
 
-/* ─── Shake horizontal ───────────────── */
+/* Shake horizontal */
 @keyframes shake-horizontal {
 
   0%,
@@ -562,7 +525,7 @@ select:focus {
   animation: shake-horizontal 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
-/* ─── Slide up entrance ──────────────── */
+/* Slide up entrance */
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -579,7 +542,7 @@ select:focus {
   animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Scale in entrance ──────────────── */
+/* Scale in entrance */
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -596,7 +559,7 @@ select:focus {
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Missing field highlight ────────── */
+/* Missing field highlight */
 @keyframes missingPulse {
 
   0%,
@@ -616,13 +579,13 @@ select:focus {
   border-color: rgba(245, 158, 11, 0.4) !important;
 }
 
-/* ─── Command Palette Overlay ────────── */
+/* Command Palette Overlay */
 .command-palette-overlay {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
 }
 
-/* ─── Responsive utilities ───────────── */
+/* Responsive utilities */
 @media (max-width: 768px) {
   .hide-mobile {
     display: none !important;
@@ -635,7 +598,7 @@ select:focus {
   }
 }
 
-/* ─── Gradient Text Animation ───────── */
+/* Gradient Text Animation */
 @keyframes gradient-x {
 
   0%,

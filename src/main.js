@@ -1,8 +1,6 @@
-// ═══════════════════════════════════════════
-// FormMate — Application Entry Point
-// ═══════════════════════════════════════════
+// FormMate Application Entry Point
 
-// Self-hosted fonts (bundled by Vite — no CDN dependency)
+// Self-hosted fonts bundled by Vite; no CDN dependency
 import 'material-symbols/outlined.css';
 import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';

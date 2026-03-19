@@ -471,7 +471,7 @@ export function accountsScreen() {
 
     wrapper.querySelector('#btn-signout')?.addEventListener('click', () => {
       signOut();
-      setState({ isAuthenticated: false, authUser: null });
+      setState({ isAuthenticated: false, authUser: null, tier: 'free', currentScreen: 'auth' });
       toast.info('Signed out.');
       navigateTo('auth');
     });

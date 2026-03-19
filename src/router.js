@@ -13,6 +13,18 @@ const historyStack = [];
 // Screens that don't require auth
 const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
 
+export function getHomeScreenForUser() {
+  return isAuthenticated() ? 'dashboard' : 'landing';
+}
+
+export function getDashboardActionScreenForUser() {
+  return isAuthenticated() ? 'dashboard' : 'auth';
+}
+
+export function getFormsEntryScreenForUser() {
+  return isAuthenticated() ? 'new' : 'auth';
+}
+
 export function registerScreen(name, renderFn) {
   routes[name] = renderFn;
 }
@@ -20,23 +32,24 @@ export function registerScreen(name, renderFn) {
 export function navigateTo(screen, replace = false) {
   const overlay = document.getElementById('page-transition-overlay');
   const isForward = !replace;
+  const animationsEnabled = getState().settings?.ui?.animationsEnabled !== false;
 
-  if (isForward && overlay) {
+  if (isForward && overlay && animationsEnabled) {
     const circle = document.createElement('div');
     circle.className = 'transition-circle expanding';
     circle.style.left = `${window.__fmClickX}px`;
     circle.style.top = `${window.__fmClickY}px`;
     overlay.appendChild(circle);
 
-    setTimeout(() => {
-      performNavigation(screen, replace);
-      
+    performNavigation(screen, replace);
+
+    requestAnimationFrame(() => {
       setTimeout(() => {
         circle.classList.remove('expanding');
         circle.classList.add('fading');
         setTimeout(() => circle.remove(), 400);
-      }, 100);
-    }, 450);
+      }, 120);
+    });
   } else {
     performNavigation(screen, replace);
   }
@@ -67,13 +80,18 @@ function performNavigation(screen, replace = false) {
 
   // Route guard (in-app navigations too)
   const authed = isAuthenticated();
+  const onboardingComplete = isOnboardingComplete();
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
     screen = 'auth';
     path = '/auth';
     replace = true;
+  } else if (authed && !onboardingComplete && screen !== 'onboarding' && screen !== 'capture') {
+    screen = 'onboarding';
+    path = '/onboarding';
+    replace = true;
   } else if (authed && screen === 'auth') {
-    screen = 'dashboard';
-    path = '/dashboard';
+    screen = onboardingComplete ? 'dashboard' : 'onboarding';
+    path = onboardingComplete ? '/dashboard' : '/onboarding';
     replace = true;
   }
 
@@ -197,7 +215,7 @@ export function initRouter() {
     if (routes[initialScreen]) {
       navigateTo(initialScreen, true);
     } else {
-      navigateTo('landing', true);
+      navigateTo('dashboard', true);
     }
   }
 }
@@ -210,6 +228,6 @@ export function goBack() {
     navigateTo(previousScreen, true);
   } else {
     // Fallback if no history
-    navigateTo('landing', true);
+    navigateTo(getHomeScreenForUser(), true);
   }
 }
