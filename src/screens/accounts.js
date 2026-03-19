@@ -11,7 +11,7 @@ import { renderTabs, initTabs, renderEmptyState, renderToggle } from '../compone
 import { logSettingsChanged } from '../storage/activity-logger.js';
 
 export function accountsScreen() {
-  const { userProfile, vault, settings } = getState();
+  const { userProfile, vault, settings, tier = 'free' } = getState();
   const formHistory = loadFormHistory();
 
   const tones = ['professional', 'friendly', 'concise', 'creative', 'formal', 'casual'];
@@ -60,7 +60,14 @@ export function accountsScreen() {
             </div>
             <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
           </div>
-          <div class="flex-1 flex justify-end"></div>
+          <div class="flex-1 flex justify-end">
+            <button id="btn-user-badge" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
+              <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+              <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+              <span class="w-px h-4 bg-slate-300"></span>
+              <span class="text-xs font-bold ${tier === 'free' ? 'text-slate-400' : 'text-primary'} uppercase tracking-tight">${tier === 'free' ? 'Free' : 'Pro'}</span>
+            </button>
+          </div>
         </header>
 
         <div class="max-w-3xl mx-auto p-8 space-y-8">

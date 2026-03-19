@@ -162,36 +162,76 @@ select:focus {
   animation: spin 1s linear infinite;
 }
 
-/* ─── Screen transitions ─────────────── */
+/* ─── Screen transitions (directional) ── */
+
+/* Forward: slide in from right */
+.screen-enter-forward {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.screen-exit-forward {
+  animation: slideOutLeft 0.2s ease-out forwards;
+}
+
+/* Backward: slide in from left */
+.screen-enter-backward {
+  animation: slideInLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.screen-exit-backward {
+  animation: slideOutRight 0.2s ease-out forwards;
+}
+
+/* Legacy fallback class name */
 .screen-enter {
-  animation: screenFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .screen-exit {
-  animation: screenFadeOut 0.2s ease-out forwards;
+  animation: slideOutLeft 0.2s ease-out forwards;
 }
 
-@keyframes screenFadeIn {
+@keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateX(60px);
   }
-
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-@keyframes screenFadeOut {
+@keyframes slideOutLeft {
   from {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
-
   to {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateX(-60px);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(60px);
   }
 }
 
@@ -620,59 +660,3 @@ select:focus {
   color: transparent;
   display: inline-block;
 }
-
-/* ─── Page Transitions (Circular) ──────── */
-#page-transition-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9999;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.transition-circle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--fm-primary);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.transition-circle.expanding {
-  animation: circleExpand 0.7s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-}
-
-.transition-circle.fading {
-  animation: circleFadeOut 0.4s ease-out forwards;
-}
-
-@keyframes circleExpand {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(300); /* Covers 3000px diameter */
-    opacity: 1;
-  }
-}
-
-@keyframes circleFadeOut {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(300);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(300);
-  }
-}
