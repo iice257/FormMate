@@ -17,6 +17,8 @@ const RENDER_REQUIRED_PLATFORMS = new Set([
   'Feathery'
 ]);
 
+const MIN_CONFIDENT_FIELDS = 2;
+
 function createParseError(code, message, details = {}) {
   const err = new Error(message);
   err.code = code;
@@ -236,6 +238,14 @@ async function parseGoogleForm(url) {
         );
       }
 
+      if (formData.requiresRender && formData.questions.length < MIN_CONFIDENT_FIELDS) {
+        throw createParseError(
+          'RENDER_REQUIRED',
+          "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
+          { platform: 'Google Forms', url }
+        );
+      }
+
       // If still no questions, try AI fallback
       if (!formData.questions || formData.questions.length === 0) {
         console.log('[FormParser] DOM parser found 0 questions. Trying AI fallback...');
@@ -294,7 +304,7 @@ async function parseGenericForm(url) {
     }
 
     // If the HTML looks like a JS shell, ask for Assisted Capture instead of retry loops.
-    if (formData.requiresRender && formData.questions.length === 0) {
+    if (formData.requiresRender && formData.questions.length < MIN_CONFIDENT_FIELDS) {
       throw createParseError(
         'RENDER_REQUIRED',
         "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",

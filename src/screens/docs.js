@@ -1,5 +1,5 @@
 import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo } from '../router.js';
-import { generateText } from '../ai/ai-service.js';
+import { generateText, getAiErrorMessage } from '../ai/ai-service.js';
 import { toast } from '../components/toast.js';
 import { getState } from '../state.js';
 
@@ -16,16 +16,16 @@ export function docsScreen() {
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <!-- Navigation Bar -->
-      <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white shrink-0 z-30">
+      <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
-          <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-slate-300 hover:text-slate-900 transition-colors btn-press" id="btn-home">
+          <button type="button" class="docs-home-button inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 transition-colors btn-press" id="btn-home">
             <span class="material-symbols-outlined text-[16px]">arrow_back</span>
             Back to Home
           </button>
         </div>
         
-        <div class="flex-1 flex justify-center items-center gap-4">
-            <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span> Help Center</span>
+        <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
+            <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Help Center</span>
           <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
           <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
@@ -47,10 +47,10 @@ export function docsScreen() {
           </div>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-4 text-sm font-semibold">
+        <div class="flex-1 flex items-center justify-end gap-3 md:gap-4 text-sm font-semibold">
            <button type="button" class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer bg-transparent border-0 p-0" id="btn-docs-pricing">Pricing</button>
            <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
-           <button class="bg-primary text-white px-4 py-2 rounded-lg hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
+           <button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
         </div>
       </header>
 
@@ -544,6 +544,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
     if (chatInput && btnSend) {
       const tooltip = wrapper.querySelector('#ai-focus-tooltip');
+      let isChatPending = false;
 
       chatInput.addEventListener('focus', () => {
         if (!chatInput.value.trim()) {
@@ -570,11 +571,13 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
       const sendMessage = async () => {
         const text = chatInput.value.trim();
-        if (!text) return;
+        if (!text || isChatPending) return;
+        isChatPending = true;
 
         chatInput.value = '';
         btnSend.disabled = true;
         chatInput.style.height = '48px';
+        chatInput.disabled = true;
 
         // User Bubble
         chatHistory.push({ role: 'user', content: text });
@@ -625,16 +628,22 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
           console.error(e);
           const typingEl = wrapper.querySelector('#' + typingId);
           if (typingEl) typingEl.remove();
+          const message = getAiErrorMessage(e, 'AI service is currently unavailable. Please try again.');
 
           chatMessages.insertAdjacentHTML('beforeend', `
             <div class="flex flex-col gap-1 animate-message-in">
               <div class="max-w-[85%] bg-red-50 text-red-600 border border-red-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs leading-relaxed">
-                <div class="flex items-center gap-1.5 font-bold mb-1"><span class="material-symbols-outlined text-[14px]">error</span> AI service is currently unavailable.</div>
-                Please check system configuration or try again later.
+                <div class="flex items-center gap-1.5 font-bold mb-1"><span class="material-symbols-outlined text-[14px]">error</span> AI assistant unavailable</div>
+                ${escapeHtml(message)}
               </div>
             </div>
           `);
           chatMessages.scrollTop = chatMessages.scrollHeight;
+        } finally {
+          isChatPending = false;
+          chatInput.disabled = false;
+          btnSend.disabled = !chatInput.value.trim();
+          chatInput.focus();
         }
       };
 

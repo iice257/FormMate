@@ -10,18 +10,17 @@ export function parseDOM(htmlString) {
     requiresRender: false,
   };
 
-  // Auth/Cookie wall detection: return structured flags instead of throwing.
   const pageText = doc.body?.textContent || '';
+  const normalizedPageText = pageText.replace(/[\u2013\u2014]/g, '-');
   const authSignals = [
     "Can't access your Google Account",
     'Sign in to continue',
     'Sign in to Google',
     'Sign in - Google Accounts',
-    'Sign in – Google Accounts',
     'You need permission',
     'This form can only be viewed by users in the owner'
   ];
-  if (authSignals.some((signal) => pageText.includes(signal))) {
+  if (authSignals.some((signal) => pageText.includes(signal) || normalizedPageText.includes(signal))) {
     return {
       title: 'Unknown Form',
       description: '',
@@ -31,7 +30,6 @@ export function parseDOM(htmlString) {
     };
   }
 
-  // JS-rendered shell detection (forms that require client rendering).
   const shellSignals = [
     'enable javascript',
     'please enable javascript',
@@ -39,33 +37,29 @@ export function parseDOM(htmlString) {
     'this application requires javascript',
     'javascript is disabled'
   ];
-  const noscriptText = (doc.querySelector('noscript')?.textContent || '').toLowerCase();
+  const noscriptText = cleanText(doc.querySelector('noscript')?.textContent || '').toLowerCase();
   const lowerPage = String(pageText || '').toLowerCase();
   if (shellSignals.some((signal) => lowerPage.includes(signal) || noscriptText.includes(signal))) {
     formData.requiresRender = true;
   }
 
-  // Best-effort title/description extraction.
   const titleEl = doc.querySelector('.F9yp7e')
     || doc.querySelector('div[role="heading"][aria-level="1"]')
     || doc.querySelector('.freebirdFormviewerViewHeaderTitle')
     || doc.querySelector('.Qr7Oae');
-  if (titleEl) formData.title = titleEl.textContent.trim();
+  if (titleEl) formData.title = cleanText(titleEl.textContent);
 
   const descEl = doc.querySelector('.wGQFbe')
     || doc.querySelector('.freebirdFormviewerViewHeaderDescription')
     || doc.querySelector('.cBGGJ');
-  if (descEl) formData.description = descEl.textContent.trim();
+  if (descEl) formData.description = cleanText(descEl.textContent);
 
-  // Primary selector: Google Forms list items.
   let items = Array.from(doc.querySelectorAll('div[role="listitem"]'));
 
-  // Secondary fallback: common field containers.
   if (items.length === 0) {
-    items = Array.from(doc.querySelectorAll('.freebirdFormviewerViewItemsItemItem, .geS5n, .Qr7Oae, fieldset, .form-group'));
+    items = Array.from(doc.querySelectorAll('.freebirdFormviewerViewItemsItemItem, .geS5n, .Qr7Oae, fieldset, .form-group, .field, .input-group, [role="group"]'));
   }
 
-  // Third fallback: derive containers from concrete controls.
   if (items.length === 0) {
     const forms = Array.from(doc.querySelectorAll('form'));
     const target = forms.sort((a, b) =>
@@ -73,16 +67,10 @@ export function parseDOM(htmlString) {
     )[0] || doc.body;
 
     const controls = Array.from(target?.querySelectorAll('input,textarea,select') || []).filter(isVisibleControl);
-
     const containerSet = new Set();
+
     controls.forEach((control) => {
-      const container =
-        control.closest('fieldset') ||
-        control.closest('.form-group') ||
-        control.closest('.field') ||
-        control.closest('.input-group') ||
-        control.closest('label') ||
-        control.parentElement;
+      const container = findBestControlContainer(control);
       if (container) containerSet.add(container);
     });
 
@@ -93,21 +81,19 @@ export function parseDOM(htmlString) {
   let questionIndex = 1;
 
   items.forEach((item, index) => {
-    const controls = Array.from(item.querySelectorAll('input, textarea, select')).filter(isVisibleControl);
+    const controls = getItemControls(item);
 
     let text = resolveItemText(doc, item, controls, index);
-    const requiredFromText = /\*\s*$/.test(text);
+    const requiredFromText = /\*\s*$/.test(text) || /\(\s*required\s*\)\s*$/i.test(text);
     text = stripRequiredMarker(text);
 
-    let required = requiredFromText || Boolean(
-      item.querySelector('[aria-required="true"], input[required], textarea[required], select[required]')
-    );
+    let required = requiredFromText || itemMatchesOrContains(item, '[aria-required="true"], input[required], textarea[required], select[required], [data-required="true"]');
 
     let type = controls.length > 0 ? 'short_text' : 'unknown_type';
     let options = [];
 
-    const ariaRadios = Array.from(item.querySelectorAll('[role="radio"]'));
-    const ariaChecks = Array.from(item.querySelectorAll('[role="checkbox"]'));
+    const ariaRadios = Array.from(queryAllWithinOrSelf(item, '[role="radio"]'));
+    const ariaChecks = Array.from(queryAllWithinOrSelf(item, '[role="checkbox"]'));
     if (ariaRadios.length > 0) {
       type = 'radio';
       options = ariaRadios
@@ -130,7 +116,7 @@ export function parseDOM(htmlString) {
         type = 'dropdown';
         options = Array.from(firstControl.querySelectorAll('option'))
           .map((option) => cleanText(option.textContent))
-          .filter(Boolean);
+          .filter((option) => option && !/^select( an)? option$/i.test(option));
       } else if (tag === 'input') {
         const inputType = normalizeInputType(firstControl.getAttribute('type'));
         if (inputType === 'radio' || inputType === 'checkbox') {
@@ -167,16 +153,14 @@ export function parseDOM(htmlString) {
       }
     }
 
-    // Google Forms listbox fallback.
-    if (type === 'unknown_type' && item.querySelector('[role="listbox"]')) {
+    if (type === 'unknown_type' && itemMatchesOrContains(item, '[role="listbox"]')) {
       type = 'dropdown';
-      options = Array.from(item.querySelectorAll('[role="option"]'))
+      options = Array.from(queryAllWithinOrSelf(item, '[role="option"]'))
         .map((option) => cleanText(option.getAttribute('data-value') || option.textContent))
         .filter(Boolean);
     }
 
-    // Linear scale heuristic.
-    if (item.querySelectorAll('[role="radio"]').length > 3 && String(item.textContent || '').match(/\d+.*to.*\d+/i)) {
+    if (queryAllWithinOrSelf(item, '[role="radio"]').length > 3 && String(item.textContent || '').match(/\d+.*to.*\d+/i)) {
       type = 'linear_scale';
     }
 
@@ -211,8 +195,39 @@ function normalizeInputType(rawType) {
   return String(rawType || 'text').toLowerCase();
 }
 
+function isControlElement(element) {
+  if (!element?.matches) return false;
+  return element.matches('input, textarea, select');
+}
+
+function getItemControls(item) {
+  if (isControlElement(item)) {
+    return isVisibleControl(item) ? [item] : [];
+  }
+  return Array.from(item.querySelectorAll('input, textarea, select')).filter(isVisibleControl);
+}
+
+function queryAllWithinOrSelf(item, selector) {
+  const matches = [];
+  if (item?.matches?.(selector)) {
+    matches.push(item);
+  }
+  if (item?.querySelectorAll) {
+    matches.push(...item.querySelectorAll(selector));
+  }
+  return matches;
+}
+
+function itemMatchesOrContains(item, selector) {
+  return Boolean(item?.matches?.(selector) || item?.querySelector?.(selector));
+}
+
 function stripRequiredMarker(value) {
-  return cleanText(String(value || '').replace(/\s*\*+\s*$/, ''));
+  return cleanText(
+    String(value || '')
+      .replace(/\s*\*+\s*$/, '')
+      .replace(/\(\s*required\s*\)\s*$/i, '')
+  );
 }
 
 function cleanText(value) {
@@ -224,13 +239,23 @@ function dedupe(values) {
 }
 
 function resolveItemText(doc, item, controls, index) {
-  const heading = item.querySelector('div[role="heading"], .M7eMe, .question-title');
+  const heading = item.querySelector?.('div[role="heading"], .M7eMe, .question-title');
   if (heading) return cleanText(heading.textContent);
 
-  const legend = item.querySelector('legend');
+  const legend = item.querySelector?.('legend');
   if (legend) return cleanText(legend.textContent);
 
-  const directLabel = item.querySelector('label');
+  const labelledContainer = item.getAttribute?.('aria-labelledby');
+  if (labelledContainer) {
+    const labelledText = labelledContainer
+      .split(/\s+/)
+      .map((id) => cleanText(doc.getElementById(id)?.textContent || ''))
+      .filter(Boolean)
+      .join(' ');
+    if (labelledText) return labelledText;
+  }
+
+  const directLabel = item.querySelector?.('label');
   if (directLabel) return cleanText(directLabel.textContent);
 
   if (controls.length > 0) {
@@ -256,7 +281,7 @@ function resolveControlLabel(doc, item, control) {
   if (ariaLabel) return cleanText(ariaLabel);
 
   if (control.id) {
-    const scoped = item.querySelector(`label[for="${control.id}"]`);
+    const scoped = item.querySelector?.(`label[for="${control.id}"]`);
     if (scoped) return cleanText(scoped.textContent);
     const globalLabel = doc.querySelector(`label[for="${control.id}"]`);
     if (globalLabel) return cleanText(globalLabel.textContent);
@@ -272,6 +297,37 @@ function resolveControlLabel(doc, item, control) {
   if (title) return cleanText(title);
 
   return '';
+}
+
+function findBestControlContainer(control) {
+  const choiceType = normalizeInputType(control.getAttribute('type'));
+  const groupedChoice = choiceType === 'radio' || choiceType === 'checkbox';
+  const candidates = [
+    control.closest('fieldset'),
+    control.closest('[role="group"]'),
+    control.closest('.form-group'),
+    control.closest('.field'),
+    control.closest('.input-group'),
+    control.closest('.question'),
+    control.closest('[data-question]'),
+    control.closest('[data-field]'),
+    control.closest('label'),
+    control.parentElement,
+    control
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (groupedChoice && (candidate.matches?.('fieldset') || candidate.getAttribute?.('role') === 'group')) {
+      return candidate;
+    }
+
+    const containedControls = Array.from(candidate.querySelectorAll?.('input, textarea, select') || []).filter(isVisibleControl);
+    if (containedControls.length <= 1) {
+      return candidate;
+    }
+  }
+
+  return control;
 }
 
 function resolveChoiceGroupControls(doc, controls, inputType) {
@@ -307,8 +363,18 @@ function buildChoiceGroupKey(groupControls, inputType) {
 }
 
 function resolveGroupQuestionText(doc, item, groupControls, index) {
-  const legend = item.querySelector('legend');
+  const legend = item.querySelector?.('legend');
   if (legend) return cleanText(legend.textContent);
+
+  const groupLabelledBy = item.getAttribute?.('aria-labelledby');
+  if (groupLabelledBy) {
+    const text = groupLabelledBy
+      .split(/\s+/)
+      .map((id) => cleanText(doc.getElementById(id)?.textContent || ''))
+      .filter(Boolean)
+      .join(' ');
+    if (text) return text;
+  }
 
   const first = groupControls[0];
   if (first) {

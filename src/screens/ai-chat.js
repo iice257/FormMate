@@ -5,6 +5,7 @@
 import { getState, setState, addChatMessage } from '../state.js';
 import { withLayout, initLayout } from '../components/layout.js';
 import { processChatMessage } from '../ai/ai-actions.js';
+import { getAiErrorMessage } from '../ai/ai-service.js';
 import { escapeAttr, escapeHtml, escapeHtmlWithLineBreaks } from '../utils/escape.js';
 import { toast } from '../components/toast.js';
 
@@ -188,6 +189,7 @@ export function aiChatScreen() {
     const btnSend = wrapper.querySelector('#btn-send-chat');
     const messagesContainer = wrapper.querySelector('#chat-messages');
     const sessionsList = wrapper.querySelector('#sessions-list');
+    let isSending = false;
 
     // Auto-resize textarea
     chatInput?.addEventListener('input', () => {
@@ -198,9 +200,11 @@ export function aiChatScreen() {
 
     // Send Message
     async function sendMessage(text) {
-      if (!text.trim()) return;
+      const trimmedText = text.trim();
+      if (!trimmedText || isSending) return;
+      isSending = true;
       
-      const newMsg = { role: 'user', content: text, timestamp: Date.now() };
+      const newMsg = { role: 'user', content: trimmedText, timestamp: Date.now() };
       currentSession.messages.push(newMsg);
       saveSessions(sessions);
       
@@ -214,6 +218,7 @@ export function aiChatScreen() {
       chatInput.value = '';
       chatInput.style.height = 'auto';
       btnSend.disabled = true;
+      chatInput.disabled = true;
 
       // Typing state
       const typingEl = document.createElement('div');
@@ -233,7 +238,7 @@ export function aiChatScreen() {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
       try {
-        const aiResponse = await processChatMessage(text, {}, currentSession.messages.slice(0, -1));
+        const aiResponse = await processChatMessage(trimmedText, {}, currentSession.messages.slice(0, -1));
         
         // Remove <think> tags for cleaner display
         const cleanResponse = aiResponse.replace(/<think>[\s\S]*?<\/think>/, '').trim();
@@ -248,13 +253,18 @@ export function aiChatScreen() {
       } catch (err) {
         typingEl.remove();
         console.error(err);
-        const message = err?.message || 'AI service is unavailable right now.';
+        const message = getAiErrorMessage(err, 'AI service is unavailable right now.');
         const errorMsg = { role: 'assistant', content: message, timestamp: Date.now() };
         currentSession.messages.push(errorMsg);
         saveSessions(sessions);
         messagesContainer.innerHTML += renderMessage(errorMsg);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         toast.error(message);
+      } finally {
+        isSending = false;
+        chatInput.disabled = false;
+        btnSend.disabled = !chatInput.value.trim();
+        chatInput.focus();
       }
     }
 

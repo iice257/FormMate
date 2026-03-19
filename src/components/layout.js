@@ -32,10 +32,10 @@ export function withLayout(pageId, contentHtml) {
   const sidebarLinksHtml = sidebarLinks.map(link => {
     const isActive = pageId === link.id;
     return `
-      <button id="nav-${link.id}" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative overflow-hidden ${
+      <button id="nav-${link.id}" class="layout-nav-pill w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative overflow-hidden ${
         isActive 
-          ? 'bg-white shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-primary/10 text-slate-900'
-          : 'text-slate-600 hover:bg-white hover:shadow-[0_8px_20px_rgba(15,23,42,0.05)] hover:text-slate-900 border border-transparent hover:border-slate-100'
+          ? 'layout-nav-pill-active bg-white shadow-[0_14px_34px_rgba(15,23,42,0.08)] border border-primary/15 text-slate-900'
+          : 'text-slate-600 hover:bg-white hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)] hover:text-slate-900 border border-transparent hover:border-slate-100'
       }">
         ${isActive ? '<div class="absolute inset-0 bg-gradient-to-r from-primary/8 via-transparent to-transparent pointer-events-none"></div>' : ''}
         ${isActive ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1 bg-primary rounded-r-md"></div>' : ''}
@@ -48,9 +48,9 @@ export function withLayout(pageId, contentHtml) {
   return `
     <div class="h-screen bg-slate-50 text-slate-900 flex flex-col font-sans overflow-hidden">
       <!-- Header -->
-      <header data-fm-hide-on-scroll="true" class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative">
+      <header data-fm-hide-on-scroll="true" class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative border-b border-white/60">
         <button type="button" class="flex items-center gap-3 cursor-pointer btn-press bg-transparent border-0 p-0 text-left" id="btn-logo-home" aria-label="Go to home">
-          <div class="size-10 rounded-xl bg-white shadow-[0_4px_12px_rgba(124,58,237,0.15)] border border-slate-100 p-[3px] flex items-center justify-center">
+          <div class="size-10 rounded-2xl bg-white shadow-[0_8px_22px_rgba(124,58,237,0.12)] border border-slate-100 p-[3px] flex items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
           </div>
           <div class="hidden sm:flex flex-col">
@@ -75,13 +75,13 @@ export function withLayout(pageId, contentHtml) {
 
       <main class="flex-1 flex overflow-hidden lg:pl-2">
         <!-- Sidebar Navigation -->
-        <aside id="sidebar" class="w-16 lg:w-[260px] glass-panel border border-slate-200/50 rounded-[var(--fm-card-radius)] flex flex-col py-4 shrink-0 transition-all z-20 hidden md:flex my-4 ml-4 shadow-sm" style="height: calc(100% - 2rem);">
-          <nav class="flex-1 px-3 space-y-1.5 flex flex-col overflow-y-auto no-scrollbar">
+        <aside id="sidebar" class="w-16 lg:w-[264px] glass-panel border border-slate-200/50 rounded-[var(--fm-card-radius)] flex flex-col py-4 shrink-0 transition-all z-20 hidden md:flex my-4 ml-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)]" style="height: calc(100% - 2rem);">
+          <nav class="flex-1 px-3 space-y-2 flex flex-col overflow-y-auto no-scrollbar">
             ${sidebarLinksHtml}
 
             <div class="my-3 border-t border-slate-100 w-full"></div>
             
-            <button id="nav-support" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-white hover:shadow hover:text-slate-900 transition-all group">
+            <button id="nav-support" class="layout-nav-pill w-full flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-white hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)] hover:text-slate-900 transition-all group border border-transparent hover:border-slate-100">
               <span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[20px]">help</span>
               <span class="font-semibold text-[14px] hidden lg:block tracking-wide">Help Center</span>
             </button>
@@ -89,7 +89,7 @@ export function withLayout(pageId, contentHtml) {
           
           <!-- Bottom Section: Profile & Settings -->
           <div class="mt-auto px-1.5 lg:px-3 pt-4 border-t border-slate-50">
-             <div class="flex items-center justify-between p-2 lg:p-3 rounded-2xl bg-white/50 border border-slate-100/50 shadow-sm mb-3">
+             <div class="flex items-center justify-between p-2 lg:p-3 rounded-2xl bg-white/65 border border-slate-100/80 shadow-[0_10px_24px_rgba(15,23,42,0.05)] mb-3">
                 <div class="flex items-center gap-2.5 min-w-0">
                    <div class="relative shrink-0">
                       <img src="${avatarSrc}" class="size-8 lg:size-10 rounded-full object-cover border-2 border-white shadow-sm" alt="Avatar" />

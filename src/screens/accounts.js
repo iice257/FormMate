@@ -471,7 +471,22 @@ export function accountsScreen() {
 
     wrapper.querySelector('#btn-signout')?.addEventListener('click', () => {
       signOut();
-      setState({ isAuthenticated: false, authUser: null, tier: 'free', currentScreen: 'auth' });
+      setState({
+        isAuthenticated: false,
+        authUser: null,
+        tier: 'free',
+        currentScreen: 'auth',
+        userProfile: {
+          name: '',
+          email: '',
+          phone: '',
+          occupation: '',
+          bio: '',
+          experience: '',
+          preferredTone: 'professional',
+          avatar: ''
+        }
+      });
       toast.info('Signed out.');
       navigateTo('auth');
     });
@@ -480,6 +495,22 @@ export function accountsScreen() {
       if (confirm('This will permanently delete your account and all data. This action cannot be undone.')) {
         await deleteAccount();
         clearAll();
+        setState({
+          isAuthenticated: false,
+          authUser: null,
+          tier: 'free',
+          currentScreen: 'auth',
+          userProfile: {
+            name: '',
+            email: '',
+            phone: '',
+            occupation: '',
+            bio: '',
+            experience: '',
+            preferredTone: 'professional',
+            avatar: ''
+          }
+        });
         toast.warning('Account deleted.');
         navigateTo('auth');
       }

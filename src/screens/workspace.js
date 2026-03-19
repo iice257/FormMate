@@ -5,6 +5,7 @@
 import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo, subscribe } from '../state.js';
 import { navigateTo } from '../router.js';
 import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-actions.js';
+import { getAiErrorMessage } from '../ai/ai-service.js';
 import { renderQuestionCard } from '../components/question-card.js';
 import { categorizeField } from '../ai/field-classifier.js';
 import { withLayout, initLayout } from '../components/layout.js';
@@ -155,6 +156,7 @@ export function workspaceScreen() {
     const btnCloseChat = wrapper.querySelector('#btn-close-chat');
     const chatPanel = wrapper.querySelector('#chat-panel');
     const questionsContainer = wrapper.querySelector('#questions-container');
+    let isChatPending = false;
 
     // Drag and Drop
     if (!window.Sortable) {
@@ -197,7 +199,37 @@ export function workspaceScreen() {
       const undoBtn = e.target.closest('.btn-undo');
       const redoBtn = e.target.closest('.btn-redo');
       const regenBtn = e.target.closest('.btn-regenerate');
+      const chipBtn = e.target.closest('.btn-chip-action');
       let newAns = null, qId = null;
+
+      if (chipBtn) {
+        qId = chipBtn.dataset.questionId;
+        const instruction = chipBtn.dataset.action || chipBtn.textContent?.trim() || '';
+        const question = formData?.questions?.find((item) => String(item.id) === String(qId));
+        const current = getState().answers?.[qId]?.text || '';
+        if (!question || !instruction) return;
+
+        const originalHtml = chipBtn.innerHTML;
+        chipBtn.disabled = true;
+        chipBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Updating';
+
+        try {
+          const res = await quickEditAnswer(question, current, instruction);
+          updateAnswer(qId, res.text, 'edited');
+          const textarea = wrapper.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+          if (textarea) textarea.value = res.text;
+          updateAnsweredCount();
+          syncUndoRedoButtons();
+          toast.success('Answer refined');
+        } catch (err) {
+          console.error(err);
+          toast.error(getAiErrorMessage(err, 'Failed to refine answer.'));
+        } finally {
+          chipBtn.disabled = false;
+          chipBtn.innerHTML = originalHtml;
+        }
+        return;
+      }
 
       if (regenBtn) {
         qId = regenBtn.dataset.questionId;
@@ -225,7 +257,7 @@ export function workspaceScreen() {
           toast.success('Answer updated');
         } catch (err) {
           console.error(err);
-          toast.error(err?.message || 'Failed to regenerate answer');
+          toast.error(getAiErrorMessage(err, 'Failed to regenerate answer.'));
         } finally {
           regenBtn.disabled = false;
           regenBtn.innerHTML = originalHtml;
@@ -362,14 +394,19 @@ export function workspaceScreen() {
     };
 
     async function sendMessage(text) {
-      if (!text.trim()) return;
+      const trimmedText = text.trim();
+      if (!trimmedText || isChatPending) return;
+      isChatPending = true;
 
-      appendChatBubble('user', text);
-      addChatMessage('user', text);
-      chatHistory.push({ role: 'user', content: text });
+      appendChatBubble('user', trimmedText);
+      addChatMessage('user', trimmedText);
+      chatHistory.push({ role: 'user', content: trimmedText });
 
       btnSend.disabled = true;
       chatInput.disabled = true;
+      wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
+        chip.disabled = true;
+      });
 
       const typingEl = document.createElement('div');
       typingEl.className = 'flex flex-col gap-1 items-start animate-message-in';
@@ -384,7 +421,7 @@ export function workspaceScreen() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       try {
-        const response = await processChatMessage(text, formData, chatHistory, getState().activeQuestionId);
+        const response = await processChatMessage(trimmedText, formData, chatHistory, getState().activeQuestionId);
         const cleanResponse = String(response || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim() || 'I did not generate a response.';
         typingEl.remove();
         appendChatBubble('assistant', cleanResponse);
@@ -392,12 +429,16 @@ export function workspaceScreen() {
         chatHistory.push({ role: 'assistant', content: cleanResponse });
       } catch (error) {
         typingEl.remove();
-        const message = error?.message || 'AI service is unavailable right now.';
+        const message = getAiErrorMessage(error, 'AI service is unavailable right now.');
         appendChatBubble('assistant', message);
         toast.error(message);
       } finally {
         btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;
+        wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
+          chip.disabled = false;
+        });
+        isChatPending = false;
         chatInput.focus();
       }
     }

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════
 
 import { getState, setState, subscribe } from './state.js';
-import { isAuthenticated } from './auth/auth-service.js';
+import { getSession, isAuthenticated } from './auth/auth-service.js';
 import { isOnboardingComplete } from './storage/local-store.js';
 
 const routes = {};
@@ -189,7 +189,22 @@ export function initRouter() {
   const onboarded = isOnboardingComplete();
 
   if (authenticated) {
-    setState({ isAuthenticated: true });
+    const session = getSession();
+    if (session?.user) {
+      setState({
+        isAuthenticated: true,
+        authUser: session.user,
+        tier: session.user.tier || session.tier || 'free',
+        userProfile: {
+          ...getState().userProfile,
+          name: session.user.name || '',
+          email: session.user.email || '',
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=2298da&color=fff&bold=true`
+        }
+      });
+    } else {
+      setState({ isAuthenticated: true });
+    }
   }
 
   // Check URL first

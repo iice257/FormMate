@@ -18,6 +18,33 @@ export function dashboardScreen() {
     { label: 'Accuracy', value: '98%', icon: 'verified', color: 'text-primary', bg: 'bg-indigo-50' },
   ];
 
+  const quickActions = [
+    {
+      id: 'new',
+      buttonId: 'btn-dashboard-focus-new',
+      eyebrow: 'Start',
+      title: 'Paste a new form link',
+      copy: 'Kick off a fresh analysis flow in one click.',
+      icon: 'link'
+    },
+    {
+      id: 'history',
+      buttonId: 'btn-dashboard-focus-history',
+      eyebrow: 'Review',
+      title: 'Open recent form history',
+      copy: 'Jump back into a recent form without hunting around.',
+      icon: 'history'
+    },
+    {
+      id: 'chat',
+      buttonId: 'btn-dashboard-focus-chat',
+      eyebrow: 'Refine',
+      title: 'Ask Copilot for help',
+      copy: 'Rewrite, clarify, or tighten answers from one place.',
+      icon: 'forum'
+    }
+  ];
+
   const recentFormsHtml = formHistory.length > 0 
     ? formHistory.slice(0, 5).map(form => `
         <div class="recent-form-item flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group cursor-pointer" data-form-url="${escapeAttr(form.url || '')}" role="button" tabindex="0">
@@ -52,61 +79,84 @@ export function dashboardScreen() {
       <div class="max-w-6xl mx-auto px-6 py-8 md:py-10">
         
         <!-- Welcome Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Welcome back, ${firstName}!</h1>
-            <p class="text-sm text-slate-500 mt-1">Here's what's happening with your forms today.</p>
-          </div>
-          <div class="flex items-center gap-3">
-            ${formData ? `
-              <button id="btn-dashboard-resume" class="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all btn-press">
-                <span class="material-symbols-outlined text-[20px]">play_arrow</span>
-                Resume Active Form
+        <div class="dashboard-hero mb-10">
+          <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div class="max-w-2xl">
+              <div class="dashboard-kicker">
+                <span class="material-symbols-outlined text-[15px]">nest_clock_farsight_analog</span>
+                Your form cockpit
+              </div>
+              <h1 class="mt-4 text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.05]">Welcome back, ${firstName}!</h1>
+              <p class="mt-3 max-w-xl text-sm md:text-[15px] text-slate-600 leading-relaxed">Everything important is surfaced here: active work, recent history, and the fastest way back into a form.</p>
+            </div>
+            <div class="flex items-center gap-3">
+              ${formData ? `
+                <button id="btn-dashboard-resume" class="dashboard-primary-action flex items-center gap-2 px-6 py-3 rounded-2xl font-bold btn-press">
+                  <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                  Resume Active Form
+                </button>
+              ` : ''}
+              <button id="btn-dashboard-new" class="dashboard-secondary-action flex items-center gap-2 px-6 py-3 rounded-2xl font-bold btn-press">
+                <span class="material-symbols-outlined text-[20px]">add</span>
+                New Form
               </button>
-            ` : ''}
-            <button id="btn-dashboard-new" class="flex items-center gap-2 ${formData ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-primary text-white hover:bg-primary/90'} px-6 py-3 rounded-2xl font-bold shadow-lg ${formData ? 'shadow-slate-900/10' : 'shadow-primary/20'} hover:shadow-xl hover:-translate-y-0.5 transition-all btn-press">
-              <span class="material-symbols-outlined text-[20px]">add</span>
-              New Form
-            </button>
+            </div>
+          </div>
+          <div class="dashboard-hero-metrics mt-8">
+            <div>
+              <div class="dashboard-hero-metric-value">${formHistory.length || 0}</div>
+              <div class="dashboard-hero-metric-label">Forms touched</div>
+            </div>
+            <div>
+              <div class="dashboard-hero-metric-value">${tier === 'free' ? 'Free' : 'Pro'}</div>
+              <div class="dashboard-hero-metric-label">Current plan</div>
+            </div>
+            <div>
+              <div class="dashboard-hero-metric-value">${formData ? 'Live' : 'Idle'}</div>
+              <div class="dashboard-hero-metric-label">Workspace status</div>
+            </div>
           </div>
         </div>
 
-        <div class="mb-8 rounded-3xl border border-slate-200/80 bg-white/90 p-3 shadow-sm">
+        <div class="dashboard-section-surface mb-8">
+          <div class="flex items-center justify-between gap-4 px-1 pb-4">
+            <div>
+              <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Quick Actions</p>
+              <h2 class="mt-1 text-lg font-black tracking-tight text-slate-900">Three fast paths back into work</h2>
+            </div>
+            <div class="hidden md:flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500">
+              <span class="material-symbols-outlined text-[14px]">bolt</span>
+              Optimized for speed
+            </div>
+          </div>
           <div class="grid gap-3 md:grid-cols-3">
-            <button id="btn-dashboard-focus-new" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
-              <span class="material-symbols-outlined text-primary">link</span>
-              <span>
-                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Start</span>
-                <span class="block text-sm font-bold text-slate-900">Paste a new form link</span>
-              </span>
-            </button>
-            <button id="btn-dashboard-focus-history" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
-              <span class="material-symbols-outlined text-primary">history</span>
-              <span>
-                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Review</span>
-                <span class="block text-sm font-bold text-slate-900">Open recent form history</span>
-              </span>
-            </button>
-            <button id="btn-dashboard-focus-chat" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 btn-press">
-              <span class="material-symbols-outlined text-primary">forum</span>
-              <span>
-                <span class="block text-xs font-black uppercase tracking-widest text-slate-400">Refine</span>
-                <span class="block text-sm font-bold text-slate-900">Ask Copilot for help</span>
-              </span>
-            </button>
+            ${quickActions.map((action) => `
+              <button id="${action.buttonId}" class="dashboard-quick-action btn-press" data-dashboard-focus="${action.id}">
+                <div class="dashboard-quick-action-icon">
+                  <span class="material-symbols-outlined text-[20px]">${action.icon}</span>
+                </div>
+                <div class="min-w-0">
+                  <span class="dashboard-quick-action-eyebrow">${action.eyebrow}</span>
+                  <span class="dashboard-quick-action-title">${action.title}</span>
+                  <span class="dashboard-quick-action-copy">${action.copy}</span>
+                </div>
+                <span class="material-symbols-outlined dashboard-quick-action-arrow">arrow_outward</span>
+              </button>
+            `).join('')}
           </div>
         </div>
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           ${mockStats.map(stat => `
-            <div class="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all relative overflow-hidden">
-              <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary/20 to-transparent"></div>
-              <div class="size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm">
+            <div class="dashboard-stat-card">
+              <div class="dashboard-stat-edge"></div>
+              <div class="dashboard-stat-glow"></div>
+              <div class="size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm relative z-10">
                 <span class="material-symbols-outlined text-[22px]">${stat.icon}</span>
               </div>
-              <div class="text-2xl font-black text-slate-900">${stat.value}</div>
-              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">${stat.label}</div>
+              <div class="text-2xl font-black text-slate-900 relative z-10">${stat.value}</div>
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1 relative z-10">${stat.label}</div>
             </div>
           `).join('')}
         </div>

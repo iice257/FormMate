@@ -6,7 +6,7 @@
 // prompts using user profile, vault, and settings.
 // ═══════════════════════════════════════════
 
-import { generateText, generateJson } from './ai-service.js';
+import { generateText, generateJson, getAiErrorMessage, isRetryableAiError } from './ai-service.js';
 import { getState } from '../state.js';
 import { categorizeField } from './field-classifier.js';
 import { buildSystemPrompt } from './system-prompts.js';
@@ -68,10 +68,19 @@ Extraction Rules:
       }));
     }
 
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.questions)) {
+      const invalidShapeError = new Error('Invalid parsed form response.');
+      invalidShapeError.code = 'INVALID_JSON';
+      throw invalidShapeError;
+    }
+
     return parsed;
   } catch (err) {
     console.error('[AI Actions] Form parsing failed:', err);
-    throw new Error('Failed to parse form structure.');
+    const error = new Error(getAiErrorMessage(err, 'Failed to parse the form structure. Please try again.'));
+    error.code = err?.code || 'FORM_PARSING_FAILED';
+    error.retryable = isRetryableAiError(err);
+    throw error;
   }
 }
 
@@ -195,7 +204,10 @@ export async function quickEditAnswer(question, currentAnswer, instruction) {
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'edited', confidence: 1.0 };
   } catch (err) {
     console.error(err);
-    throw new Error('Failed to edit answer.');
+    const error = new Error(getAiErrorMessage(err, 'Failed to edit the answer. Please try again.'));
+    error.code = err?.code || 'QUICK_EDIT_FAILED';
+    error.retryable = isRetryableAiError(err);
+    throw error;
   }
 }
 
@@ -227,7 +239,10 @@ export async function regenerateAnswer(question, currentAnswer) {
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'ai', confidence: 0.85 };
   } catch (err) {
     console.error(err);
-    throw new Error('Failed to regenerate answer.');
+    const error = new Error(getAiErrorMessage(err, 'Failed to regenerate the answer. Please try again.'));
+    error.code = err?.code || 'REGENERATION_FAILED';
+    error.retryable = isRetryableAiError(err);
+    throw error;
   }
 }
 
@@ -291,6 +306,9 @@ Be helpful, provide concrete suggestions, and answer questions clearly, adapting
 
     return responseText;
   } catch (err) {
-    throw new Error('Chat generation failed.');
+    const error = new Error(getAiErrorMessage(err, 'Chat generation failed. Please try again.'));
+    error.code = err?.code || 'CHAT_GENERATION_FAILED';
+    error.retryable = isRetryableAiError(err);
+    throw error;
   }
 }

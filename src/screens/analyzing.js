@@ -68,7 +68,7 @@ export function analyzingScreen() {
             </p>
 
             <p class="text-slate-400 text-sm mb-10">
-              <span class="font-medium text-primary">${platform}</span> • ${formUrl.length > 50 ? formUrl.substring(0, 50) + '...' : formUrl}
+              <span class="font-medium text-primary">${platform}</span> &middot; ${formUrl.length > 50 ? formUrl.substring(0, 50) + '...' : formUrl}
             </p>
 
             <!-- Progress Section -->
@@ -163,11 +163,11 @@ export function analyzingScreen() {
       <!-- Assisted Capture Modal (Auth/Render required) -->
       <div id="capture-modal" class="fixed inset-0 z-[101] bg-white hidden flex-col items-center justify-center p-6 text-center animate-screen-enter">
         <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6 border-4 border-white shadow-xl">
-          <span class="material-symbols-outlined text-4xl">lock</span>
+          <span id="capture-modal-icon" class="material-symbols-outlined text-4xl">lock</span>
         </div>
         <h2 class="text-3xl lg:text-4xl font-black text-slate-900 mb-4 tracking-tight">Assisted Capture Needed</h2>
         <p id="capture-modal-msg" class="text-slate-600 max-w-md mb-10 leading-relaxed text-lg">
-          This form requires sign-in or is rendered client-side. Use Assisted Capture to import fields while you’re already signed in.
+          This form requires sign-in or is rendered client-side. Use Assisted Capture to import fields while you're already signed in.
         </p>
         <div class="flex flex-col sm:flex-row gap-3">
           <button id="btn-capture-start" class="px-8 py-3.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/95 shadow-lg shadow-primary/25 transition-all">Use Assisted Capture</button>
@@ -194,6 +194,7 @@ export function analyzingScreen() {
     const btnErrorHome = wrapper.querySelector('#btn-error-home');
 
     const captureModal = wrapper.querySelector('#capture-modal');
+    const captureIcon = wrapper.querySelector('#capture-modal-icon');
     const captureMsg = wrapper.querySelector('#capture-modal-msg');
     const btnCaptureStart = wrapper.querySelector('#btn-capture-start');
     const btnCaptureDemo = wrapper.querySelector('#btn-capture-demo');
@@ -335,9 +336,15 @@ export function analyzingScreen() {
         if ((code === 'AUTH_REQUIRED' || code === 'RENDER_REQUIRED') && captureModal) {
           captureModal.classList.remove('hidden');
           captureModal.classList.add('flex');
+          if (captureIcon) {
+            captureIcon.textContent = code === 'AUTH_REQUIRED' ? 'lock' : 'preview';
+          }
           if (captureMsg) {
             const platform = err?.details?.platform ? ` (${err.details.platform})` : '';
-            captureMsg.textContent = (err.message || 'Assisted Capture is required to import this form.') + platform;
+            const fallbackMessage = code === 'AUTH_REQUIRED'
+              ? 'This form requires sign-in or extra permission checks. Use Assisted Capture while you are already signed in.'
+              : "This form is rendered client-side and can't be scanned reliably from a pasted URL. Use Assisted Capture to import the visible fields.";
+            captureMsg.textContent = fallbackMessage + platform;
           }
           return;
         }

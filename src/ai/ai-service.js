@@ -12,8 +12,6 @@
 //   llama-3.1-8b-instant  -> fast lightweight
 //   whisper-large-v3      -> speech-to-text
 
-import { getState } from '../state.js';
-
 // Model registry (vendor-prefixed for Groq)
 
 // Model Assignment
@@ -42,6 +40,7 @@ export const TASK_ROUTES = {
 
 const RATE_LIMIT = { maxRequests: 20, windowMs: 60_000 };
 const requestTimestamps = [];
+const REQUEST_TIMEOUT_MS = 20_000;
 
 function checkRateLimit() {
   const now = Date.now();
@@ -105,6 +104,8 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
   }
 
   let response;
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS) : null;
   try {
     response = await fetch(`/api/ai/chat`, {
       method: 'POST',
@@ -112,10 +113,19 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body),
+      signal: controller?.signal,
     });
   } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (error?.name === 'AbortError') {
+      throw { type: 'TIMEOUT_ERROR', message: 'Request timed out' };
+    }
     throw { type: 'NETWORK_ERROR', message: error?.message || 'Network request failed' };
   }
+  if (timeoutId) clearTimeout(timeoutId);
+
+  const responseText = await response.text().catch(() => '');
+  const parsedBody = tryParseJson(responseText);
 
   if (response.status === 429) {
     const retryAfter = parseInt(response.headers.get('retry-after') || '2', 10);
@@ -123,11 +133,13 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
   }
 
   if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-    throw { type: 'API_ERROR', status: response.status, body: errorBody };
+    throw {
+      type: 'API_ERROR',
+      status: response.status,
+      body: responseText,
+      message: parsedBody?.error || parsedBody?.message || `Request failed with status ${response.status}`
+    };
   }
-
-  const data = await response.json();
 
   // Best-effort usage tracking (local). Avoid failing the request on storage errors.
   try {
@@ -135,7 +147,16 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
     incrementUsage('aiCalls');
   } catch (_) { /* no-op */ }
 
-  return data.choices?.[0]?.message?.content || data.text || '';
+  const content = parsedBody?.choices?.[0]?.message?.content
+    ?? parsedBody?.text
+    ?? parsedBody?.message
+    ?? responseText;
+
+  if (!String(content || '').trim()) {
+    throw { type: 'EMPTY_RESPONSE', message: 'The model returned an empty response' };
+  }
+
+  return String(content);
 }
 
 // Public API: generate()
@@ -212,12 +233,28 @@ export async function generate({
     e.code = 'UPSTREAM_ERROR';
     e.status = lastError.status;
     e.body = lastError.body;
+    e.retryable = lastError.status >= 500 || lastError.status === 408;
     throw e;
   }
 
   if (lastError?.type === 'NETWORK_ERROR') {
     const e = new Error('[AIService] Unable to reach the AI service. Start the API server or try again.');
     e.code = 'NETWORK_ERROR';
+    e.retryable = true;
+    throw e;
+  }
+
+  if (lastError?.type === 'TIMEOUT_ERROR') {
+    const e = new Error('[AIService] The AI service took too long to respond. Please try again.');
+    e.code = 'TIMEOUT_ERROR';
+    e.retryable = true;
+    throw e;
+  }
+
+  if (lastError?.type === 'EMPTY_RESPONSE') {
+    const e = new Error('[AIService] The AI returned an empty response. Please try again.');
+    e.code = 'EMPTY_RESPONSE';
+    e.retryable = true;
     throw e;
   }
 
@@ -228,7 +265,7 @@ export async function generate({
 
 export function parseJsonResponse(text) {
   let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  const jsonMatch = cleaned.match(/[[\{][\s\S]*[\]\}]/);
+  const jsonMatch = cleaned.match(/[\[{][\s\S]*[\]}]/);
   if (jsonMatch) cleaned = jsonMatch[0];
   return JSON.parse(cleaned);
 }
@@ -237,7 +274,14 @@ export function parseJsonResponse(text) {
 
 export async function generateText(options) {
   const text = await generate({ ...options, jsonMode: false });
-  return String(text || '');
+  const normalized = String(text || '').trim();
+  if (!normalized) {
+    const err = new Error('[AIService] The AI returned an empty response. Please try again.');
+    err.code = 'EMPTY_RESPONSE';
+    err.retryable = true;
+    throw err;
+  }
+  return normalized;
 }
 
 export async function generateJson(options) {
@@ -308,6 +352,45 @@ function getDevFallbackResponse(task, messages, jsonMode) {
 function truncate(value, maxLength) {
   if (!value || value.length <= maxLength) return value;
   return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+function tryParseJson(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+export function isRetryableAiError(error) {
+  return Boolean(
+    error?.retryable ||
+    ['RATE_LIMITED', 'NETWORK_ERROR', 'TIMEOUT_ERROR', 'UPSTREAM_ERROR', 'INVALID_JSON', 'EMPTY_RESPONSE'].includes(error?.code)
+  );
+}
+
+export function getAiErrorMessage(error, fallback = 'AI service is unavailable right now.') {
+  if (!error) return fallback;
+  if (error.code === 'RATE_LIMITED') {
+    return `The AI is busy right now. Please wait ${error.retryAfter || 2}s and try again.`;
+  }
+  if (error.code === 'NETWORK_ERROR') {
+    return 'Unable to reach the AI service right now. Please check your connection and try again.';
+  }
+  if (error.code === 'TIMEOUT_ERROR') {
+    return 'The AI took too long to respond. Please try again.';
+  }
+  if (error.code === 'UPSTREAM_ERROR') {
+    return 'The AI service is temporarily unavailable. Please try again shortly.';
+  }
+  if (error.code === 'INVALID_JSON') {
+    return 'The AI returned an unreadable response. Please try again.';
+  }
+  if (error.code === 'EMPTY_RESPONSE') {
+    return 'The AI returned an empty response. Please try again.';
+  }
+  return error.message || fallback;
 }
 
 function delay(ms) {
