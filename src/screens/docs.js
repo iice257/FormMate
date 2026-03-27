@@ -1,4 +1,4 @@
-import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo } from '../router.js';
+import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBack } from '../router.js';
 import { generateText, getAiErrorMessage } from '../ai/ai-service.js';
 import { toast } from '../components/toast.js';
 import { getState } from '../state.js';
@@ -13,14 +13,19 @@ export function docsScreen() {
   const authed = getState().isAuthenticated;
   const dashboardLabel = authed ? 'Go to Dashboard' : 'Sign In';
 
+  const previousScreen = window.__fmPreviousScreen;
+  let backText = 'Back';
+  if (previousScreen === 'landing') backText = 'Back to Home';
+  else if (previousScreen === 'dashboard') backText = 'Back to Dashboard';
+
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
-          <button type="button" class="docs-home-button inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 transition-colors btn-press" id="btn-home">
-            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-            Back to Home
+          <button type="button" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            ${backText}
           </button>
         </div>
         
@@ -342,7 +347,101 @@ export function docsScreen() {
                   </div>
                </div>
             </article>
-            
+
+            <hr class="border-slate-100 my-16" />
+
+            <!-- Review & Feedback -->
+            <article id="feedback" class="mb-20 scroll-mt-24">
+               <h2 class="text-3xl font-bold text-slate-900 tracking-tight mb-4 flex items-center group">
+                 Review & Feedback
+                 <a href="#feedback" class="opacity-0 group-hover:opacity-100 ml-2 text-primary transition-opacity"><span class="material-symbols-outlined text-xl">link</span></a>
+               </h2>
+               <p class="text-base text-slate-600 leading-relaxed mb-8">We'd love to hear what you think of FormMate. Your feedback directly shapes our roadmap and helps us build a better product.</p>
+
+               <div class="p-8 border border-slate-200 rounded-2xl bg-slate-50">
+                 <div class="mb-6">
+                   <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 block">Your Rating</label>
+                   <div id="star-rating" class="flex items-center gap-1">
+                     <span data-val="1" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                     <span data-val="2" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                     <span data-val="3" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                     <span data-val="4" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                     <span data-val="5" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                   </div>
+                 </div>
+
+                 <div class="mb-6">
+                   <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="feedback-category">Category</label>
+                   <select id="feedback-category" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                     <option value="general">General Feedback</option>
+                     <option value="feature">Feature Request</option>
+                     <option value="bug">Bug Report</option>
+                     <option value="praise">Praise & Appreciation</option>
+                   </select>
+                 </div>
+
+                 <div class="mb-6">
+                   <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="feedback-text">Your Feedback</label>
+                   <textarea id="feedback-text" rows="4" class="w-full px-4 py-3 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Tell us what you love, what could be better, or share ideas for new features..."></textarea>
+                 </div>
+
+                 <button id="btn-submit-feedback" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-all btn-press flex items-center gap-2">
+                   <span class="material-symbols-outlined text-lg">send</span>
+                   Submit Feedback
+                 </button>
+               </div>
+            </article>
+
+            <hr class="border-slate-100 my-16" />
+
+            <!-- Contact Us -->
+            <article id="contact" class="mb-20 scroll-mt-24">
+               <h2 class="text-3xl font-bold text-slate-900 tracking-tight mb-4 flex items-center group">
+                 Contact Us
+                 <a href="#contact" class="opacity-0 group-hover:opacity-100 ml-2 text-primary transition-opacity"><span class="material-symbols-outlined text-xl">link</span></a>
+               </h2>
+               <p class="text-base text-slate-600 leading-relaxed mb-8">Have a specific question, billing issue, or partnership inquiry? Reach out to our support team and we'll get back to you within 24 hours.</p>
+
+               <div class="p-8 border border-slate-200 rounded-2xl bg-slate-50">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                   <div>
+                     <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="contact-name">Full Name</label>
+                     <input id="contact-name" type="text" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Your name" />
+                   </div>
+                   <div>
+                     <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="contact-email">Email Address <span class="text-red-400">*</span></label>
+                     <input id="contact-email" type="email" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="you@example.com" />
+                   </div>
+                 </div>
+
+                 <div class="mb-4">
+                   <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="contact-subject">Subject</label>
+                   <select id="contact-subject" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                     <option value="general">General Inquiry</option>
+                     <option value="support">Technical Support</option>
+                     <option value="billing">Billing</option>
+                     <option value="partnership">Partnership</option>
+                   </select>
+                 </div>
+
+                 <div class="mb-4">
+                   <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block" for="contact-message">Message <span class="text-red-400">*</span></label>
+                   <textarea id="contact-message" rows="5" class="w-full px-4 py-3 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Describe your issue or question in detail..."></textarea>
+                 </div>
+
+                 <div class="flex items-center justify-between flex-wrap gap-4">
+                   <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                     <input id="contact-save-info" type="checkbox" class="size-4 rounded border-slate-300 text-primary focus:ring-primary/30" />
+                     Save my info for next time
+                   </label>
+                   <button id="btn-submit-contact" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-all btn-press flex items-center gap-2">
+                     <span class="material-symbols-outlined text-lg">mail</span>
+                     Send Message
+                   </button>
+                 </div>
+               </div>
+            </article>
+
             <div class="bg-gradient-to-br from-slate-50 to-primary/5 rounded-2xl p-8 border border-primary/10 text-center mt-12 mb-8">
                <h3 class="text-xl font-bold text-slate-900 mb-2">Still need help?</h3>
                <p class="text-slate-600 mb-6 max-w-lg mx-auto">Our support team is always available to help you configure your vault or troubleshoot any issues.</p>
@@ -399,7 +498,7 @@ export function docsScreen() {
   `;
 
   function init(wrapper) {
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo(getHomeScreenForUser()));
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
     wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => navigateTo('help'));
@@ -424,7 +523,9 @@ export function docsScreen() {
       { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
       { id: 'faqs', title: 'Pricing FAQ', text: 'Is FormMate free to use? Yes! You can fill up to 5 forms per month for free.', type: 'faq' },
       { id: 'faqs', title: 'Multi-step FAQ', text: 'Can FormMate handle multi-step forms? Absolutely.', type: 'faq' },
-      { id: 'faqs', title: 'Security FAQ', text: 'How safe is my Vault data? Your data is stored locally and used only for your sessions.', type: 'faq' }
+      { id: 'faqs', title: 'Security FAQ', text: 'How safe is my Vault data? Your data is stored locally and used only for your sessions.', type: 'faq' },
+      { id: 'feedback', title: 'Review & Feedback', text: 'Share your feedback, rate your experience, and help us improve FormMate.', type: 'guide' },
+      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions, billing issues, or partnership inquiries.', type: 'guide' }
     ];
 
     searchInput?.addEventListener('input', (e) => {

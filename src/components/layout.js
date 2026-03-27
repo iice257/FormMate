@@ -1,10 +1,30 @@
 // ═══════════════════════════════════════════
-// FormMate — Shared Layout Component
+// FormMate — Shared Layout Component (Redesigned)
 // ═══════════════════════════════════════════
 
 import { getState } from '../state.js';
 import { getHomeScreenForUser, navigateTo } from '../router.js';
 import { escapeHtml, safeHttpUrl } from '../utils/escape.js';
+
+// Global account modal state
+let _accountModalOpenFn = null;
+
+/**
+ * Register the account modal opener. Called once by main.js after modal init.
+ */
+export function registerAccountModalOpener(fn) {
+  _accountModalOpenFn = fn;
+}
+
+/**
+ * Open the account modal on the given tab.
+ * @param {'profile'|'settings'|'help'} tab
+ */
+export function openAccountModal(tab = 'profile') {
+  if (_accountModalOpenFn) {
+    _accountModalOpenFn(tab);
+  }
+}
 
 /**
  * Wraps a screen's content with the shared Sidebar and Header.
@@ -22,99 +42,92 @@ export function withLayout(pageId, contentHtml) {
 
   const sidebarLinks = [
     { id: 'dashboard', icon: 'space_dashboard', label: 'Dashboard', route: 'dashboard' },
-    { id: 'new', icon: 'add_box', label: 'New Form', route: 'new' },
-    { id: 'workspace', icon: 'edit_document', label: 'Active Form', route: 'workspace' },
-    { id: 'history', icon: 'history', label: 'History', route: 'history' },
-    { id: 'ai-chat', icon: 'forum', label: 'AI Chat', route: 'ai-chat' },
-    { id: 'examples', icon: 'extension', label: 'Examples', route: 'examples' },
+    { id: 'new', icon: 'add_circle', label: 'New Form', route: 'new' },
+    { id: 'workspace', icon: 'description', label: 'Active Form', route: 'workspace' },
+    { id: 'history', icon: 'schedule', label: 'History', route: 'history' },
+    { id: 'ai-chat', icon: 'chat_bubble', label: 'AI Chat', route: 'ai-chat' },
+    { id: 'examples', icon: 'auto_stories', label: 'Examples', route: 'examples' },
   ];
 
   const sidebarLinksHtml = sidebarLinks.map(link => {
     const isActive = pageId === link.id;
     return `
-      <button id="nav-${link.id}" class="layout-nav-pill w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative overflow-hidden ${
-        isActive 
-          ? 'layout-nav-pill-active bg-white shadow-[0_14px_34px_rgba(15,23,42,0.08)] border border-primary/15 text-slate-900'
-          : 'text-slate-600 hover:bg-white hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)] hover:text-slate-900 border border-transparent hover:border-slate-100'
-      }">
-        ${isActive ? '<div class="absolute inset-0 bg-gradient-to-r from-primary/8 via-transparent to-transparent pointer-events-none"></div>' : ''}
-        ${isActive ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1 bg-primary rounded-r-md"></div>' : ''}
-        <span class="material-symbols-outlined ${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors text-[20px] relative z-10">${link.icon}</span>
-        <span class="${isActive ? 'font-black' : 'font-semibold'} text-[14px] hidden lg:block tracking-wide ${isActive ? 'ml-1' : ''} relative z-10">${link.label}</span>
+      <button id="nav-${link.id}" class="layout-sidebar-link ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
+        ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
+        <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
+        <span class="layout-sidebar-label">${link.label}</span>
       </button>
     `;
   }).join('');
 
   return `
-    <div class="h-screen bg-slate-50 text-slate-900 flex flex-col font-sans overflow-hidden">
+    <div class="layout-shell">
       <!-- Header -->
-      <header data-fm-hide-on-scroll="true" class="h-16 lg:h-18 glass-header flex items-center justify-between px-4 lg:px-6 shrink-0 z-30 shadow-sm relative border-b border-white/60">
-        <button type="button" class="flex items-center gap-3 cursor-pointer btn-press bg-transparent border-0 p-0 text-left" id="btn-logo-home" aria-label="Go to home">
-          <div class="size-10 rounded-2xl bg-white shadow-[0_8px_22px_rgba(124,58,237,0.12)] border border-slate-100 p-[3px] flex items-center justify-center">
-            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+      <header data-fm-hide-on-scroll="true" class="layout-header">
+        <button type="button" class="layout-brand" id="btn-logo-home" aria-label="Go to home">
+          <div class="layout-brand-icon">
+            <img src="/logo.png" alt="FormMate Logo" />
           </div>
-          <div class="hidden sm:flex flex-col">
-            <span class="font-black text-2xl tracking-tighter text-slate-900 leading-none">Form<span class="text-primary">Mate</span></span>
-            <span class="text-[10px] font-bold text-primary uppercase tracking-widest leading-none mt-1">Form Copilot</span>
-          </div>
+          <span class="layout-brand-text">Form<span class="text-primary">Mate</span></span>
         </button>
         
-        <div class="flex items-center gap-4">
-          <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
-          
-          ${isAuthenticated && userProfile ? `
-          <button id="btn-profile-header" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-            <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-            <span class="truncate max-w-[100px]">${displayFirstName}</span>
+        <div class="layout-search-container">
+          <span class="material-symbols-outlined layout-search-icon">search</span>
+          <input type="text" class="layout-search-input" placeholder="Search forms, templates, or AI prompts..." id="layout-search" />
+        </div>
+
+        <div class="layout-header-actions">
+          ${isAuthenticated ? `
+          <button class="layout-header-icon-btn" id="btn-notifications" aria-label="Notifications">
+            <span class="material-symbols-outlined">notifications</span>
+          </button>
+          <button class="layout-header-icon-btn" id="btn-header-settings" aria-label="Settings">
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+          <button class="layout-header-avatar-btn" id="btn-profile-header" aria-label="Account">
+            <img src="${avatarSrc}" alt="Avatar" />
           </button>
           ` : `
-          <button id="btn-login-header" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-slate-800 transition-all shadow-sm btn-press">Sign In</button>
+          <button id="btn-login-header" class="layout-header-signin">Sign In</button>
           `}
         </div>
       </header>
 
-      <main class="flex-1 flex overflow-hidden lg:pl-2">
+      <main class="layout-main">
         <!-- Sidebar Navigation -->
-        <aside id="sidebar" class="w-16 lg:w-[264px] glass-panel border border-slate-200/50 rounded-[var(--fm-card-radius)] flex flex-col py-4 shrink-0 transition-all z-20 hidden md:flex my-4 ml-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)]" style="height: calc(100% - 2rem);">
-          <nav class="flex-1 px-3 space-y-2 flex flex-col overflow-y-auto no-scrollbar">
+        <aside id="sidebar" class="layout-sidebar">
+          <nav class="layout-sidebar-nav">
             ${sidebarLinksHtml}
 
-            <div class="my-3 border-t border-slate-100 w-full"></div>
+            <div class="layout-sidebar-divider"></div>
             
-            <button id="nav-support" class="layout-nav-pill w-full flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-white hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)] hover:text-slate-900 transition-all group border border-transparent hover:border-slate-100">
-              <span class="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors text-[20px]">help</span>
-              <span class="font-semibold text-[14px] hidden lg:block tracking-wide">Help Center</span>
+            <button id="nav-support" class="layout-sidebar-link" aria-label="Help Center">
+              <span class="material-symbols-outlined layout-sidebar-icon">help</span>
+              <span class="layout-sidebar-label">Help Center</span>
             </button>
           </nav>
           
           <!-- Bottom Section: Profile & Settings -->
-          <div class="mt-auto px-1.5 lg:px-3 pt-4 border-t border-slate-50">
-             <div class="flex items-center justify-between p-2 lg:p-3 rounded-2xl bg-white/65 border border-slate-100/80 shadow-[0_10px_24px_rgba(15,23,42,0.05)] mb-3">
-                <div class="flex items-center gap-2.5 min-w-0">
-                   <div class="relative shrink-0">
-                      <img src="${avatarSrc}" class="size-8 lg:size-10 rounded-full object-cover border-2 border-white shadow-sm" alt="Avatar" />
-                      ${tier !== 'free' ? '<div class="absolute -bottom-1 -right-1 size-4 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm"><span class="material-symbols-outlined text-[10px]">bolt</span></div>' : ''}
-                   </div>
-                   <div class="hidden lg:flex flex-col min-w-0">
-                      <span class="text-[13px] font-bold text-slate-900 truncate">${displayName}</span>
-                      <span class="text-[10px] font-heavy ${tier === 'free' ? 'text-slate-400' : 'text-primary'} uppercase tracking-tighter">${tier === 'free' ? 'Free Plan' : 'Pro Member'}</span>
-                   </div>
-                </div>
-                <button id="nav-settings" class="size-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all shrink-0">
-                   <span class="material-symbols-outlined text-[20px]">settings</span>
-                </button>
-             </div>
+          <div class="layout-sidebar-bottom">
+            <button id="nav-profile-sidebar" class="layout-sidebar-user">
+              <div class="layout-sidebar-avatar-wrap">
+                <img src="${avatarSrc}" alt="Avatar" />
+                ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
+              </div>
+              <div class="layout-sidebar-user-info">
+                <span class="layout-sidebar-user-name">${displayName}</span>
+                <span class="layout-sidebar-user-plan ${tier !== 'free' ? 'pro' : ''}">${tier === 'free' ? 'Free Plan' : 'Pro Member'}</span>
+              </div>
+            </button>
              
-             ${tier === 'free' ? `
-             <div class="px-2 pb-2 hidden lg:block">
-                <button id="btn-upgrade-sidebar" class="w-full py-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-[11px] uppercase tracking-widest font-black transition-all border border-primary/10">Upgrade Pro</button>
-             </div>
-             ` : ''}
+            ${tier === 'free' ? `
+            <button id="btn-upgrade-sidebar" class="layout-sidebar-upgrade">Upgrade Pro</button>
+            ` : ''}
           </div>
         </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex overflow-hidden relative" id="internal-page-container">
+        <div class="layout-content" id="internal-page-container">
            ${contentHtml}
         </div>
       </main>
@@ -135,8 +148,6 @@ export function initLayout(wrapper) {
     { id: 'nav-history', route: 'history' },
     { id: 'nav-ai-chat', route: 'ai-chat' },
     { id: 'nav-examples', route: 'examples' },
-    { id: 'nav-settings', route: 'accounts' },
-    { id: 'nav-support', route: 'docs' },
   ];
 
   links.forEach(link => {
@@ -145,18 +156,37 @@ export function initLayout(wrapper) {
     });
   });
 
+  // Help Center → account modal (help tab)
+  wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
+    openAccountModal('help');
+  });
+
+  // Settings icon → account modal (settings tab)
+  wrapper.querySelector('#btn-header-settings')?.addEventListener('click', () => {
+    openAccountModal('settings');
+  });
+
+  // Logo → home
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
     navigateTo(getHomeScreenForUser());
   });
 
+  // Header avatar → account modal (profile tab)
   wrapper.querySelector('#btn-profile-header')?.addEventListener('click', () => {
-    navigateTo('accounts');
+    openAccountModal('profile');
   });
 
+  // Sidebar user card → account modal (profile tab)
+  wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
+    openAccountModal('profile');
+  });
+
+  // Login button
   wrapper.querySelector('#btn-login-header')?.addEventListener('click', () => {
     navigateTo('auth');
   });
 
+  // Upgrade button
   wrapper.querySelector('#btn-upgrade-sidebar')?.addEventListener('click', () => {
     navigateTo('pricing');
   });

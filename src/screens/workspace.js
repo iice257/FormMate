@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════
-// FormMate — Main Workspace Screen
+// FormMate — Main Workspace Screen (Redesigned)
 // ═══════════════════════════════════════════
 
 import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo, subscribe } from '../state.js';
@@ -32,6 +32,9 @@ export function workspaceScreen() {
     });
   }
 
+  const answeredCount = Object.keys(answers).filter(k => answers[k]?.text).length;
+  const totalQ = formData.questions.length;
+
   const questionsHtml = formData.questions.map((q, i) =>
     renderQuestionCard(q, answers[q.id], i)
   ).join('');
@@ -40,108 +43,161 @@ export function workspaceScreen() {
     <div class="flex-1 flex overflow-hidden relative" id="editor-container">
       <!-- Editor Center -->
       <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar" id="editor-scroll">
-        <div class="max-w-3xl mx-auto px-6 md:px-8 lg:px-12 py-8 lg:py-12 pb-32">
+        <div style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
           
-          <div class="mb-4">
-            <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold tracking-wide text-slate-600 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors btn-press group" id="btn-question-categories" aria-controls="question-categories-panel" aria-expanded="false">
-              <span class="material-symbols-outlined text-primary text-[14px]">category</span>
-              Question Categories
-              <span class="material-symbols-outlined text-[14px] text-slate-400 group-hover:text-slate-600 ml-1">expand_more</span>
-            </button>
-            
-            <div id="question-categories-panel" class="hidden mt-3 flex-wrap items-center gap-2 text-[12px] animate-screen-enter">
-              <button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-bold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="all" data-active="true">
-                All Fields
-              </button>
-              ${autoCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="autofillable">
-                <span class="material-symbols-outlined text-[14px]">bolt</span> AutoFillable <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${autoCount}</span>
-              </button>` : ''}
-              ${aiCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="generatable">
-                <span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI Fillable <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${aiCount}</span>
-              </button>` : ''}
-              ${manualCount > 0 ? `<button class="filter-pill flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-slate-700 font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800" data-filter="manual_only">
-                <span class="material-symbols-outlined text-[14px]">edit_document</span> Manual <span class="bg-slate-100/50 px-1.5 rounded ml-1 text-[10px] opacity-70 border border-slate-200/50">${manualCount}</span>
-              </button>` : ''}
+          <!-- Breadcrumb & Actions Bar -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
+              <span style="font-size: 0.65rem; color: #cbd5e1;">›</span>
+              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.7rem; font-weight: 700;">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
+              <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
 
-          <h1 class="text-3xl lg:text-[42px] font-black tracking-tight text-slate-900 mb-4 leading-[1.1]">${escapeHtml(formData.title)}</h1>
-          <p class="text-slate-500 text-base lg:text-[17px] leading-relaxed max-w-2xl">${escapeHtml(formData.description || 'Review the suggested answers below. You can edit them manually or use AI to refine them.')}</p>
-          
-          <div class="flex flex-wrap items-center gap-3 mt-6">
-            <div class="flex items-center gap-2 text-[13px] text-slate-600 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm font-semibold">
-              <span class="material-symbols-outlined text-primary text-[18px]">list_alt</span>
-              <span><span id="answered-count">${Object.keys(answers).filter(k => answers[k]?.text).length}</span> / ${formData.questions.length} answered</span>
+          <h1 style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
+
+          <!-- Filter Tabs -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
+            ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
+            ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
+            ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">sort</span> Sort
             </div>
           </div>
 
           <!-- Question Cards -->
-          <div id="questions-container" class="space-y-6 stagger-children pb-10 mt-10">
+          <div id="questions-container" class="space-y-6 stagger-children">
             ${questionsHtml}
           </div>
 
           <!-- Bottom Review CTA -->
-          <div class="mt-8 flex justify-center pb-12">
-            <button id="btn-review-bottom" class="w-[200px] bg-primary text-white py-3 rounded-lg font-bold text-sm shadow-[0_4px_12px_rgba(124,58,237,0.25)] hover:bg-primary/90 hover:shadow-[0_8px_16px_rgba(124,58,237,0.3)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 btn-press group">
-              <span class="material-symbols-outlined text-[18px]">check_circle</span>
+          <div style="margin-top: 2.5rem; display: flex; justify-content: center;">
+            <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
               Review & Submit
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Copilot Panel (Right) -->
-      <aside id="chat-panel" class="w-80 lg:w-96 border-l border-slate-100 bg-white flex flex-col shrink-0 hidden md:flex z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] transition-all">
-        <div class="p-4 lg:p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
-          <div class="flex items-center gap-2">
-            <div class="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <span class="material-symbols-outlined text-lg">smart_toy</span>
+      <!-- Right Panel: AI Chat / AI Actions (Toggle) -->
+      <aside id="right-panel" class="hidden md:flex" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
+        
+        <!-- Panel Toggle Tabs -->
+        <div style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
+          <button id="toggle-ai-chat" class="panel-toggle-btn active" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
+          <button id="toggle-ai-actions" class="panel-toggle-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
+        </div>
+
+        <!-- AI Chat Panel -->
+        <div id="ai-chat-panel" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+          <div style="padding: 1rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center; gap: 0.5rem;">
+            <img src="https://ui-avatars.com/api/?name=AI&background=14919b&color=fff&bold=true&size=32" style="width: 32px; height: 32px; border-radius: 50%;" alt="Copilot" />
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 800; color: var(--fm-text);">Copilot</div>
+              <div style="font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Always Active</div>
             </div>
-            <span class="font-black tracking-tight text-sm text-slate-900 uppercase">Copilot</span>
+            <div style="margin-left: auto; padding: 0.25rem 0.6rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 600; color: #64748b;">Tonal: Friendly</div>
           </div>
-          <button id="btn-close-chat" class="md:hidden size-8 flex items-center justify-center text-slate-400">
-            <span class="material-symbols-outlined">close</span>
+
+          <div style="padding: 0.5rem 1rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary); text-align: center;">Connected to Resume Data</div>
+
+          <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" class="no-scrollbar">
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                <span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span>
+              </div>
+              <div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; font-size: 0.8rem; color: var(--fm-text); line-height: 1.5; max-width: 85%;">
+                I've analyzed the job description and your previous portfolio entries. Would you like me to draft a more detailed response for the "Design Systems" question?
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input -->
+          <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
+            <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.25rem;">
+                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
+                </button>
+                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">folder</span>
+                </button>
+              </div>
+              <div style="flex: 1; position: relative;">
+                <input type="text" id="chat-input" placeholder="Ask Copilot anything..." style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
+                <button id="btn-send-chat" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+            <div style="text-align: center; font-size: 0.6rem; color: #cbd5e1; margin-top: 0.35rem;">AI can make mistakes. Check important info.</div>
+          </div>
+        </div>
+
+        <!-- AI Actions Panel (hidden by default) -->
+        <div id="ai-actions-panel" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;" class="no-scrollbar">
+          <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text); margin-bottom: 0.15rem;">AI Actions</div>
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
+          
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Automated Tasks</div>
+          
+          <button id="btn-generate-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">auto_awesome</span> Generate All
+            </div>
+            <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
           </button>
-        </div>
 
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 scroll-smooth no-scrollbar">
-          <!-- Initial AI greeting -->
-          <div class="flex flex-col gap-2 animate-message-in">
-            <div class="max-w-[85%] bg-slate-50 rounded-2xl rounded-tl-none p-4 text-[13px] text-slate-700 leading-relaxed relative border border-slate-100 shadow-sm">
-              Hello! I've analyzed <strong>${formData.title}</strong> and generated suggestions for ${formData.questions.length} fields.
-              <ul class="mt-3 space-y-2 text-[12px]">
-                <li class="flex items-start gap-2"><span class="material-symbols-outlined text-primary text-[14px] mt-0.5">edit</span> Edit any answer directly.</li>
-                <li class="flex items-start gap-2"><span class="material-symbols-outlined text-primary text-[14px] mt-0.5">forum</span> Or ask me to refine everything at once.</li>
-              </ul>
+          <button id="btn-review-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--fm-text); margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">checklist</span> Review All
             </div>
-            <span class="text-[10px] text-slate-400 font-bold ml-2">Copilot • ${formatTime(new Date())}</span>
-          </div>
-        </div>
+            <div style="display: flex; align-items: center; gap: 0.35rem; color: #94a3b8;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">sync</span>
+              <span style="font-size: 0.75rem; font-weight: 700;">${totalQ}</span>
+            </div>
+          </button>
 
-        <!-- Chat Input -->
-        <div class="p-4 lg:p-6 border-t border-slate-100 bg-white">
-          <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar scroll-smooth" id="chat-suggestions">
-            <button class="chat-chip whitespace-nowrap bg-slate-50 hover:bg-white hover:border-primary/30 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg text-slate-500 transition-all border border-slate-100 flex items-center gap-1" data-msg="Make all answers more professional">
-              <span class="material-symbols-outlined text-[14px]">work</span> Professional
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Refinement</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.25rem;">
+            <button class="chat-chip btn-press" data-msg="Make all answers more professional" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; cursor: pointer; color: var(--fm-text);">
+              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">shield</span>
+              <span style="font-size: 0.75rem; font-weight: 600;">Professional</span>
             </button>
-            <button class="chat-chip whitespace-nowrap bg-slate-50 hover:bg-white hover:border-primary/30 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg text-slate-500 transition-all border border-slate-100 flex items-center gap-1" data-msg="Shorten all long answers">
-              <span class="material-symbols-outlined text-[14px]">compress</span> Shorten
+            <button class="chat-chip btn-press" data-msg="Shorten all long answers" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; cursor: pointer; color: var(--fm-text);">
+              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">add</span>
+              <span style="font-size: 0.75rem; font-weight: 600;">Concise</span>
             </button>
           </div>
-          <div class="relative group">
-            <textarea
-              id="chat-input"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm py-3 pl-4 pr-12 resize-none transition-all shadow-sm outline-none"
-              placeholder="Ask Copilot..."
-              rows="1"
-              style="min-height: 48px; max-height: 120px;"
-            ></textarea>
-            <button id="btn-send-chat" class="absolute bottom-1/2 translate-y-1/2 right-2 size-8 flex items-center justify-center bg-primary text-white rounded-full hover:bg-primary-dark transition-all shadow-md active:scale-95 disabled:opacity-50">
-              <span class="material-symbols-outlined text-[18px]">send</span>
-            </button>
+
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Intelligence</div>
+          <div style="padding: 1rem; background: var(--fm-bg-sunken); border-radius: var(--fm-radius-xl); margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+              <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-primary);">location_on</span>
+              <div>
+                <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fm-primary); margin-bottom: 0.25rem;">Match Insight</div>
+                <div style="font-size: 0.8rem; color: var(--fm-text); line-height: 1.45;">92% Match. Emphasize "Accessibility" and "System Tokens" to increase relevance.</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: auto;">
+            <button id="btn-actions-review" class="btn-press" style="width: 100%; padding: 0.75rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">Review & Submit</button>
           </div>
         </div>
       </aside>
+
+      <!-- FAB for AI Actions (mobile) -->
+      <button id="btn-fab-ai" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
+        <span class="material-symbols-outlined">auto_awesome</span>
+      </button>
     </div>
   `;
 
@@ -153,10 +209,32 @@ export function workspaceScreen() {
     const chatInput = wrapper.querySelector('#chat-input');
     const btnSend = wrapper.querySelector('#btn-send-chat');
     const chatMessages = wrapper.querySelector('#chat-messages');
-    const btnCloseChat = wrapper.querySelector('#btn-close-chat');
-    const chatPanel = wrapper.querySelector('#chat-panel');
     const questionsContainer = wrapper.querySelector('#questions-container');
     let isChatPending = false;
+
+    // Panel Toggle
+    const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
+    const aiActionsPanel = wrapper.querySelector('#ai-actions-panel');
+    const toggleChat = wrapper.querySelector('#toggle-ai-chat');
+    const toggleActions = wrapper.querySelector('#toggle-ai-actions');
+
+    toggleChat?.addEventListener('click', () => {
+      aiChatPanel.style.display = 'flex';
+      aiActionsPanel.style.display = 'none';
+      toggleChat.style.color = 'var(--fm-primary)';
+      toggleChat.style.borderBottomColor = 'var(--fm-primary)';
+      toggleActions.style.color = '#94a3b8';
+      toggleActions.style.borderBottomColor = 'transparent';
+    });
+
+    toggleActions?.addEventListener('click', () => {
+      aiChatPanel.style.display = 'none';
+      aiActionsPanel.style.display = 'flex';
+      toggleActions.style.color = 'var(--fm-primary)';
+      toggleActions.style.borderBottomColor = 'var(--fm-primary)';
+      toggleChat.style.color = '#94a3b8';
+      toggleChat.style.borderBottomColor = 'transparent';
+    });
 
     // Drag and Drop
     if (!window.Sortable) {
@@ -288,7 +366,7 @@ export function workspaceScreen() {
       }
     });
 
-    // Radio / checkbox / scale interactions (non-input controls)
+    // Radio / checkbox / scale interactions
     const applyRadioSelection = (questionId, selectedValue) => {
       wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="radio"]`).forEach((el) => {
         const isSelected = el.dataset.value === selectedValue;
@@ -298,10 +376,7 @@ export function workspaceScreen() {
         const dot = el.querySelector('.radio-dot');
         if (dot) dot.classList.toggle('hidden', !isSelected);
         const ring = el.querySelector('.size-4');
-        if (ring) {
-          ring.classList.toggle('border-primary', isSelected);
-          ring.classList.toggle('border-slate-300', !isSelected);
-        }
+        if (ring) { ring.classList.toggle('border-primary', isSelected); ring.classList.toggle('border-slate-300', !isSelected); }
       });
     };
 
@@ -315,11 +390,7 @@ export function workspaceScreen() {
         const mark = el.querySelector('.check-mark');
         if (mark) mark.classList.toggle('hidden', !isChecked);
         const box = el.querySelector('.size-4');
-        if (box) {
-          box.classList.toggle('border-primary', isChecked);
-          box.classList.toggle('bg-primary', isChecked);
-          box.classList.toggle('border-slate-300', !isChecked);
-        }
+        if (box) { box.classList.toggle('border-primary', isChecked); box.classList.toggle('bg-primary', isChecked); box.classList.toggle('border-slate-300', !isChecked); }
       });
     };
 
@@ -329,44 +400,27 @@ export function workspaceScreen() {
         const qId = opt.dataset.questionId;
         const value = opt.dataset.value || '';
         const type = opt.dataset.type;
-
-        if (type === 'radio') {
-          updateAnswer(qId, value, 'user');
-          applyRadioSelection(qId, value);
-          updateAnsweredCount();
-          syncUndoRedoButtons();
-          return;
-        }
-
+        if (type === 'radio') { updateAnswer(qId, value, 'user'); applyRadioSelection(qId, value); updateAnsweredCount(); syncUndoRedoButtons(); return; }
         if (type === 'checkbox') {
           const current = getState().answers?.[qId]?.text || '';
           const items = current ? current.split(', ').filter(Boolean) : [];
           const idx = items.indexOf(value);
-          if (idx >= 0) items.splice(idx, 1);
-          else items.push(value);
-          const next = items.join(', ');
-          updateAnswer(qId, next, 'user');
+          if (idx >= 0) items.splice(idx, 1); else items.push(value);
+          updateAnswer(qId, items.join(', '), 'user');
           applyCheckboxSelection(qId, items);
-          updateAnsweredCount();
-          syncUndoRedoButtons();
-          return;
+          updateAnsweredCount(); syncUndoRedoButtons(); return;
         }
       }
-
       const scaleBtn = e.target.closest('.scale-btn');
       if (scaleBtn) {
         const qId = scaleBtn.dataset.questionId;
         const val = scaleBtn.dataset.value || '';
         updateAnswer(qId, String(val), 'user');
-        // Update UI
         wrapper.querySelectorAll(`.scale-btn[data-question-id="${qId}"]`).forEach((b) => {
           const isActive = b.dataset.value === String(val);
-          b.classList.toggle('bg-primary', isActive);
-          b.classList.toggle('text-white', isActive);
-          b.classList.toggle('border-slate-200', !isActive);
+          b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
         });
-        updateAnsweredCount();
-        syncUndoRedoButtons();
+        updateAnsweredCount(); syncUndoRedoButtons();
       }
     });
 
@@ -374,20 +428,35 @@ export function workspaceScreen() {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const opt = e.target.closest('.option-select, .scale-btn');
       if (!opt) return;
-      e.preventDefault();
-      opt.click();
+      e.preventDefault(); opt.click();
     });
 
+    // Filter pills
+    wrapper.querySelectorAll('.filter-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        wrapper.querySelectorAll('.filter-pill').forEach(p => {
+          p.style.background = '#fff'; p.style.color = 'var(--fm-text)'; p.style.borderColor = 'var(--fm-border)';
+          p.dataset.active = 'false';
+        });
+        pill.style.background = 'var(--fm-text)'; pill.style.color = '#fff'; pill.style.borderColor = 'var(--fm-text)';
+        pill.dataset.active = 'true';
+        // Filter logic (visual only for now)
+      });
+    });
+
+    // Chat
     const chatHistory = [];
 
     const appendChatBubble = (role, text) => {
       const isUser = role === 'user';
       const bubble = document.createElement('div');
-      bubble.className = `flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'} animate-message-in`;
+      bubble.style.cssText = `display: flex; gap: 0.5rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''}`;
       bubble.innerHTML = `
-        <div class="max-w-[85%] ${isUser ? 'bg-primary text-white rounded-2xl rounded-tr-none' : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-2xl rounded-tl-none'} px-4 py-3 text-[13px] leading-relaxed shadow-sm">
+        ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div>` : ''}
+        <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;">
           ${escapeHtml(text).replace(/\n/g, '<br>')}
         </div>
+        ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">person</span></div>` : ''}
       `;
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -397,26 +466,15 @@ export function workspaceScreen() {
       const trimmedText = text.trim();
       if (!trimmedText || isChatPending) return;
       isChatPending = true;
-
       appendChatBubble('user', trimmedText);
       addChatMessage('user', trimmedText);
       chatHistory.push({ role: 'user', content: trimmedText });
-
       btnSend.disabled = true;
       chatInput.disabled = true;
-      wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
-        chip.disabled = true;
-      });
 
       const typingEl = document.createElement('div');
-      typingEl.className = 'flex flex-col gap-1 items-start animate-message-in';
-      typingEl.innerHTML = `
-        <div class="max-w-[85%] bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none px-3 py-2 flex items-center justify-center gap-1.5 h-10 w-16">
-          <div class="typing-dot bg-slate-400"></div>
-          <div class="typing-dot bg-slate-400" style="animation-delay: 0.2s"></div>
-          <div class="typing-dot bg-slate-400" style="animation-delay: 0.4s"></div>
-        </div>
-      `;
+      typingEl.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start;';
+      typingEl.innerHTML = `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;"><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.2s;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.4s;"></div></div>`;
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -435,9 +493,6 @@ export function workspaceScreen() {
       } finally {
         btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;
-        wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
-          chip.disabled = false;
-        });
         isChatPending = false;
         chatInput.focus();
       }
@@ -445,48 +500,36 @@ export function workspaceScreen() {
 
     chatInput?.addEventListener('input', () => {
       btnSend.disabled = !chatInput.value.trim();
-      chatInput.style.height = 'auto';
-      chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
+    });
+
+    chatInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); btnSend.click(); }
     });
 
     btnSend?.addEventListener('click', () => {
       sendMessage(chatInput.value);
       chatInput.value = '';
-      chatInput.style.height = 'auto';
     });
 
-    chatInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        btnSend.click();
-      }
-    });
-
-    wrapper.querySelectorAll('.chat-chip').forEach((chip) => {
+    wrapper.querySelectorAll('.chat-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const text = chip.dataset.msg || '';
         chatInput.value = text;
         btnSend.disabled = !text.trim();
-        btnSend.click();
+        // Switch to chat panel first
+        toggleChat?.click();
+        sendMessage(text);
       });
     });
 
-    // Review redirection
+    // Review & Submit
     wrapper.querySelector('#btn-review-bottom')?.addEventListener('click', () => navigateTo('review'));
-    
-    // Toggle Categories
-    const categoriesBtn = wrapper.querySelector('#btn-question-categories');
-    const categoriesPanel = wrapper.querySelector('#question-categories-panel');
-    categoriesBtn?.addEventListener('click', () => {
-      if (!categoriesPanel) return;
-      const isHidden = categoriesPanel.classList.toggle('hidden');
-      categoriesBtn.setAttribute('aria-expanded', String(!isHidden));
-    });
+    wrapper.querySelector('#btn-review-bottom-2')?.addEventListener('click', () => navigateTo('review'));
+    wrapper.querySelector('#btn-actions-review')?.addEventListener('click', () => navigateTo('review'));
 
     function updateAnsweredCount() {
        const count = Object.keys(getState().answers).filter(k => getState().answers[k]?.text).length;
-       const el = wrapper.querySelector('#answered-count');
-       if (el) el.textContent = count;
+       wrapper.querySelectorAll('#answered-count').forEach(el => { el.textContent = count; });
     }
   }
 

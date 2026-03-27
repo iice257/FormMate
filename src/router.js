@@ -14,7 +14,7 @@ const historyStack = [];
 const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
 
 export function getHomeScreenForUser() {
-  return isAuthenticated() ? 'dashboard' : 'landing';
+  return 'landing';
 }
 
 export function getDashboardActionScreenForUser() {
@@ -128,6 +128,7 @@ function performNavigation(screen, replace = false) {
     }
 
     setState({ currentScreen: screen });
+    window.__fmPreviousScreen = historyStack.length > 0 ? historyStack[historyStack.length - 1] : null;
     
     // Update Document Title
     const titleMap = {
@@ -221,16 +222,16 @@ export function initRouter() {
   } else if (!onboarded) {
     navigateTo('onboarding', true);
   } else {
-    // Signed-in users should land on the app dashboard by default
+    // Signed-in users should land on the homepage by default
     if (initialScreen === 'landing') {
-      navigateTo('dashboard', true);
+      navigateTo('landing', true);
       return;
     }
     // if requested a valid route, go there, else home
     if (routes[initialScreen]) {
       navigateTo(initialScreen, true);
     } else {
-      navigateTo('dashboard', true);
+      navigateTo('landing', true);
     }
   }
 }

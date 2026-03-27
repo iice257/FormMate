@@ -3,22 +3,39 @@ import { getHomeScreenForUser, navigateTo } from '../router.js';
 import { MOCK_FORMS } from '../parser/mock-forms.js';
 
 export function examplesScreen() {
+  const { isAuthenticated, userProfile } = getState();
+  const displayFirstName = userProfile?.name?.split(' ')[0] || 'User';
+  const avatarFromProfile = userProfile?.avatar || '';
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = avatarFromProfile || fallbackAvatar;
+
+  const authButtonHtml = isAuthenticated
+    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
+         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <span class="truncate max-w-[100px]">${displayFirstName}</span>
+       </button>`
+    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
+
   const html = `
     <div class="min-h-screen w-full bg-mesh flex flex-col">
       
       <!-- Header -->
-      <header class="h-16 border-b border-slate-200 flex items-center px-6 md:px-12 sticky top-0 z-50 glass">
-        <button id="btn-back" class="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors font-medium text-sm btn-press">
-          <span class="material-symbols-outlined text-lg">arrow_back</span>
-          Back
-        </button>
-        <div class="flex-1"></div>
-        <button type="button" class="flex items-center gap-2 btn-press cursor-pointer bg-transparent border-0 p-0" id="btn-home" aria-label="Go to home">
-          <div class="size-8 flex shrink-0 items-center justify-center">
-            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
-          </div>
-          <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
-        </button>
+      <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 glass">
+        <div class="flex-1 flex justify-start">
+          <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            Back
+          </button>
+        </div>
+        <div class="flex-1 flex justify-center items-center">
+            <button type="button" class="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0" id="btn-home" aria-label="Go to home">
+                <img src="/logo.png" class="size-8" alt="Logo" />
+                <span class="text-xl font-black text-slate-900 tracking-tight">FormMate</span>
+            </button>
+        </div>
+        <div class="flex-1 flex items-center justify-end">
+          ${authButtonHtml}
+        </div>
       </header>
 
       <!-- Main Content -->
@@ -151,6 +168,8 @@ export function examplesScreen() {
     wrapper.querySelector('#btn-home').addEventListener('click', () => {
       navigateTo(getHomeScreenForUser());
     });
+    wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
+    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
 
     // Render grid
     const grid = wrapper.querySelector('#examples-grid');

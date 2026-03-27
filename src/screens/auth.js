@@ -9,65 +9,28 @@ import { isOnboardingComplete } from '../storage/local-store.js';
 import { toast } from '../components/toast.js';
 
 export function authScreen() {
-  const devUsers = getDevTestUsers();
-  const devAccessHtml = isDevAuthEnabled() ? `
-            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4">
-              <div class="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-700">Dev Quick Access</h3>
-                  <p class="text-[11px] text-slate-500 mt-1">One-click sign-in for local testing. Password: <strong>password</strong></p>
-                </div>
-              </div>
-              <div class="grid gap-2">
-                ${devUsers.map((user) => `
-                  <button type="button" class="btn-dev-user flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-xs font-semibold text-slate-700 hover:border-primary/30 hover:bg-primary/5 transition-all btn-press" data-email="${user.email}">
-                    <span>${user.name}</span>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-500">${user.tier}</span>
-                  </button>
-                `).join('')}
-              </div>
-            </div>
-  ` : '';
+  const devAccessHtml = '';
 
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh">
       <!-- Left decorative panel (desktop) -->
-      <div class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden" style="background: var(--fm-gradient-primary);">
-        <div class="relative z-10">
-          <div class="flex items-center gap-3 mb-16">
-            <div class="size-10 flex shrink-0 items-center justify-center">
-            <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain filter brightness-0 invert" />
-            </div>
-            <h2 class="text-white text-2xl font-black tracking-tighter">Form<span class="text-white/80">Mate</span></h2>
-          </div>
+      <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017]">
+        <!-- Holographic AI background -->
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
 
-          <h1 class="text-white text-5xl font-extrabold leading-tight tracking-tight mb-6">
-            Fill forms<br/>with AI magic.
+        <!-- Inward gradient border/stroke effect seen in mockup -->
+        <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
+
+        <!-- Dark blur cloud behind text for contrast -->
+        <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div class="w-[110%] h-[50%] bg-black/40 blur-[80px] rounded-[100%] rounded-full"></div>
+        </div>
+
+        <div class="relative z-20 flex w-full items-center justify-center px-4">
+          <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.1] tracking-tight text-center">
+            Fill forms with<br/>AI magic.
           </h1>
-          <p class="text-white/70 text-lg max-w-md leading-relaxed">
-            FormMate analyzes any form and generates intelligent, context-aware answers in seconds.
-          </p>
         </div>
-
-        <div class="relative z-10 flex items-center gap-4">
-          <div class="flex -space-x-3">
-            ${[1, 2, 3, 4].map(i => `
-              <div class="size-10 rounded-full border-2 border-white/20 flex items-center justify-center text-xs font-bold text-white/80" style="background: rgba(255,255,255,0.1);">
-                <span class="material-symbols-outlined text-sm">person</span>
-              </div>
-            `).join('')}
-          </div>
-          <div>
-            <p class="text-white text-sm font-semibold">500+ professionals</p>
-            <p class="text-white/50 text-xs">trust FormMate daily</p>
-          </div>
-        </div>
-
-        <!-- Decorative circles -->
-        <div class="absolute -top-32 -right-32 size-[400px] rounded-full border border-white/10"></div>
-        <div class="absolute -bottom-24 -left-24 size-[300px] rounded-full border border-white/5"></div>
-        <div class="absolute top-1/2 right-12 size-3 rounded-full bg-white/20"></div>
-        <div class="absolute top-1/3 right-1/4 size-2 rounded-full bg-white/15"></div>
       </div>
 
       <!-- Right form panel -->
@@ -83,8 +46,8 @@ export function authScreen() {
 
           <!-- Login Form (default) -->
           <div id="login-form">
-            <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Welcome back</h2>
-            <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Enter your credentials to access your account</p>
+            <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Continue to FormMate</h2>
+            <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Please sign in or register to proceed.</p>
 
             <div class="space-y-4">
               <div>
@@ -377,18 +340,7 @@ export function authScreen() {
       });
     });
 
-    wrapper.querySelectorAll('.btn-dev-user').forEach((button) => {
-      button.addEventListener('click', async () => {
-        try {
-          const session = await signIn(button.dataset.email, 'password');
-          applySessionState(session);
-          toast.success(`Signed in as ${session.user.name}`);
-          navigateAfterAuth();
-        } catch (error) {
-          toast.error(error.message || 'Dev sign-in failed.');
-        }
-      });
-    });
+
   }
 
   return { html, init };

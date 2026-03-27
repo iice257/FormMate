@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════
-// FormMate — Dashboard Screen
+// FormMate — Dashboard Screen (Redesigned)
 // ═══════════════════════════════════════════
 
 import { getState } from '../state.js';
@@ -11,201 +11,190 @@ export function dashboardScreen() {
   const { userProfile, formHistory, tier, formData } = getState();
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
 
-  const mockStats = [
-    { label: 'Total Forms', value: formHistory.length || 0, icon: 'description', color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'AI Credits', value: tier === 'free' ? '3/5' : 'Unlimited', icon: 'bolt', color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Time Saved', value: '1.2h', icon: 'schedule', color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Accuracy', value: '98%', icon: 'verified', color: 'text-primary', bg: 'bg-indigo-50' },
-  ];
+  // Stats
+  const totalForms = formHistory.length || 0;
+  const aiCredits = tier === 'free' ? '3/5' : 'Unlimited';
+  const timeSaved = totalForms > 0 ? `${(totalForms * 0.08).toFixed(1)}h` : '0h';
+  const accuracy = totalForms > 0 ? '99.2%' : '—';
 
   const quickActions = [
     {
       id: 'new',
       buttonId: 'btn-dashboard-focus-new',
-      eyebrow: 'Start',
       title: 'Paste a new form link',
-      copy: 'Kick off a fresh analysis flow in one click.',
-      icon: 'link'
+      copy: 'Convert any web form into a Mate structure instantly.',
+      icon: 'link',
+      featured: true
     },
     {
       id: 'history',
       buttonId: 'btn-dashboard-focus-history',
-      eyebrow: 'Review',
-      title: 'Open recent form history',
-      copy: 'Jump back into a recent form without hunting around.',
-      icon: 'history'
+      title: 'Open recent history',
+      copy: 'Jump back into your recently edited or viewed forms.',
+      icon: 'schedule'
     },
     {
       id: 'chat',
       buttonId: 'btn-dashboard-focus-chat',
-      eyebrow: 'Refine',
       title: 'Ask Copilot for help',
-      copy: 'Rewrite, clarify, or tighten answers from one place.',
-      icon: 'forum'
+      copy: 'Let our AI assist you with logic, validation, or design.',
+      icon: 'smart_toy'
     }
   ];
 
-  const recentFormsHtml = formHistory.length > 0 
-    ? formHistory.slice(0, 5).map(form => `
-        <div class="recent-form-item flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group cursor-pointer" data-form-url="${escapeAttr(form.url || '')}" role="button" tabindex="0">
-          <div class="flex items-center gap-4">
-            <div class="size-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-              <span class="material-symbols-outlined">edit_document</span>
+  const recentFormsHtml = formHistory.length > 0
+    ? formHistory.slice(0, 5).map(form => {
+      const status = form.status || 'completed';
+      const statusLabel = status === 'completed' ? 'Active' : status === 'draft' ? 'Draft' : 'Closed';
+      const statusColor = status === 'completed' ? 'color: #059669; background: #d1fae5;' : status === 'draft' ? 'color: #d97706; background: #fef3c7;' : 'color: #dc2626; background: #fee2e2;';
+      return `
+        <tr class="recent-form-row" data-form-url="${escapeAttr(form.url || '')}" role="button" tabindex="0" style="cursor: pointer;">
+          <td style="padding: 1rem 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 32px; height: 32px; border-radius: var(--fm-radius-md); background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
+                <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${escapeHtml(form.title || 'Untitled Form')}</div>
+                <div style="font-size: 0.7rem; color: #94a3b8;">${escapeHtml(form.provider || 'google_forms').toLowerCase().replace(/\s+/g, '_')}</div>
+              </div>
             </div>
-            <div class="flex flex-col">
-              <span class="text-sm font-bold text-slate-900 truncate max-w-[200px]">${escapeHtml(form.title || 'Untitled Form')}</span>
-              <span class="text-[11px] text-slate-400 font-medium">${new Date(form.timestamp).toLocaleDateString()} • ${escapeHtml(form.provider || 'Google Forms')}</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-             <span class="text-[10px] font-bold px-2 py-1 rounded-full ${form.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'} uppercase tracking-tight">${escapeHtml(form.status || 'In Progress')}</span>
-             <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
-          </div>
-        </div>
-      `).join('')
-    : `
-        <div class="flex flex-col items-center justify-center py-12 text-center bg-white border border-dashed border-slate-200 rounded-3xl">
-          <div class="size-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
-            <span class="material-symbols-outlined text-3xl">history</span>
-          </div>
-          <h3 class="text-base font-bold text-slate-900 mb-1">No forms yet</h3>
-          <p class="text-xs text-slate-500 max-w-[200px]">Start by pasting a link to analyze your first form.</p>
-          <button id="btn-empty-new" class="mt-6 px-6 py-2 bg-primary text-white rounded-full text-xs font-bold shadow-sm btn-press">Start New Form</button>
-        </div>
+          </td>
+          <td style="padding: 1rem 0.75rem;">
+            <span style="display: inline-block; padding: 0.2rem 0.55rem; border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; ${statusColor}">${statusLabel}</span>
+          </td>
+          <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b;">0</td>
+          <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b;">${new Date(form.timestamp).toLocaleDateString()}</td>
+          <td style="padding: 1rem 0.75rem; text-align: right;">
+            <button class="recent-form-menu" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+              <span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+            </button>
+          </td>
+        </tr>
       `;
+    }).join('')
+    : `
+      <tr>
+        <td colspan="5" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic;">No forms yet. Start by pasting a link to analyze your first form.</td>
+      </tr>
+    `;
 
   const dashboardContent = `
     <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth animate-screen-enter">
-      <div class="max-w-6xl mx-auto px-6 py-8 md:py-10">
+      <div style="max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem;">
         
         <!-- Welcome Header -->
-        <div class="dashboard-hero mb-10">
-          <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div class="max-w-2xl">
-              <div class="dashboard-kicker">
-                <span class="material-symbols-outlined text-[15px]">nest_clock_farsight_analog</span>
-                Your form cockpit
-              </div>
-              <h1 class="mt-4 text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.05]">Welcome back, ${firstName}!</h1>
-              <p class="mt-3 max-w-xl text-sm md:text-[15px] text-slate-600 leading-relaxed">Everything important is surfaced here: active work, recent history, and the fastest way back into a form.</p>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem;">
+          <div>
+            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; margin-bottom: 0.35rem;">Welcome back, ${firstName}!</h1>
+            <p style="font-size: 0.85rem; color: #64748b;">Your workspace is looking productive today.</p>
+          </div>
+          <button id="btn-dashboard-new" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.25rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-full); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+            New Form
+          </button>
+        </div>
+
+        <!-- Top Stats Cards -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Forms Touched</span>
+              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">description</span>
             </div>
-            <div class="flex items-center gap-3">
-              ${formData ? `
-                <button id="btn-dashboard-resume" class="dashboard-primary-action flex items-center gap-2 px-6 py-3 rounded-2xl font-bold btn-press">
-                  <span class="material-symbols-outlined text-[20px]">play_arrow</span>
-                  Resume Active Form
-                </button>
-              ` : ''}
-              <button id="btn-dashboard-new" class="dashboard-secondary-action flex items-center gap-2 px-6 py-3 rounded-2xl font-bold btn-press">
-                <span class="material-symbols-outlined text-[20px]">add</span>
-                New Form
-              </button>
+            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${totalForms}</div>
+            <div style="font-size: 0.7rem; color: var(--fm-success); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span>
+              +12% from last week
             </div>
           </div>
-          <div class="dashboard-hero-metrics mt-8">
-            <div>
-              <div class="dashboard-hero-metric-value">${formHistory.length || 0}</div>
-              <div class="dashboard-hero-metric-label">Forms touched</div>
+
+          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Current Plan</span>
+              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">shield</span>
             </div>
-            <div>
-              <div class="dashboard-hero-metric-value">${tier === 'free' ? 'Free' : 'Pro'}</div>
-              <div class="dashboard-hero-metric-label">Current plan</div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${tier === 'free' ? 'Basic' : 'Pro'}</div>
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">Next billing cycle: —</div>
+          </div>
+
+          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Workspace Status</span>
+              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">cloud_done</span>
             </div>
-            <div>
-              <div class="dashboard-hero-metric-value">${formData ? 'Live' : 'Idle'}</div>
-              <div class="dashboard-hero-metric-label">Workspace status</div>
-            </div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${formData ? 'Active' : 'Healthy'}</div>
+            <div style="font-size: 0.7rem; color: var(--fm-success); margin-top: 0.25rem;">All systems operational</div>
           </div>
         </div>
 
-        <div class="dashboard-section-surface mb-8">
-          <div class="flex items-center justify-between gap-4 px-1 pb-4">
-            <div>
-              <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Quick Actions</p>
-              <h2 class="mt-1 text-lg font-black tracking-tight text-slate-900">Three fast paths back into work</h2>
-            </div>
-            <div class="hidden md:flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500">
-              <span class="material-symbols-outlined text-[14px]">bolt</span>
-              Optimized for speed
-            </div>
-          </div>
-          <div class="grid gap-3 md:grid-cols-3">
-            ${quickActions.map((action) => `
-              <button id="${action.buttonId}" class="dashboard-quick-action btn-press" data-dashboard-focus="${action.id}">
-                <div class="dashboard-quick-action-icon">
-                  <span class="material-symbols-outlined text-[20px]">${action.icon}</span>
-                </div>
-                <div class="min-w-0">
-                  <span class="dashboard-quick-action-eyebrow">${action.eyebrow}</span>
-                  <span class="dashboard-quick-action-title">${action.title}</span>
-                  <span class="dashboard-quick-action-copy">${action.copy}</span>
-                </div>
-                <span class="material-symbols-outlined dashboard-quick-action-arrow">arrow_outward</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          ${mockStats.map(stat => `
-            <div class="dashboard-stat-card">
-              <div class="dashboard-stat-edge"></div>
-              <div class="dashboard-stat-glow"></div>
-              <div class="size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm relative z-10">
-                <span class="material-symbols-outlined text-[22px]">${stat.icon}</span>
-              </div>
-              <div class="text-2xl font-black text-slate-900 relative z-10">${stat.value}</div>
-              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1 relative z-10">${stat.label}</div>
-            </div>
+        <!-- Quick Action Cards -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+          ${quickActions.map(action => `
+            <button id="${action.buttonId}" class="btn-press" style="display: flex; flex-direction: column; padding: 1.25rem; border-radius: var(--fm-radius-xl); border: 1px solid ${action.featured ? 'transparent' : 'var(--fm-border-light)'}; background: ${action.featured ? 'linear-gradient(135deg, #0d7377, #14919b)' : '#fff'}; color: ${action.featured ? '#fff' : 'var(--fm-text)'}; text-align: left; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s; position: relative; overflow: hidden; min-height: 150px;">
+              ${action.featured ? '<div style="position: absolute; right: -20px; bottom: -20px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.08);"></div><div style="position: absolute; right: 20px; bottom: 10px; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.05);"></div>' : ''}
+              <span class="material-symbols-outlined" style="font-size: 22px; margin-bottom: 0.75rem; ${!action.featured ? 'color: var(--fm-primary);' : ''}">${action.icon}</span>
+              <div style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.35rem; position: relative; z-index: 1;">${action.title}</div>
+              <div style="font-size: 0.75rem; opacity: 0.8; line-height: 1.45; position: relative; z-index: 1;">${action.copy}</div>
+              <span class="material-symbols-outlined" style="margin-top: auto; font-size: 18px; opacity: 0.6; position: relative; z-index: 1;">arrow_forward</span>
+            </button>
           `).join('')}
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <!-- Recent Forms -->
-          <div class="lg:col-span-2">
-            <div class="flex items-center justify-between mb-5 px-1">
-              <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">history</span>
-                Recent Forms
-              </h3>
-              <button id="btn-dashboard-view-all" class="text-xs font-bold text-primary hover:underline">View All</button>
-            </div>
-            <div class="space-y-4">
-              ${recentFormsHtml}
+        <!-- Stats Row -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; padding: 1rem 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
+          <div>
+            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Total Forms</div>
+            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">${totalForms || 158}</span>
+              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">+4 this month</span>
             </div>
           </div>
-
-          <!-- Side Cards -->
-          <div class="space-y-6">
-            <!-- AI Pro Card -->
-            <button type="button" id="btn-upgrade-card" class="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white group cursor-pointer text-left w-full">
-              <div class="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-primary/30 transition-colors"></div>
-              <div class="relative z-10">
-                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-primary text-[10px] font-black uppercase tracking-widest border border-white/10 mb-6">
-                  <span class="material-symbols-outlined text-[14px]">bolt</span>
-                  Pro Features
-                </div>
-                <h4 class="text-xl font-bold mb-3">Unlimited AI Power</h4>
-                <p class="text-slate-400 text-xs leading-relaxed mb-6">Get 100% accuracy with advanced reasoning models & unlimited form parses.</p>
-                <div class="flex items-center gap-2 font-bold text-sm text-white group-hover:gap-3 transition-all">
-                  Upgrade Now
-                  <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </button>
-
-            <!-- Quick Tips -->
-            <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-              <h4 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-500 text-[18px]">lightbulb</span>
-                Quick Tip
-              </h4>
-              <p class="text-xs text-slate-600 leading-relaxed mb-4">Did you know you can type <strong>"Make it professional"</strong> in the chat to rewrite your summaries?</p>
-              <button id="btn-dashboard-try-chat" class="w-full py-2.5 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors">Try AI Chat</button>
+          <div>
+            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">AI Credits</div>
+            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">${tier === 'free' ? '450' : '∞'}</span>
+              <span style="font-size: 0.65rem; color: #64748b; font-weight: 600;">of 500 used</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Time Saved</div>
+            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">12.4h</span>
+              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">Efficient</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Accuracy</div>
+            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">99.2%</span>
+              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">High</span>
             </div>
           </div>
         </div>
+
+        <!-- Recent Forms Activity -->
+        <div style="background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem;">
+            <h2 style="font-size: 1.05rem; font-weight: 800; color: var(--fm-text);">Recent Forms Activity</h2>
+            <button id="btn-dashboard-view-all" style="font-size: 0.8rem; font-weight: 600; color: var(--fm-primary); background: none; border: none; cursor: pointer;">View All</button>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-top: 1px solid var(--fm-border-light);">
+                <th style="padding: 0.75rem 1.25rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Form Name</th>
+                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Status</th>
+                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Responses</th>
+                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Last Modified</th>
+                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentFormsHtml}
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
   `;
@@ -221,10 +210,6 @@ export function dashboardScreen() {
 
     wrapper.querySelector('#btn-dashboard-resume')?.addEventListener('click', () => {
       navigateTo('workspace');
-    });
-
-    wrapper.querySelector('#btn-empty-new')?.addEventListener('click', () => {
-      navigateTo('new');
     });
 
     wrapper.querySelector('#btn-dashboard-view-all')?.addEventListener('click', () => {
@@ -243,13 +228,9 @@ export function dashboardScreen() {
       navigateTo('ai-chat');
     });
 
-    wrapper.querySelector('#btn-dashboard-try-chat')?.addEventListener('click', () => {
-      navigateTo('ai-chat');
-    });
-
-    wrapper.querySelectorAll('.recent-form-item').forEach((el) => {
-      el.addEventListener('click', () => {
-        // Keep data flow as-is for now (no param hydration yet).
+    wrapper.querySelectorAll('.recent-form-row').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.recent-form-menu')) return;
         navigateTo('workspace');
       });
       el.addEventListener('keydown', (e) => {
@@ -257,10 +238,6 @@ export function dashboardScreen() {
         e.preventDefault();
         el.click();
       });
-    });
-
-    wrapper.querySelector('#btn-upgrade-card')?.addEventListener('click', () => {
-      navigateTo('pricing');
     });
   }
 

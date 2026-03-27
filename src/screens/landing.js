@@ -38,7 +38,7 @@ export function landingScreen() {
           </div>
           
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Forms</button>
+            ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-pricing">${(getState().tier && getState().tier !== 'free') ? 'Subscription' : 'Pricing'}</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
@@ -579,7 +579,7 @@ export function landingScreen() {
     });
 
     wrapper.querySelector('#nav-forms')?.addEventListener('click', () => {
-      navigateTo(getFormsEntryScreenForUser());
+      navigateTo(getDashboardActionScreenForUser());
     });
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));

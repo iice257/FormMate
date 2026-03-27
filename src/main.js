@@ -16,6 +16,8 @@ import './styles.css';
 
 // Core
 import { registerScreen, initRouter } from './router.js';
+import { registerAccountModalOpener } from './components/layout.js';
+import { initAccountModal } from './components/account-modal.js';
 
 // Screens
 import { authScreen } from './screens/auth.js';
@@ -154,6 +156,10 @@ async function boot() {
 
   try {
     initTransitions();
+
+    // Initialize account modal and register with layout
+    const openModal = initAccountModal();
+    registerAccountModalOpener(openModal);
 
     // Sync initial auth state but never block routing on auth read.
     try {

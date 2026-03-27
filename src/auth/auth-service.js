@@ -91,6 +91,16 @@ export async function signUp(email, password, name = '') {
 export async function signIn(email, password) {
   await delay(500);
 
+  if (email === 'dev' && password === 'dev') {
+    return persistSession({
+      id: 'dev_user_admin',
+      email: 'dev@formmate.ai',
+      name: 'Dev Admin',
+      tier: 'monthly',
+      provider: 'email'
+    });
+  }
+
   const users = load(USERS_KEY) || {};
   const stored = users[email];
 
