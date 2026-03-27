@@ -9,6 +9,7 @@ import { isOnboardingComplete } from './storage/local-store.js';
 const routes = {};
 let currentCleanup = null;
 const historyStack = [];
+let navigationDirection = 'forward'; // 'forward' | 'backward'
 
 // Screens that don't require auth
 const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
@@ -29,9 +30,12 @@ export function registerScreen(name, renderFn) {
   routes[name] = renderFn;
 }
 
-export function navigateTo(screen, replace = false) {
+export function navigateTo(screen, replace = false, direction = null) {
+  // Determine direction: explicit > inferred from replace flag
+  navigationDirection = direction || (replace ? 'backward' : 'forward');
+
   const overlay = document.getElementById('page-transition-overlay');
-  const isForward = !replace;
+  const isForward = navigationDirection === 'forward';
   const animationsEnabled = getState().settings?.ui?.animationsEnabled !== false;
 
   if (isForward && overlay && animationsEnabled) {
@@ -102,11 +106,12 @@ function performNavigation(screen, replace = false) {
     window.history.replaceState({ screen }, '', path);
   }
 
-  // Standard fade-out exit for non-interactive navigations
+  // Directional exit animation
   const currentContent = app.firstElementChild;
+  const isBack = navigationDirection === 'backward';
   if (currentContent && replace) {
-    currentContent.classList.remove('screen-enter');
-    currentContent.classList.add('screen-exit');
+    currentContent.classList.remove('screen-enter', 'screen-enter-forward', 'screen-enter-backward');
+    currentContent.classList.add(isBack ? 'screen-exit-backward' : 'screen-exit-forward');
   }
 
   // Switch content
@@ -161,7 +166,8 @@ function performNavigation(screen, replace = false) {
       if (!html && !init) return;
 
       const wrapper = document.createElement('div');
-      wrapper.className = 'screen-enter';
+      const enterClass = navigationDirection === 'backward' ? 'screen-enter-backward' : 'screen-enter-forward';
+      wrapper.className = enterClass;
       wrapper.innerHTML = html;
       app.appendChild(wrapper);
 
@@ -176,10 +182,10 @@ export function initRouter() {
   // Listen for back button
   window.addEventListener('popstate', (e) => {
     if (e.state && e.state.screen) {
-      // Use replace=true to avoid double-pushing during back navigation
-      navigateTo(e.state.screen, true);
+      // Use replace=true to avoid double-pushing; direction=backward for slide-from-left
+      navigateTo(e.state.screen, true, 'backward');
     } else {
-      navigateTo('landing', true);
+      navigateTo('landing', true, 'backward');
       // If we got here with no state, let's make sure we pushstate to avoid exiting on the next back press
       window.history.pushState({ screen: 'landing' }, '', '/');
     }
@@ -214,24 +220,24 @@ export function initRouter() {
 
   if (!authenticated) {
     if (PUBLIC_SCREENS.includes(initialScreen)) {
-      navigateTo(initialScreen, true);
+      navigateTo(initialScreen, true, 'forward');
     } else {
       // Show auth screen first
-      navigateTo('auth', true);
+      navigateTo('auth', true, 'forward');
     }
   } else if (!onboarded) {
-    navigateTo('onboarding', true);
+    navigateTo('onboarding', true, 'forward');
   } else {
     // Signed-in users should land on the homepage by default
     if (initialScreen === 'landing') {
-      navigateTo('landing', true);
+      navigateTo('landing', true, 'forward');
       return;
     }
     // if requested a valid route, go there, else home
     if (routes[initialScreen]) {
-      navigateTo(initialScreen, true);
+      navigateTo(initialScreen, true, 'forward');
     } else {
-      navigateTo('landing', true);
+      navigateTo('landing', true, 'forward');
     }
   }
 }
@@ -241,9 +247,9 @@ export function goBack() {
     window.history.back();
   } else if (historyStack.length > 0) {
     const previousScreen = historyStack.pop();
-    navigateTo(previousScreen, true);
+    navigateTo(previousScreen, true, 'backward');
   } else {
     // Fallback if no history
-    navigateTo(getHomeScreenForUser(), true);
+    navigateTo(getHomeScreenForUser(), true, 'backward');
   }
 }
