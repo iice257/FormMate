@@ -5,6 +5,7 @@ import { getState } from '../state';
 import { withLayout, initLayout } from '../components/layout';
 import { navigateTo } from '../router';
 import { escapeAttr, escapeHtml } from '../utils/escape';
+import { renderButtonMarkup, renderInputMarkup } from '../components/ui-markup';
 
 export function historyScreen() {
   const { formHistory } = getState();
@@ -32,9 +33,12 @@ export function historyScreen() {
             <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: var(--fm-radius-full); background: var(--fm-bg-sunken); color: var(--fm-text-secondary); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;">${escapeHtml(form.provider || 'Google Forms')}</span>
           </td>
           <td style="padding: 1rem 0.75rem; text-align: right;">
-            <button class="btn-open-history" data-form-url="${escapeAttr(form.url || '')}" disabled style="font-size: 0.8rem; font-weight: 700; color: var(--fm-text-tertiary); background: none; border: none; display: flex; align-items: center; gap: 0.25rem; margin-left: auto;">
-              Saved <span class="material-symbols-outlined" style="font-size: 16px;">inventory_2</span>
-            </button>
+            ${renderButtonMarkup({
+      className: 'btn-open-history ml-auto flex items-center gap-1 bg-transparent px-0 text-[0.8rem] font-bold text-[var(--fm-text-tertiary)] shadow-none hover:bg-transparent',
+      contentHtml: 'Saved <span class="material-symbols-outlined" style="font-size: 16px;">inventory_2</span>',
+      disabled: true,
+      variant: 'ghost',
+    }).replace('<button', `<button data-form-url="${escapeAttr(form.url || '')}"`)}
           </td>
         </tr>
       `).join('')
@@ -52,9 +56,12 @@ export function historyScreen() {
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; margin-bottom: 0.35rem;">Form History</h1>
             <p style="font-size: 0.85rem; color: var(--fm-text-secondary);">Review your analyzed forms and the metadata captured for each run.</p>
           </div>
-          <button id="btn-export-all" class="btn-press" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer;">
-            <span class="material-symbols-outlined" style="font-size: 17px;">info</span> Export Deferred
-          </button>
+          ${renderButtonMarkup({
+    className: 'btn-press flex items-center gap-1.5 px-4 py-2 text-[0.8rem] font-semibold',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 17px;">info</span> Export Deferred',
+    id: 'btn-export-all',
+    variant: 'outline',
+  })}
         </div>
 
         <div class="history-zen-hide" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
@@ -79,7 +86,11 @@ export function historyScreen() {
           <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center;">
             <div style="position: relative; flex: 1; max-width: 300px;">
               <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--fm-text-tertiary); pointer-events: none;">search</span>
-              <input type="text" placeholder="Search history..." disabled style="width: 100%; height: 36px; padding: 0 0.75rem 0 2.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text-tertiary);" />
+              ${renderInputMarkup({
+    className: 'h-9 rounded-full border-[var(--fm-border)] bg-[var(--fm-bg-sunken)] pr-3 pl-9 text-[0.8rem] text-[var(--fm-text-tertiary)]',
+    disabled: true,
+    placeholder: 'Search history...',
+  })}
             </div>
           </div>
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -99,15 +110,29 @@ export function historyScreen() {
           <div class="history-zen-hide" style="padding: 1rem 1.25rem; border-top: 1px solid var(--fm-border-light); display: flex; align-items: center; justify-content: space-between;">
             <span style="font-size: 0.75rem; color: var(--fm-text-tertiary);">Showing 1 to ${Math.min(PAGE_SIZE, totalAnalyzed)} of ${totalAnalyzed} entries</span>
             <div style="display: flex; gap: 0.25rem;">
-              <button disabled style="width: 32px; height: 32px; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-sm); background: var(--fm-bg-elevated); color: #cbd5e1; display: flex; align-items: center; justify-content: center;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>
-              </button>
+              ${renderButtonMarkup({
+    className: 'size-8 rounded-[var(--fm-radius-sm)] border-[var(--fm-border)] text-[#cbd5e1]',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>',
+    disabled: true,
+    size: 'icon-sm',
+    variant: 'outline',
+  })}
               ${Array.from({ length: Math.min(totalPages, 5) }, (_, i) => `
-                <button disabled style="width: 32px; height: 32px; border: 1px solid ${i === 0 ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius: var(--fm-radius-sm); background: ${i === 0 ? 'var(--fm-primary)' : '#fff'}; color: ${i === 0 ? '#fff' : 'var(--fm-text)'}; font-size: 0.75rem; font-weight: 700;">${i + 1}</button>
+                ${renderButtonMarkup({
+        className: `size-8 rounded-[var(--fm-radius-sm)] border px-0 text-[0.75rem] font-bold ${i === 0 ? 'border-[var(--fm-primary)] bg-[var(--fm-primary)] text-white hover:bg-[var(--fm-primary)] hover:text-white' : 'border-[var(--fm-border)] bg-white text-[var(--fm-text)] hover:bg-white'}`,
+        contentHtml: String(i + 1),
+        disabled: true,
+        size: 'icon-sm',
+        variant: 'outline',
+      })}
               `).join('')}
-              <button disabled style="width: 32px; height: 32px; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-sm); background: var(--fm-bg-elevated); color: #cbd5e1; display: flex; align-items: center; justify-content: center;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
-              </button>
+              ${renderButtonMarkup({
+    className: 'size-8 rounded-[var(--fm-radius-sm)] border-[var(--fm-border)] text-[#cbd5e1]',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>',
+    disabled: true,
+    size: 'icon-sm',
+    variant: 'outline',
+  })}
             </div>
           </div>
         </div>

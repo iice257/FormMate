@@ -11,6 +11,7 @@ import { getAiErrorMessage } from '../ai/ai-service';
 import { escapeHtml } from '../utils/escape';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { openAccountModal } from '../components/layout';
+import { renderButtonMarkup, renderInputMarkup } from '../components/ui-markup';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 
@@ -41,12 +42,18 @@ export function aiChatScreen() {
             <span style="padding: 0.15rem 0.5rem; background: var(--fm-success-light); color: var(--fm-success); border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
           </div>
           <div style="display: flex; gap: 0.35rem;">
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
-              <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
-            </button>
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
-              <span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>
-            </button>
+            ${renderButtonMarkup({
+    className: 'size-8 rounded-[var(--fm-radius-sm)] px-0 text-[var(--fm-text-tertiary)] hover:bg-muted/60',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 20px;">search</span>',
+    size: 'icon-sm',
+    variant: 'ghost',
+  })}
+            ${renderButtonMarkup({
+    className: 'size-8 rounded-[var(--fm-radius-sm)] px-0 text-[var(--fm-text-tertiary)] hover:bg-muted/60',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>',
+    size: 'icon-sm',
+    variant: 'ghost',
+  })}
           </div>
         </div>
 
@@ -59,14 +66,22 @@ export function aiChatScreen() {
             <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.5rem;">How can I help you today?</h3>
             <p style="font-size: 0.85rem; color: var(--fm-text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions — just ask.</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-              <button class="chat-suggestion btn-press" data-msg="Analyze my latest form and suggest improvements" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: var(--fm-bg-elevated); cursor: pointer; text-align: left;">
-                <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">analytics</span>
-                <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Analyze my latest form</span>
-              </button>
-              <button class="chat-suggestion btn-press" data-msg="Help me write a professional cover letter" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: var(--fm-bg-elevated); cursor: pointer; text-align: left;">
-                <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">edit_note</span>
-                <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Help me write a cover letter</span>
-              </button>
+              ${renderButtonMarkup({
+    className: 'chat-suggestion btn-press h-auto items-start rounded-[var(--fm-radius-xl)] border-[var(--fm-border-light)] bg-[var(--fm-bg-elevated)] p-4 text-left',
+    contentHtml: `
+      <span class="material-symbols-outlined mb-1.5 block text-[20px] text-[var(--fm-primary)]">analytics</span>
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Analyze my latest form</span>
+    `,
+    variant: 'outline',
+  }).replace('<button', '<button data-msg="Analyze my latest form and suggest improvements"')}
+              ${renderButtonMarkup({
+    className: 'chat-suggestion btn-press h-auto items-start rounded-[var(--fm-radius-xl)] border-[var(--fm-border-light)] bg-[var(--fm-bg-elevated)] p-4 text-left',
+    contentHtml: `
+      <span class="material-symbols-outlined mb-1.5 block text-[20px] text-[var(--fm-primary)]">edit_note</span>
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Help me write a cover letter</span>
+    `,
+    variant: 'outline',
+  }).replace('<button', '<button data-msg="Help me write a professional cover letter"')}
             </div>
           </div>
         </div>
@@ -74,18 +89,32 @@ export function aiChatScreen() {
         <!-- Chat Input -->
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
-            </button>
+            ${renderButtonMarkup({
+    className: 'size-9 rounded-full border-[var(--fm-border)] bg-[var(--fm-bg-elevated)] text-[var(--fm-text-tertiary)]',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>',
+    size: 'icon',
+    variant: 'outline',
+  })}
             <div style="flex: 1; position: relative;">
-              <input type="text" id="chat-input" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: var(--fm-bg-elevated); color: var(--fm-text);" />
-              <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: var(--primary-foreground); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
-                <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
-              </button>
+              ${renderInputMarkup({
+    className: 'h-11 rounded-full border-[var(--fm-border)] bg-[var(--fm-bg-elevated)] pr-12 pl-4 text-[0.85rem] text-[var(--fm-text)]',
+    id: 'chat-input',
+    placeholder: 'Message FormMate AI...',
+  })}
+              ${renderButtonMarkup({
+    className: 'absolute top-1/2 right-1 size-9 -translate-y-1/2 rounded-full border-transparent bg-[var(--fm-primary)] text-[var(--primary-foreground)] hover:bg-[var(--fm-primary)]',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>',
+    disabled: true,
+    id: 'btn-send',
+    size: 'icon',
+  })}
             </div>
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
-            </button>
+            ${renderButtonMarkup({
+    className: 'size-9 rounded-full border-[var(--fm-border)] bg-[var(--fm-bg-elevated)] text-[var(--fm-text-tertiary)]',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">mic</span>',
+    size: 'icon',
+    variant: 'outline',
+  })}
           </div>
           <div style="text-align: center; font-size: 0.65rem; color: #cbd5e1; margin-top: 0.4rem;">AI can make mistakes. Check important info.</div>
         </div>
@@ -102,17 +131,24 @@ export function aiChatScreen() {
           </div>
         </div>
         
-        <button id="btn-new-chat" class="btn-press" style="width: 100%; padding: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer; margin-bottom: 1.25rem;">
-          <span class="material-symbols-outlined" style="font-size: 18px;">add</span> New Chat
-        </button>
+        ${renderButtonMarkup({
+    className: 'btn-press mb-5 flex w-full items-center justify-center gap-1.5 px-4 py-2 text-[0.8rem] font-semibold',
+    contentHtml: '<span class="material-symbols-outlined" style="font-size: 18px;">add</span> New Chat',
+    id: 'btn-new-chat',
+    variant: 'outline',
+  })}
 
         <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.5rem;">Recent Chats</div>
         <div id="sessions-list" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 1.5rem;">
           ${sessions.length > 0 ? sessions.slice(0, 8).map(s => `
-            <button class="session-item" data-session-id="${s.id}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.65rem; border: none; background: none; border-radius: var(--fm-radius-sm); cursor: pointer; text-align: left; font-family: var(--fm-font-sans); width: 100%; color: var(--fm-text); transition: background 0.15s;">
-              <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-text-tertiary);">chat_bubble_outline</span>
-              <span style="font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.title || `Chat ${s.id.substring(0, 4)}`)}</span>
-            </button>
+            ${renderButtonMarkup({
+      className: 'session-item w-full justify-start gap-2 rounded-[var(--fm-radius-sm)] px-3 py-2 text-left text-[var(--fm-text)] hover:bg-muted/60',
+      contentHtml: `
+        <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-text-tertiary);">chat_bubble_outline</span>
+        <span style="font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.title || `Chat ${s.id.substring(0, 4)}`)}</span>
+      `,
+      variant: 'ghost',
+    }).replace('<button', `<button data-session-id="${s.id}"`)}
           `).join('') : '<div style="font-size: 0.8rem; color: var(--fm-text-tertiary); font-style: italic; padding: 0.5rem;">No recent chats</div>'}
         </div>
 
