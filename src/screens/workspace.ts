@@ -63,13 +63,13 @@ export function workspaceScreen() {
           <!-- Breadcrumb & Actions Bar -->
           <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
             <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
+              <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary);">Applications</span>
               <span style="font-size: 0.65rem; color: #cbd5e1;">›</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
-              <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
+              <span class="app-pill" style="background: var(--fm-success-light); color: var(--fm-success); border-color: rgba(16, 185, 129, 0.18);">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
+              <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: var(--primary-foreground); border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
 
@@ -77,11 +77,11 @@ export function workspaceScreen() {
 
           <!-- Filter Tabs -->
           <div class="workspace-zen-hide app-surface-soft workspace-filter-row" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
-            ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
-            ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
-            ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
+            <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: var(--primary-foreground); font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
+            ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
+            ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
+            ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--fm-text-tertiary); cursor: pointer;">
               <span class="material-symbols-outlined" style="font-size: 16px;">sort</span> Sort
             </div>
           </div>
@@ -93,7 +93,7 @@ export function workspaceScreen() {
 
           <!-- Bottom Review CTA -->
           <div style="margin-top: 2.5rem; display: flex; justify-content: center;">
-            <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+            <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: var(--primary-foreground); border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
               <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
               Review & Submit
             </button>
@@ -102,12 +102,12 @@ export function workspaceScreen() {
       </div>
 
       <!-- Right Panel: AI Chat / AI Actions (Toggle) -->
-      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
+      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: var(--fm-bg-elevated); flex-direction: column; flex-shrink: 0; z-index: 20;">
         
         <!-- Panel Toggle Tabs -->
         <div class="workspace-zen-panel-tabs" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <button id="toggle-ai-chat" class="panel-toggle-btn active" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
-          <button id="toggle-ai-actions" class="panel-toggle-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
+          <button id="toggle-ai-actions" class="panel-toggle-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-text-tertiary); border-bottom: 2px solid transparent;">AI Actions</button>
         </div>
 
         <!-- AI Chat Panel -->
@@ -116,9 +116,9 @@ export function workspaceScreen() {
             <img src="https://ui-avatars.com/api/?name=AI&background=14919b&color=fff&bold=true&size=32" style="width: 32px; height: 32px; border-radius: 50%;" alt="Copilot" />
             <div>
               <div style="font-size: 0.85rem; font-weight: 800; color: var(--fm-text);">Copilot</div>
-              <div style="font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Always Active</div>
+              <div style="font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fm-text-tertiary);">Always Active</div>
             </div>
-            <div style="margin-left: auto; padding: 0.25rem 0.6rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 600; color: #64748b;">Tonal: Friendly</div>
+            <div style="margin-left: auto; padding: 0.25rem 0.6rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 600; color: var(--fm-text-secondary);">Tonal: Friendly</div>
           </div>
 
           <div style="padding: 0.5rem 1rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary); text-align: center;">Profile-Aware Assistant</div>
@@ -126,7 +126,7 @@ export function workspaceScreen() {
           <div id="chat-messages" class="no-scrollbar" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
             <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
               <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
-                <span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span>
+                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary-foreground);">smart_toy</span>
               </div>
               <div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; font-size: 0.8rem; color: var(--fm-text); line-height: 1.5; max-width: 85%;">
                 I can help refine answers for this form, explain field categories, and draft stronger responses where AI generation is available.
@@ -138,16 +138,16 @@ export function workspaceScreen() {
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
                 </button>
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">folder</span>
                 </button>
               </div>
               <div style="flex: 1; position: relative;">
                 <input type="text" id="chat-input" placeholder="Ask Copilot anything..." style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
-                <button id="btn-send-chat" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <button id="btn-send-chat" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: var(--primary-foreground); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
                 </button>
               </div>
@@ -159,40 +159,40 @@ export function workspaceScreen() {
         <!-- AI Actions Panel (hidden by default) -->
         <div id="ai-actions-panel" class="no-scrollbar" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
           <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text); margin-bottom: 0.15rem;">AI Actions</div>
-          <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
+          <div style="font-size: 0.75rem; color: var(--fm-text-tertiary); margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
           
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Automated Tasks</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.5rem;">Automated Tasks</div>
           
-          <button id="btn-generate-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-bottom: 0.5rem;">
+          <button id="btn-generate-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--fm-primary-dark); color: var(--primary-foreground); border: none; border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-bottom: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <span class="material-symbols-outlined" style="font-size: 18px;">auto_awesome</span> Generate All
             </div>
             <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
           </button>
 
-          <button id="btn-review-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--fm-text); margin-bottom: 1.25rem;">
+          <button id="btn-review-all" class="btn-press" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--fm-text); margin-bottom: 1.25rem;">
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <span class="material-symbols-outlined" style="font-size: 18px;">checklist</span> Review All
             </div>
-            <div style="display: flex; align-items: center; gap: 0.35rem; color: #94a3b8;">
+            <div style="display: flex; align-items: center; gap: 0.35rem; color: var(--fm-text-tertiary);">
               <span class="material-symbols-outlined" style="font-size: 16px;">sync</span>
               <span style="font-size: 0.75rem; font-weight: 700;">${totalQ}</span>
             </div>
           </button>
 
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Refinement</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.5rem;">Refinement</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.25rem;">
-            <button class="chat-chip btn-press" data-msg="Make all answers more professional" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; cursor: pointer; color: var(--fm-text);">
+            <button class="chat-chip btn-press" data-msg="Make all answers more professional" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text);">
               <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">shield</span>
               <span style="font-size: 0.75rem; font-weight: 600;">Professional</span>
             </button>
-            <button class="chat-chip btn-press" data-msg="Shorten all long answers" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; cursor: pointer; color: var(--fm-text);">
+            <button class="chat-chip btn-press" data-msg="Shorten all long answers" style="display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text);">
               <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">add</span>
               <span style="font-size: 0.75rem; font-weight: 600;">Concise</span>
             </button>
           </div>
 
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Intelligence</div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.5rem;">Intelligence</div>
           <div style="padding: 1rem; background: var(--fm-bg-sunken); border-radius: var(--fm-radius-xl); margin-bottom: 1.5rem;">
             <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-primary);">location_on</span>
@@ -204,13 +204,13 @@ export function workspaceScreen() {
           </div>
 
           <div style="margin-top: auto;">
-            <button id="btn-actions-review" class="btn-press" style="width: 100%; padding: 0.75rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">Review & Submit</button>
+            <button id="btn-actions-review" class="btn-press" style="width: 100%; padding: 0.75rem; background: var(--fm-primary-dark); color: var(--primary-foreground); border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">Review & Submit</button>
           </div>
         </div>
       </aside>
 
       <!-- FAB for AI Actions (mobile) -->
-      <button id="btn-fab-ai" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
+      <button id="btn-fab-ai" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: var(--primary-foreground); border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
         <span class="material-symbols-outlined">auto_awesome</span>
       </button>
     </div>
@@ -489,11 +489,11 @@ export function workspaceScreen() {
       const bubble = document.createElement('div');
       bubble.style.cssText = `display: flex; gap: 0.5rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''}`;
       bubble.innerHTML = `
-        ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div>` : ''}
+        ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary-foreground);">smart_toy</span></div>` : ''}
         <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;">
           ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
         </div>
-        ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">person</span></div>` : ''}
+        ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary-foreground);">person</span></div>` : ''}
       `;
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -511,7 +511,7 @@ export function workspaceScreen() {
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start;';
-      typingEl.innerHTML = `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;"><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.2s;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.4s;"></div></div>`;
+      typingEl.innerHTML = `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary-foreground);">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;"><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.2s;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.4s;"></div></div>`;
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -589,3 +589,4 @@ function escapeHtml(text) {
 function formatTime(date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+

@@ -42,21 +42,21 @@ export function dashboardScreen() {
       const status = form.status || 'completed';
       const statusLabel = status === 'completed' ? 'Active' : status === 'draft' ? 'Draft' : 'Closed';
       const statusColor = status === 'completed'
-        ? 'color: #059669; background: #d1fae5;'
+        ? 'color: var(--fm-success); background: var(--fm-success-light);'
         : status === 'draft'
-          ? 'color: #d97706; background: #fef3c7;'
-          : 'color: #dc2626; background: #fee2e2;';
+          ? 'color: var(--fm-warning); background: var(--fm-warning-light);'
+          : 'color: var(--fm-error); background: var(--fm-error-light);';
 
       return `
         <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}" style="border-top: 1px solid var(--fm-border-light);">
           <td style="padding: 1rem 1.35rem;">
             <div style="display: flex; align-items: center; gap: 0.8rem;">
-              <div style="width: 2.25rem; height: 2.25rem; border-radius: 0.95rem; background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
+              <div style="width: 2.25rem; height: 2.25rem; border-radius: 0.95rem; background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: var(--fm-text-tertiary); flex-shrink: 0;">
                 <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
               </div>
               <div>
                 <div style="font-size: 0.88rem; font-weight: 750; color: var(--fm-text);">${escapeHtml(form.title || 'Untitled Form')}</div>
-                <div style="font-size: 0.7rem; color: #94a3b8;">${escapeHtml(form.provider || 'Google Forms')}</div>
+                <div style="font-size: 0.7rem; color: var(--fm-text-tertiary);">${escapeHtml(form.provider || 'Google Forms')}</div>
               </div>
             </div>
           </td>
@@ -65,8 +65,8 @@ export function dashboardScreen() {
               ${statusLabel}
             </span>
           </td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: #64748b;">—</td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: #64748b;">${new Date(form.timestamp).toLocaleDateString()}</td>
+          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: var(--fm-text-secondary);">—</td>
+          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: var(--fm-text-secondary);">${new Date(form.timestamp).toLocaleDateString()}</td>
           <td style="padding: 1rem 1.35rem 1rem 0.75rem; text-align: right;">
             <button class="recent-form-menu" aria-label="No actions available yet" disabled style="width: 2rem; height: 2rem; border: none; background: transparent; color: #cbd5e1; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.7rem;">
               <span class="material-symbols-outlined" style="font-size: 18px;">more_horiz</span>
@@ -77,7 +77,7 @@ export function dashboardScreen() {
     }).join('')
     : `
       <tr>
-        <td colspan="5" style="padding: 3.5rem 1rem; text-align: center; color: #94a3b8; font-style: italic;">
+        <td colspan="5" style="padding: 3.5rem 1rem; text-align: center; color: var(--fm-text-tertiary); font-style: italic;">
           No forms yet. Start by pasting a link to analyze your first form.
         </td>
       </tr>
@@ -136,7 +136,7 @@ export function dashboardScreen() {
               <div class="app-eyebrow">Total Forms</div>
               <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
                 <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${totalForms}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Observed usage</span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--fm-text-secondary);">Observed usage</span>
               </div>
             </article>
             <article class="dashboard-stat-card">
@@ -145,7 +145,7 @@ export function dashboardScreen() {
               <div class="app-eyebrow">AI Credits</div>
               <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
                 <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${aiCredits}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Tier state</span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--fm-text-secondary);">Tier state</span>
               </div>
             </article>
             <article class="dashboard-stat-card">
@@ -154,7 +154,7 @@ export function dashboardScreen() {
               <div class="app-eyebrow">Time Saved</div>
               <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
                 <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${timeSaved}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Not yet measured</span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--fm-text-secondary);">Not yet measured</span>
               </div>
             </article>
             <article class="dashboard-stat-card">
@@ -163,7 +163,7 @@ export function dashboardScreen() {
               <div class="app-eyebrow">Accuracy</div>
               <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
                 <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${accuracy}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Pending telemetry</span>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--fm-text-secondary);">Pending telemetry</span>
               </div>
             </article>
           </section>
@@ -180,14 +180,14 @@ export function dashboardScreen() {
                 <button
                   id="${action.buttonId}"
                   class="dashboard-quick-action ${action.featured ? 'dashboard-quick-action-featured' : ''}"
-                  style="${action.featured ? 'background: linear-gradient(145deg, #0f172a, #163452); color: #fff; border-color: rgba(15, 23, 42, 0.08); box-shadow: 0 22px 44px rgba(15, 23, 42, 0.14);' : ''}"
+                  style="${action.featured ? 'background: linear-gradient(145deg, #0f172a, #163452); color: var(--primary-foreground); border-color: rgba(15, 23, 42, 0.08); box-shadow: 0 22px 44px rgba(15, 23, 42, 0.14);' : ''}"
                 >
-                  <span class="dashboard-quick-action-icon" style="${action.featured ? 'background: rgba(255,255,255,0.12); color: #fff; box-shadow: none;' : ''}">
+                  <span class="dashboard-quick-action-icon" style="${action.featured ? 'background: rgba(255,255,255,0.12); color: var(--primary-foreground); box-shadow: none;' : ''}">
                     <span class="material-symbols-outlined">${action.icon}</span>
                   </span>
                   <span>
                     <span class="dashboard-quick-action-eyebrow" style="${action.featured ? 'color: rgba(255,255,255,0.72);' : ''}">${action.featured ? 'Featured' : 'Shortcut'}</span>
-                    <span class="dashboard-quick-action-title" style="${action.featured ? 'color: #fff;' : ''}">${action.title}</span>
+                    <span class="dashboard-quick-action-title" style="${action.featured ? 'color: var(--primary-foreground);' : ''}">${action.title}</span>
                     <span class="dashboard-quick-action-copy" style="${action.featured ? 'color: rgba(255,255,255,0.78);' : ''}">${action.copy}</span>
                   </span>
                   <span class="material-symbols-outlined dashboard-quick-action-arrow" style="${action.featured ? 'color: rgba(255,255,255,0.52);' : ''}">north_east</span>
@@ -208,11 +208,11 @@ export function dashboardScreen() {
               <table class="dashboard-activity-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead>
                   <tr style="border-top: 1px solid var(--fm-border-light);">
-                    <th style="padding: 0.8rem 1.35rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Form Name</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Status</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Captured Answers</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Last Modified</th>
-                    <th style="padding: 0.8rem 1.35rem 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; text-align: right;">Actions</th>
+                    <th style="padding: 0.8rem 1.35rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fm-text-tertiary);">Form Name</th>
+                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fm-text-tertiary);">Status</th>
+                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fm-text-tertiary);">Captured Answers</th>
+                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fm-text-tertiary);">Last Modified</th>
+                    <th style="padding: 0.8rem 1.35rem 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--fm-text-tertiary); text-align: right;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,3 +268,4 @@ export function dashboardScreen() {
 
   return { html, init };
 }
+

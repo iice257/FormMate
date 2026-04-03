@@ -46,7 +46,7 @@ export function renderQuestionCard(question, answer, index) {
         <div style="flex: 1; max-width: 130px; height: 0.45rem; border-radius: 999px; overflow: hidden; background: var(--fm-bg-sunken);">
           <div style="height: 100%; width: ${confidence * 100}%; border-radius: 999px; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
         </div>
-        <span style="font-size: 0.67rem; font-weight: 700; color: #94a3b8;">${Math.round(confidence * 100)}% Match</span>
+        <span style="font-size: 0.67rem; font-weight: 700; color: var(--fm-text-tertiary);">${Math.round(confidence * 100)}% Match</span>
       </div>
     `
     : '';
@@ -265,3 +265,4 @@ function escapeAttr(text) {
     .replaceAll("'", '&#39;')
     .replaceAll('`', '&#96;');
 }
+

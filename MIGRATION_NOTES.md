@@ -56,15 +56,26 @@
   - installed components: `button`
 - `src/globals.css` contains generated Luma `:root` and `.dark` tokens.
 - Scan result for `src/components/ui/*.tsx`: no direct `bg-zinc-*`, `bg-slate-*`, `text-white`, or hex-color overrides were found in the generated shadcn components.
+- Overlay exceptions flagged in generated shadcn components:
+  - `src/components/ui/dialog.tsx` uses `bg-black/30` for the backdrop.
+  - `src/components/ui/drawer.tsx` uses `bg-black/30` for the backdrop.
+  - `src/components/ui/sheet.tsx` uses `bg-black/30` for the backdrop.
 
 ## Remaining migration work
 
 - Replace shared custom primitives in `src/components/ui-components.ts` with shadcn components.
-- Replace the custom toast system in `src/components/toast.ts` with `sonner`.
+- `src/components/toast.ts` now proxies `sonner`, but callers still use the legacy wrapper path.
 - Replace modal, tabs, toggle, accordion, tooltip, empty-state, and badge compositions with shadcn equivalents.
 - Replace raw form controls and option pickers in `src/components/question-card.ts`.
 - Convert layout and screen shells away from HTML-string rendering so shadcn components can be used directly.
-- Remove residual `--fm-*` color tokens and hardcoded color utilities once all screens are migrated.
+- Remove the remaining hardcoded literals concentrated in:
+  - `src/styles.css`
+  - `src/components/account-modal.ts`
+  - `src/screens/workspace.ts`
+  - `src/screens/docs.ts`
+  - `src/screens/ai-chat.ts`
+  - `src/screens/history.ts`
+- Replace the generated overlay backdrop literals in `dialog.tsx`, `drawer.tsx`, and `sheet.tsx` if strict token-only overlays are required.
 
 ## Files to audit for hardcoded color/theme overrides
 
@@ -75,3 +86,7 @@
 - `src/components/ui-components.ts`
 - `src/styles.css`
 - `src/design-tokens.css`
+- `src/screens/workspace.ts`
+- `src/screens/docs.ts`
+- `src/screens/ai-chat.ts`
+- `src/screens/history.ts`

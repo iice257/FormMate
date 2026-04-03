@@ -12,11 +12,11 @@
  */
 export function renderButton(text, { id = '', icon = '', variant = 'primary', size = 'md', classes = '', disabled = false } = {}) {
   const variants = {
-    primary: 'bg-primary text-white hover:brightness-110 shadow-lg shadow-primary/20',
-    secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-    ghost: 'text-slate-600 hover:bg-slate-100',
-    danger: 'bg-red-500 text-white hover:bg-red-600',
-    outline: 'border border-slate-200 text-slate-700 hover:bg-slate-50',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    ghost: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+    danger: 'bg-destructive text-primary-foreground hover:brightness-95',
+    outline: 'border border-border bg-background text-foreground hover:bg-muted',
   };
   const sizes = {
     sm: 'h-8 px-3 text-xs gap-1 rounded-lg',
@@ -46,13 +46,13 @@ export function renderModal(id, { title = '', content = '', size = 'md', showClo
 
   return `
     <div id="${id}" class="fixed inset-0 z-[var(--fm-z-modal,50)] hidden" role="dialog" aria-modal="true">
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" data-modal-overlay="${id}"></div>
+      <div class="absolute inset-0 bg-black/35 backdrop-blur-sm" data-modal-overlay="${id}"></div>
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full ${sizes[size]} p-4">
         <div class="bg-[var(--fm-bg-elevated)] rounded-2xl shadow-2xl overflow-hidden" style="box-shadow: var(--fm-shadow-xl);">
           ${title || showClose ? `
             <div class="flex items-center justify-between p-6 pb-4">
               <h3 class="text-xl font-bold" style="color: var(--fm-text);">${title}</h3>
-              ${showClose ? `<button data-modal-close="${id}" class="p-2 hover:bg-slate-100 rounded-lg transition-colors" style="color: var(--fm-text-secondary);">
+              ${showClose ? `<button data-modal-close="${id}" class="p-2 hover:bg-muted rounded-lg transition-colors" style="color: var(--fm-text-secondary);">
                 <span class="material-symbols-outlined">close</span>
               </button>` : ''}
             </div>
@@ -109,8 +109,8 @@ export function renderToggle(id, { label = '', checked = false, description = ''
       </div>
       <div class="relative">
         <input type="checkbox" id="${id}" class="sr-only peer" ${checked ? 'checked' : ''} />
-        <div class="w-10 h-6 rounded-full transition-colors peer-checked:bg-primary bg-slate-300"></div>
-        <div class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4"></div>
+        <div class="w-10 h-6 rounded-full transition-colors peer-checked:bg-primary bg-border"></div>
+        <div class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-background shadow-sm transition-transform peer-checked:translate-x-4"></div>
       </div>
     </label>
   `;
@@ -123,7 +123,7 @@ export function renderTabs(tabs, { activeTab = 0, id = 'tabs' } = {}) {
   return `
     <div id="${id}" class="flex gap-1 p-1 rounded-xl" style="background: var(--fm-bg-sunken);">
       ${tabs.map((tab, i) => `
-        <button class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${i === activeTab ? 'bg-white shadow-sm' : 'hover:bg-white/50'}"
+        <button class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${i === activeTab ? 'bg-card shadow-sm' : 'hover:bg-background/60'}"
                 data-tab-index="${i}" data-tab-group="${id}"
                 style="color: ${i === activeTab ? 'var(--fm-text)' : 'var(--fm-text-tertiary)'};">
           ${tab.icon ? `<span class="material-symbols-outlined text-sm mr-1.5">${tab.icon}</span>` : ''}${tab.label}
@@ -143,12 +143,12 @@ export function initTabs(wrapper, id, onChange) {
 
       // Update active state
       wrapper.querySelectorAll(`[data-tab-group="${id}"]`).forEach(b => {
-        b.classList.remove('bg-white', 'shadow-sm');
-        b.classList.add('hover:bg-white/50');
+        b.classList.remove('bg-card', 'shadow-sm');
+        b.classList.add('hover:bg-background/60');
         b.style.color = 'var(--fm-text-tertiary)';
       });
-      btn.classList.add('bg-white', 'shadow-sm');
-      btn.classList.remove('hover:bg-white/50');
+      btn.classList.add('bg-card', 'shadow-sm');
+      btn.classList.remove('hover:bg-background/60');
       btn.style.color = 'var(--fm-text)';
 
       if (onChange) onChange(index);
@@ -164,7 +164,7 @@ export function renderAccordion(items) {
     <div class="space-y-2">
       ${items.map((item, i) => `
         <div class="rounded-xl border overflow-hidden" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
-          <button class="accordion-trigger w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors" data-accordion-index="${i}">
+          <button class="accordion-trigger w-full flex items-center justify-between p-4 text-left hover:bg-muted/60 transition-colors" data-accordion-index="${i}">
             <span class="text-sm font-semibold" style="color: var(--fm-text);">${item.title}</span>
             <span class="material-symbols-outlined text-lg transition-transform" style="color: var(--fm-text-tertiary);">expand_more</span>
           </button>
@@ -253,7 +253,7 @@ export function renderSkeleton(lines = 3, { type = 'text' } = {}) {
  */
 export function renderBadge(text, { variant = 'default', icon = '' } = {}) {
   const variants = {
-    default: 'bg-slate-100 text-slate-600',
+    default: 'bg-secondary text-secondary-foreground',
     primary: 'bg-primary/10 text-primary',
     success: 'bg-emerald-50 text-emerald-600',
     warning: 'bg-amber-50 text-amber-600',

@@ -38,13 +38,13 @@ export function aiChatScreen() {
         <div class="zen-chat-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <h2 style="font-size: 1.1rem; font-weight: 800; color: var(--fm-text);">FormMate AI</h2>
-            <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
+            <span style="padding: 0.15rem 0.5rem; background: var(--fm-success-light); color: var(--fm-success); border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
           </div>
           <div style="display: flex; gap: 0.35rem;">
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
             </button>
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>
             </button>
           </div>
@@ -57,13 +57,13 @@ export function aiChatScreen() {
               <span class="material-symbols-outlined" style="font-size: 32px;">auto_awesome</span>
             </div>
             <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.5rem;">How can I help you today?</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions — just ask.</p>
+            <p style="font-size: 0.85rem; color: var(--fm-text-secondary); margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions — just ask.</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-              <button class="chat-suggestion btn-press" data-msg="Analyze my latest form and suggest improvements" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff; cursor: pointer; text-align: left;">
+              <button class="chat-suggestion btn-press" data-msg="Analyze my latest form and suggest improvements" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: var(--fm-bg-elevated); cursor: pointer; text-align: left;">
                 <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">analytics</span>
                 <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Analyze my latest form</span>
               </button>
-              <button class="chat-suggestion btn-press" data-msg="Help me write a professional cover letter" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff; cursor: pointer; text-align: left;">
+              <button class="chat-suggestion btn-press" data-msg="Help me write a professional cover letter" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: var(--fm-bg-elevated); cursor: pointer; text-align: left;">
                 <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">edit_note</span>
                 <span style="font-size: 0.8rem; font-weight: 600; color: var(--fm-text); line-height: 1.35;">Help me write a cover letter</span>
               </button>
@@ -74,16 +74,16 @@ export function aiChatScreen() {
         <!-- Chat Input -->
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
             <div style="flex: 1; position: relative;">
-              <input type="text" id="chat-input" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
-              <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
+              <input type="text" id="chat-input" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: var(--fm-bg-elevated); color: var(--fm-text);" />
+              <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: var(--primary-foreground); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
             </div>
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: var(--fm-bg-elevated); cursor: pointer; color: var(--fm-text-tertiary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
@@ -92,33 +92,33 @@ export function aiChatScreen() {
       </div>
 
       <!-- Right Sidebar -->
-      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
+      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: var(--fm-bg-elevated); flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <!-- User Card -->
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${avatarSrc}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${displayName}</div>
-            <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 500;">Online</div>
+            <div style="font-size: 0.65rem; color: var(--fm-text-tertiary); font-weight: 500;">Online</div>
           </div>
         </div>
         
-        <button id="btn-new-chat" class="btn-press" style="width: 100%; padding: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer; margin-bottom: 1.25rem;">
+        <button id="btn-new-chat" class="btn-press" style="width: 100%; padding: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer; margin-bottom: 1.25rem;">
           <span class="material-symbols-outlined" style="font-size: 18px;">add</span> New Chat
         </button>
 
-        <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem;">Recent Chats</div>
+        <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.5rem;">Recent Chats</div>
         <div id="sessions-list" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 1.5rem;">
           ${sessions.length > 0 ? sessions.slice(0, 8).map(s => `
             <button class="session-item" data-session-id="${s.id}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.65rem; border: none; background: none; border-radius: var(--fm-radius-sm); cursor: pointer; text-align: left; font-family: var(--fm-font-sans); width: 100%; color: var(--fm-text); transition: background 0.15s;">
-              <span class="material-symbols-outlined" style="font-size: 18px; color: #94a3b8;">chat_bubble_outline</span>
+              <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-text-tertiary);">chat_bubble_outline</span>
               <span style="font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.title || `Chat ${s.id.substring(0, 4)}`)}</span>
             </button>
-          `).join('') : '<div style="font-size: 0.8rem; color: #94a3b8; font-style: italic; padding: 0.5rem;">No recent chats</div>'}
+          `).join('') : '<div style="font-size: 0.8rem; color: var(--fm-text-tertiary); font-style: italic; padding: 0.5rem;">No recent chats</div>'}
         </div>
 
         <div style="margin-top: auto; padding: 1rem; background: var(--fm-bg-sunken); border-radius: var(--fm-radius-xl);">
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.6rem;">Current Context</div>
-          <div style="font-size: 0.75rem; color: #64748b; line-height: 1.5;">
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text-tertiary); margin-bottom: 0.6rem;">Current Context</div>
+          <div style="font-size: 0.75rem; color: var(--fm-text-secondary); line-height: 1.5;">
             ${formData?.title ? `Active form: ${escapeHtml(formData.title)}` : 'No active form is attached to this chat yet.'}
           </div>
         </div>
@@ -157,7 +157,7 @@ export function aiChatScreen() {
       bubble.style.cssText = `display: flex; gap: 0.6rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''} margin-bottom: 0.75rem;`;
       bubble.innerHTML = `
         <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">${isUser ? 'person' : 'smart_toy'}</span>
+          <span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary-foreground);">${isUser ? 'person' : 'smart_toy'}</span>
         </div>
         <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
           ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
@@ -181,7 +181,7 @@ export function aiChatScreen() {
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
-      typingEl.innerHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;"><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div></div>`;
+      typingEl.innerHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px; color: var(--primary-foreground);">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;"><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div></div>`;
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -238,3 +238,4 @@ export function aiChatScreen() {
 
   return { html, init };
 }
+

@@ -56,7 +56,7 @@ function renderModal() {
             <img src="${avatarSrc}" alt="Avatar" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--fm-border-light);" />
             <div style="min-width:0;">
               <div style="font-size:0.9rem; font-weight:800; color:var(--fm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.name || 'User')}</div>
-              <div style="font-size:0.73rem; color:#94a3b8; margin-top:0.12rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.email || 'Signed in account')}</div>
+              <div style="font-size:0.73rem; color:var(--fm-text-tertiary); margin-top:0.12rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.email || 'Signed in account')}</div>
             </div>
           </div>
 
@@ -127,41 +127,41 @@ function renderProfileTab(userProfile, avatarSrc) {
         <img src="${avatarSrc}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.9);" alt="Avatar" />
         <div>
           <div style="font-size:0.92rem; font-weight:700; color:var(--fm-text);">Account avatar</div>
-          <p style="font-size:0.74rem; color:#94a3b8; margin-top:0.2rem;">Avatar changes follow your current account profile data.</p>
+          <p style="font-size:0.74rem; color:var(--fm-text-tertiary); margin-top:0.2rem;">Avatar changes follow your current account profile data.</p>
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
           <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Full Name</label>
-          <input id="modal-prof-name" type="text" value="${escapeAttr(userProfile?.name || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+          <input id="modal-prof-name" type="text" value="${escapeAttr(userProfile?.name || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:var(--fm-bg-elevated);" />
         </div>
         <div>
           <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Email</label>
-          <input id="modal-prof-email" type="email" value="${escapeAttr(userProfile?.email || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+          <input id="modal-prof-email" type="email" value="${escapeAttr(userProfile?.email || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:var(--fm-bg-elevated);" />
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
           <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Phone Number</label>
-          <input id="modal-prof-phone" type="tel" value="${escapeAttr(userProfile?.phone || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" placeholder="+1 (555) 123-4567" />
+          <input id="modal-prof-phone" type="tel" value="${escapeAttr(userProfile?.phone || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:var(--fm-bg-elevated);" placeholder="+1 (555) 123-4567" />
         </div>
         <div>
           <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Occupation</label>
-          <input id="modal-prof-occupation" type="text" value="${escapeAttr(userProfile?.occupation || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+          <input id="modal-prof-occupation" type="text" value="${escapeAttr(userProfile?.occupation || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:var(--fm-bg-elevated);" />
         </div>
       </div>
 
       <div>
         <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Short Bio</label>
-        <textarea id="modal-prof-bio" style="width:100%; min-height:112px; padding:0.9rem; border:1px solid var(--fm-border); border-radius:1rem; font-size:0.85rem; color:var(--fm-text); background:#fff; resize:vertical; font-family:var(--fm-font-sans);" placeholder="Write a short introduction...">${escapeHtml(userProfile?.bio || '')}</textarea>
-        <p style="text-align:right; font-size:0.7rem; color:#94a3b8; margin-top:0.3rem;"><span id="modal-bio-count">${(userProfile?.bio || '').length}</span>/150 characters</p>
+        <textarea id="modal-prof-bio" style="width:100%; min-height:112px; padding:0.9rem; border:1px solid var(--fm-border); border-radius:1rem; font-size:0.85rem; color:var(--fm-text); background:var(--fm-bg-elevated); resize:vertical; font-family:var(--fm-font-sans);" placeholder="Write a short introduction...">${escapeHtml(userProfile?.bio || '')}</textarea>
+        <p style="text-align:right; font-size:0.7rem; color:var(--fm-text-tertiary); margin-top:0.3rem;"><span id="modal-bio-count">${(userProfile?.bio || '').length}</span>/150 characters</p>
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
-        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:#fff; font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
-        <button id="modal-save-profile" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:#fff; cursor:pointer;">Save Profile</button>
+        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:var(--fm-bg-elevated); font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
+        <button id="modal-save-profile" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:var(--primary-foreground); cursor:pointer;">Save Profile</button>
       </div>
     </div>
   `;
@@ -183,16 +183,16 @@ function renderSettingsTab(settings) {
         <p class="account-modal-subtitle" style="margin-bottom:1.15rem;">These preferences are saved against your signed-in account when remote storage is configured.</p>
       </div>
 
-      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
+      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:var(--fm-bg-elevated);">
         <div>
           <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">AI Behavior</h3>
-          <p style="font-size:0.77rem; color:#64748b;">Control how responses are generated.</p>
+          <p style="font-size:0.77rem; color:var(--fm-text-secondary);">Control how responses are generated.</p>
         </div>
 
         <div>
           <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.75rem;">Creativity: <span id="modal-temp-val">${temp}</span></label>
           <input id="modal-set-temperature" type="range" min="0" max="1" step="0.1" value="${temp}" style="width:100%; accent-color:var(--fm-primary);" />
-          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:0.35rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--fm-text-tertiary); margin-top:0.35rem;">
             <span>Precise</span><span>Creative</span>
           </div>
         </div>
@@ -224,10 +224,10 @@ function renderSettingsTab(settings) {
         </div>
       </section>
 
-      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
+      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:var(--fm-bg-elevated);">
         <div>
           <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">Theme</h3>
-          <p style="font-size:0.77rem; color:#64748b;">Pick a single app theme. Light stays the default.</p>
+          <p style="font-size:0.77rem; color:var(--fm-text-secondary);">Pick a single app theme. Light stays the default.</p>
         </div>
         <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group">
           ${['light', 'dark'].map((value) => {
@@ -249,13 +249,13 @@ function renderSettingsTab(settings) {
         </div>
       </section>
 
-      <section style="display:flex; flex-direction:column; gap:0.8rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff; ${zenSupported ? '' : 'opacity:0.65;'}">
+      <section style="display:flex; flex-direction:column; gap:0.8rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:var(--fm-bg-elevated); ${zenSupported ? '' : 'opacity:0.65;'}">
         ${renderToggleRow('modal-set-zen', 'Zen Mode', zenSupported ? `Focus the current ${escapeHtml(currentScreen)} screen.` : 'Available on AI Chat, New Form, History, and Active Form only.', zenEnabled, !zenSupported)}
       </section>
 
       <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
-        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:#fff; font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
-        <button id="modal-save-settings" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:#fff; cursor:pointer;">Save Preferences</button>
+        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:var(--fm-bg-elevated); font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
+        <button id="modal-save-settings" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:var(--primary-foreground); cursor:pointer;">Save Preferences</button>
       </div>
     </div>
   `;
@@ -266,12 +266,12 @@ function renderToggleRow(id, label, description, checked, disabled = false) {
     <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
       <div>
         <div style="font-size:0.85rem; font-weight:700; color:var(--fm-text);">${label}</div>
-        <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">${description}</div>
+        <div style="font-size:0.72rem; color:var(--fm-text-tertiary); margin-top:0.15rem;">${description}</div>
       </div>
       <label style="position:relative; width:42px; height:24px; cursor:${disabled ? 'not-allowed' : 'pointer'};">
         <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} style="opacity:0; width:0; height:0;" />
         <span style="position:absolute; inset:0; border-radius:999px; background:${checked ? 'var(--fm-primary)' : '#cbd5e1'}; transition:background-color 120ms ease;"></span>
-        <span style="position:absolute; top:2px; left:${checked ? '20px' : '2px'}; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.18); transition:left 120ms ease;"></span>
+        <span style="position:absolute; top:2px; left:${checked ? '20px' : '2px'}; width:20px; height:20px; border-radius:50%; background:var(--fm-bg-elevated); box-shadow:0 1px 3px rgba(0,0,0,0.18); transition:left 120ms ease;"></span>
       </label>
     </div>
   `;
@@ -280,18 +280,18 @@ function renderToggleRow(id, label, description, checked, disabled = false) {
 function renderHelpTab() {
   return `
     <div style="display:flex; flex-direction:column; gap:1.2rem;">
-      <div style="padding:1.4rem 1.5rem; border-radius:1.1rem; background:linear-gradient(135deg, var(--fm-primary), var(--fm-primary-light)); color:#fff; position:relative; overflow:hidden;">
+      <div style="padding:1.4rem 1.5rem; border-radius:1.1rem; background:linear-gradient(135deg, var(--fm-primary), var(--fm-primary-light)); color:var(--primary-foreground); position:relative; overflow:hidden;">
         <div style="position:absolute; right:-24px; bottom:-24px; width:108px; height:108px; border-radius:50%; background:rgba(255,255,255,0.12);"></div>
         <h2 style="font-size:1.35rem; font-weight:900; margin-bottom:0.35rem;">How can we help?</h2>
         <p style="font-size:0.8rem; opacity:0.92; line-height:1.5; max-width:340px;">Use the docs, jump to contact, or open the feedback section without leaving this account center.</p>
         <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
-          <button id="modal-help-docs" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+          <button id="modal-help-docs" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:var(--primary-foreground); font-size:0.75rem; font-weight:700; cursor:pointer;">
             <span class="material-symbols-outlined" style="font-size:16px;">menu_book</span> Docs
           </button>
-          <button id="modal-help-contact" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+          <button id="modal-help-contact" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:var(--primary-foreground); font-size:0.75rem; font-weight:700; cursor:pointer;">
             <span class="material-symbols-outlined" style="font-size:16px;">mail</span> Contact
           </button>
-          <button id="modal-help-feedback" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+          <button id="modal-help-feedback" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:var(--primary-foreground); font-size:0.75rem; font-weight:700; cursor:pointer;">
             <span class="material-symbols-outlined" style="font-size:16px;">rate_review</span> Feedback
           </button>
         </div>
@@ -305,19 +305,19 @@ function renderHelpTab() {
           { q: 'Why did the AI answer a question wrong?', a: 'AI can still miss context. Review, edit, or regenerate answers, and tune Preferences for more precise output.' },
           { q: 'Where do I update my profile and preferences?', a: 'Right here. Profile, Preferences, and Help all live inside this single account modal.' },
         ].map((faq, index) => `
-          <div class="modal-faq-item" style="border:1px solid var(--fm-border-light); border-radius:0.95rem; overflow:hidden; background:#fff;">
-            <button class="modal-faq-toggle" data-faq="${index}" type="button" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; background:#fff; border:none; cursor:pointer; font-size:0.84rem; font-weight:700; color:var(--fm-text); text-align:left;">
+          <div class="modal-faq-item" style="border:1px solid var(--fm-border-light); border-radius:0.95rem; overflow:hidden; background:var(--fm-bg-elevated);">
+            <button class="modal-faq-toggle" data-faq="${index}" type="button" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; background:var(--fm-bg-elevated); border:none; cursor:pointer; font-size:0.84rem; font-weight:700; color:var(--fm-text); text-align:left;">
               <span>${faq.q}</span>
-              <span class="material-symbols-outlined" style="font-size:20px; color:#94a3b8; transition:transform 120ms ease;">expand_more</span>
+              <span class="material-symbols-outlined" style="font-size:20px; color:var(--fm-text-tertiary); transition:transform 120ms ease;">expand_more</span>
             </button>
-            <div class="modal-faq-answer" data-faq-answer="${index}" style="display:none; padding:0 1rem 0.95rem; font-size:0.78rem; color:#64748b; line-height:1.6;">
+            <div class="modal-faq-answer" data-faq-answer="${index}" style="display:none; padding:0 1rem 0.95rem; font-size:0.78rem; color:var(--fm-text-secondary); line-height:1.6;">
               ${faq.a}
             </div>
           </div>
         `).join('')}
       </div>
 
-      <div style="padding-top:0.15rem; font-size:0.72rem; font-weight:700; letter-spacing:0.04em; color:#94a3b8;">
+      <div style="padding-top:0.15rem; font-size:0.72rem; font-weight:700; letter-spacing:0.04em; color:var(--fm-text-tertiary);">
         Version 0.6.35
       </div>
     </div>
@@ -521,3 +521,4 @@ function closeModal() {
     modalRoot.innerHTML = '';
   }
 }
+
