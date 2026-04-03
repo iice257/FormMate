@@ -312,6 +312,8 @@ export function analyzingScreen() {
             status: 'completed',
             provider: formData.source || platform,
             parseStrategy: formData.parseStrategy || 'unknown',
+            supportState: formData.supportState || 'supported',
+            diagnostics: formData.diagnostics || null,
             fields: Array.isArray(formData.questions) ? formData.questions.length : 0
           });
         } catch (e) { console.warn('[AnalyzingScreen] Failed to save form history:', e); }

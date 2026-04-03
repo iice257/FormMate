@@ -1,141 +1,168 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Account Modal Component
-// ═══════════════════════════════════════════
-
 import { getState, setState, updateProfile, updateSettings } from '../state';
-import { signOut, deleteAccount } from '../auth/auth-service';
-import { clearAll } from '../storage/local-store';
+import { signOut } from '../auth/auth-service';
 import { navigateTo } from '../router';
 import { toast } from './toast';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { logSettingsChanged } from '../storage/activity-logger';
+import { isZenModeEnabled, isZenModeSupported, updateZenMode } from './layout';
+import { applyTheme, normalizeTheme } from '../theme';
 
 let modalRoot = null;
+let activeTab = 'profile';
+let escapeHandler = null;
 
 function getAvatarSrc() {
   const { userProfile } = getState();
   return userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 }
 
-/**
- * Initialize the modal — call once at boot.
- * Returns the opener function.
- */
 export function initAccountModal() {
   modalRoot = document.createElement('div');
   modalRoot.id = 'account-modal-root';
   document.body.appendChild(modalRoot);
 
   return function openModal(tab = 'profile') {
-    renderModal(tab);
+    activeTab = tab;
+    renderModal();
   };
 }
 
-function renderModal(activeTab) {
-  const { userProfile, settings, tier } = getState();
-  const avatarSrc = getAvatarSrc();
+function renderModal() {
+  if (!modalRoot) return;
 
+  const { userProfile } = getState();
+  const avatarSrc = getAvatarSrc();
   const tabs = [
     { id: 'profile', icon: 'person', label: 'Profile' },
-    { id: 'settings', icon: 'settings', label: 'Settings' },
+    { id: 'settings', icon: 'settings', label: 'Preferences' },
     { id: 'help', icon: 'help', label: 'Help' },
   ];
 
-  const tabsHtml = tabs.map(t => `
-    <button class="account-modal-tab ${t.id === activeTab ? 'active' : ''}" data-tab="${t.id}">
-      <span class="material-symbols-outlined">${t.icon}</span>
-      ${t.label}
-    </button>
-  `).join('');
-
   modalRoot.innerHTML = `
     <div class="account-modal-overlay" id="account-modal-overlay">
-      <div class="account-modal-container" style="position: relative;">
+      <div class="account-modal-container">
         <button class="account-modal-close" id="account-modal-close" aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
 
-        <div class="account-modal-sidebar">
+        <aside class="account-modal-sidebar">
           <div class="account-modal-brand">
             <span class="material-symbols-outlined account-modal-brand-icon">auto_awesome</span>
             <span class="account-modal-brand-text">Form<span class="text-primary">Mate</span></span>
           </div>
 
-          <div class="account-modal-tabs">
-            ${tabsHtml}
+          <div style="display:flex; align-items:center; gap:0.9rem; margin:0 1rem 1.35rem; padding:0.9rem 1rem; border:1px solid var(--fm-border-light); border-radius:1.15rem; background:rgba(255,255,255,0.78); overflow:hidden;">
+            <img src="${avatarSrc}" alt="Avatar" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--fm-border-light);" />
+            <div style="min-width:0;">
+              <div style="font-size:0.9rem; font-weight:800; color:var(--fm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.name || 'User')}</div>
+              <div style="font-size:0.73rem; color:#94a3b8; margin-top:0.12rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.email || 'Signed in account')}</div>
+            </div>
           </div>
 
-          <button class="account-modal-signout" id="account-modal-signout">
+          <nav class="account-modal-tabs" id="account-modal-tabs">
+            ${tabs.map((tab) => `
+              <button class="account-modal-tab ${tab.id === activeTab ? 'active' : ''}" data-tab="${tab.id}" type="button">
+                <span class="material-symbols-outlined">${tab.icon}</span>
+                <span>${tab.label}</span>
+              </button>
+            `).join('')}
+          </nav>
+
+          <button class="account-modal-vault-bar" id="account-modal-open-vault" type="button">
+            <span class="account-modal-vault-bar-label">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span>Vault</span>
+            </span>
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+
+          <button class="account-modal-signout" id="account-modal-signout" type="button">
             <span class="material-symbols-outlined">logout</span>
             Sign Out
           </button>
-        </div>
+        </aside>
 
-        <div class="account-modal-content" id="account-modal-content">
-          ${renderTabContent(activeTab, userProfile, settings, tier, avatarSrc)}
-        </div>
+        <section class="account-modal-content" id="account-modal-content"></section>
       </div>
     </div>
   `;
 
-  // Wire events
-  wireModalEvents(activeTab);
+  renderActiveTab();
+  wireModalShellEvents();
 }
 
-function renderTabContent(tab, userProfile, settings, tier, avatarSrc) {
-  switch (tab) {
-    case 'profile': return renderProfileTab(userProfile, avatarSrc);
-    case 'settings': return renderSettingsTab(settings);
-    case 'help': return renderHelpTab();
-    default: return renderProfileTab(userProfile, avatarSrc);
+function renderActiveTab() {
+  const content = document.getElementById('account-modal-content');
+  if (!content) return;
+
+  const { userProfile, settings } = getState();
+  const avatarSrc = getAvatarSrc();
+
+  if (activeTab === 'profile') {
+    content.innerHTML = renderProfileTab(userProfile, avatarSrc);
+    wireProfileEvents();
+    return;
   }
+
+  if (activeTab === 'settings') {
+    content.innerHTML = renderSettingsTab(settings);
+    wireSettingsEvents();
+    return;
+  }
+
+  content.innerHTML = renderHelpTab();
+  wireHelpEvents();
 }
 
 function renderProfileTab(userProfile, avatarSrc) {
   return `
-    <h2 class="account-modal-title">Profile</h2>
-    <p class="account-modal-subtitle">Manage your personal information and preferences.</p>
-
-    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-      <img src="${avatarSrc}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--fm-border);" alt="Avatar" />
+    <div style="display:flex; flex-direction:column; gap:1.1rem;">
       <div>
-        <button id="modal-change-avatar" style="padding: 0.4rem 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); background: #fff; font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer;">Change Avatar</button>
-        <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.35rem;">JPG, GIF or PNG. Max size 2MB.</p>
+        <h2 class="account-modal-title">Profile</h2>
+        <p class="account-modal-subtitle" style="margin-bottom:1.15rem;">Manage the information that follows your signed-in account.</p>
       </div>
-    </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-      <div>
-        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--fm-text-secondary); margin-bottom: 0.4rem;">Full Name</label>
-        <input id="modal-prof-name" type="text" value="${escapeAttr(userProfile.name || '')}" style="width: 100%; height: 40px; padding: 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; color: var(--fm-text); background: #fff;" />
+      <div style="display:flex; align-items:center; gap:1rem; padding:0.9rem 1rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:rgba(248,250,252,0.82);">
+        <img src="${avatarSrc}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.9);" alt="Avatar" />
+        <div>
+          <div style="font-size:0.92rem; font-weight:700; color:var(--fm-text);">Account avatar</div>
+          <p style="font-size:0.74rem; color:#94a3b8; margin-top:0.2rem;">Avatar changes follow your current account profile data.</p>
+        </div>
       </div>
-      <div>
-        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--fm-text-secondary); margin-bottom: 0.4rem;">Email</label>
-        <input id="modal-prof-email" type="email" value="${escapeAttr(userProfile.email || '')}" style="width: 100%; height: 40px; padding: 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; color: var(--fm-text); background: #fff;" />
-      </div>
-    </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-      <div>
-        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--fm-text-secondary); margin-bottom: 0.4rem;">Phone Number</label>
-        <input id="modal-prof-phone" type="tel" value="${escapeAttr(userProfile.phone || '')}" style="width: 100%; height: 40px; padding: 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; color: var(--fm-text); background: #fff;" placeholder="+1 (555) 123-4567" />
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Full Name</label>
+          <input id="modal-prof-name" type="text" value="${escapeAttr(userProfile?.name || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+        </div>
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Email</label>
+          <input id="modal-prof-email" type="email" value="${escapeAttr(userProfile?.email || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+        </div>
       </div>
-      <div>
-        <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--fm-text-secondary); margin-bottom: 0.4rem;">Occupation</label>
-        <input id="modal-prof-occupation" type="text" value="${escapeAttr(userProfile.occupation || '')}" style="width: 100%; height: 40px; padding: 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; color: var(--fm-text); background: #fff;" />
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Phone Number</label>
+          <input id="modal-prof-phone" type="tel" value="${escapeAttr(userProfile?.phone || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" placeholder="+1 (555) 123-4567" />
+        </div>
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Occupation</label>
+          <input id="modal-prof-occupation" type="text" value="${escapeAttr(userProfile?.occupation || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
+        </div>
       </div>
-    </div>
 
-    <div style="margin-bottom: 1.5rem;">
-      <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--fm-text-secondary); margin-bottom: 0.4rem;">Short Bio</label>
-      <textarea id="modal-prof-bio" style="width: 100%; min-height: 90px; padding: 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.85rem; color: var(--fm-text); background: #fff; resize: vertical; font-family: var(--fm-font-sans);" placeholder="Write a short introduction...">${escapeHtml(userProfile.bio || '')}</textarea>
-      <p style="text-align: right; font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;"><span id="modal-bio-count">${(userProfile.bio || '').length}</span>/150 characters</p>
-    </div>
+      <div>
+        <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Short Bio</label>
+        <textarea id="modal-prof-bio" style="width:100%; min-height:112px; padding:0.9rem; border:1px solid var(--fm-border); border-radius:1rem; font-size:0.85rem; color:var(--fm-text); background:#fff; resize:vertical; font-family:var(--fm-font-sans);" placeholder="Write a short introduction...">${escapeHtml(userProfile?.bio || '')}</textarea>
+        <p style="text-align:right; font-size:0.7rem; color:#94a3b8; margin-top:0.3rem;"><span id="modal-bio-count">${(userProfile?.bio || '').length}</span>/150 characters</p>
+      </div>
 
-    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-      <button id="modal-cancel" style="padding: 0.5rem 1.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; font-size: 0.85rem; font-weight: 500; color: var(--fm-text-secondary); cursor: pointer;">Cancel</button>
-      <button id="modal-save-profile" style="padding: 0.5rem 1.25rem; border: none; border-radius: var(--fm-radius-md); background: var(--fm-primary-dark); font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer;">Save Changes</button>
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:#fff; font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
+        <button id="modal-save-profile" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:#fff; cursor:pointer;">Save Profile</button>
+      </div>
     </div>
   `;
 }
@@ -143,63 +170,108 @@ function renderProfileTab(userProfile, avatarSrc) {
 function renderSettingsTab(settings) {
   const temp = settings?.ai?.temperature ?? 0.7;
   const verbosity = settings?.ai?.verbosity || 'balanced';
+  const personality = settings?.ai?.defaultPersonality || 'professional';
+  const theme = normalizeTheme(settings?.ui?.theme);
+  const currentScreen = getState().currentScreen;
+  const zenSupported = isZenModeSupported(currentScreen);
+  const zenEnabled = zenSupported ? isZenModeEnabled(currentScreen) : false;
 
   return `
-    <h2 class="account-modal-title">Settings</h2>
-    <p class="account-modal-subtitle">Configure your application and AI preferences.</p>
+    <div style="display:flex; flex-direction:column; gap:1.1rem;">
+      <div>
+        <h2 class="account-modal-title">Preferences</h2>
+        <p class="account-modal-subtitle" style="margin-bottom:1.15rem;">These preferences are saved against your signed-in account when remote storage is configured.</p>
+      </div>
 
-    <section style="margin-bottom: 2rem;">
-      <h3 style="font-size: 1.1rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.25rem;">AI Behavior</h3>
-      <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1.25rem;">Control how the AI generates responses.</p>
-
-      <div style="padding: 1.25rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff;">
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--fm-text); margin-bottom: 0.75rem;">Temperature: <span id="modal-temp-val">${temp}</span></label>
-        <input id="modal-set-temperature" type="range" min="0" max="1" step="0.1" value="${temp}" style="width: 100%; accent-color: var(--fm-primary);" />
-        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #94a3b8; margin-top: 0.35rem;">
-          <span>Precise</span><span>Creative</span>
+      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
+        <div>
+          <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">AI Behavior</h3>
+          <p style="font-size:0.77rem; color:#64748b;">Control how responses are generated.</p>
         </div>
-      </div>
 
-      <div style="margin-top: 1.25rem;">
-        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--fm-text); margin-bottom: 0.6rem;">Verbosity</label>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;" id="modal-verbosity-group">
-          ${['Concise', 'Balanced', 'Detailed'].map(v => {
-      const val = v.toLowerCase();
-      const isActive = val === verbosity;
-      return `<button class="modal-verbosity-btn" data-value="${val}" style="padding: 0.55rem; border: 1px solid ${isActive ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius: var(--fm-radius-md); background: ${isActive ? 'var(--fm-primary-50)' : '#fff'}; color: ${isActive ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size: 0.825rem; font-weight: ${isActive ? '700' : '500'}; cursor: pointer; transition: all 0.15s;">${v}</button>`;
-    }).join('')}
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.75rem;">Creativity: <span id="modal-temp-val">${temp}</span></label>
+          <input id="modal-set-temperature" type="range" min="0" max="1" step="0.1" value="${temp}" style="width:100%; accent-color:var(--fm-primary);" />
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:0.35rem;">
+            <span>Precise</span><span>Creative</span>
+          </div>
         </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Verbosity</label>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem;" id="modal-verbosity-group">
+            ${['concise', 'balanced', 'detailed'].map((value) => {
+              const active = value === verbosity;
+              const label = value.charAt(0).toUpperCase() + value.slice(1);
+              return `<button class="modal-verbosity-btn ${active ? 'is-active' : ''}" data-value="${value}" type="button" style="padding:0.6rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.85rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.82rem; font-weight:${active ? '700' : '500'}; cursor:pointer;">${label}</button>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Personality</label>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.5rem;" id="modal-personality-group">
+            ${[
+              ['professional', 'Professional'],
+              ['friendly', 'Friendly'],
+              ['confident', 'Confident'],
+              ['concise', 'Concise'],
+            ].map(([value, label]) => {
+              const active = value === personality;
+              return `<button class="modal-personality-btn ${active ? 'is-active' : ''}" data-value="${value}" type="button" style="padding:0.6rem 0.5rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.85rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.78rem; font-weight:${active ? '700' : '600'}; cursor:pointer;">${label}</button>`;
+            }).join('')}
+          </div>
+        </div>
+      </section>
+
+      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
+        <div>
+          <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">Theme</h3>
+          <p style="font-size:0.77rem; color:#64748b;">Pick a single app theme. Light stays the default.</p>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group">
+          ${['light', 'dark'].map((value) => {
+            const active = value === theme;
+            const label = value.charAt(0).toUpperCase() + value.slice(1);
+            const icon = value === 'light' ? 'light_mode' : 'dark_mode';
+            return `
+              <button
+                class="modal-theme-btn ${active ? 'is-active' : ''}"
+                data-theme="${value}"
+                type="button"
+                style="display:flex; align-items:center; justify-content:center; gap:0.45rem; min-height:44px; padding:0.72rem 0.9rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.9rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.82rem; font-weight:${active ? '700' : '600'}; cursor:pointer;"
+              >
+                <span class="material-symbols-outlined" style="font-size:18px;">${icon}</span>
+                <span>${label}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </section>
+
+      <section style="display:flex; flex-direction:column; gap:0.8rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff; ${zenSupported ? '' : 'opacity:0.65;'}">
+        ${renderToggleRow('modal-set-zen', 'Zen Mode', zenSupported ? `Focus the current ${escapeHtml(currentScreen)} screen.` : 'Available on AI Chat, New Form, History, and Active Form only.', zenEnabled, !zenSupported)}
+      </section>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+        <button id="modal-cancel" type="button" style="padding:0.58rem 1.25rem; border:1px solid var(--fm-border); border-radius:0.85rem; background:#fff; font-size:0.85rem; font-weight:600; color:var(--fm-text-secondary); cursor:pointer;">Cancel</button>
+        <button id="modal-save-settings" type="button" style="padding:0.58rem 1.25rem; border:none; border-radius:0.85rem; background:var(--fm-primary-dark); font-size:0.85rem; font-weight:700; color:#fff; cursor:pointer;">Save Preferences</button>
       </div>
-    </section>
-
-    <section style="margin-bottom: 2rem;">
-      <h3 style="font-size: 1.1rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.25rem;">Appearance</h3>
-      <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1rem;">Customize the look and feel.</p>
-
-      <div style="padding: 1.25rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff; display: flex; flex-direction: column; gap: 1rem;">
-        ${renderSettingsToggle('modal-set-compact', 'Compact Mode', 'Reduce spacing for denser layouts', settings?.ui?.compactMode)}
-        ${renderSettingsToggle('modal-set-animations', 'Animations', 'Enable smooth transitions and effects', settings?.ui?.animationsEnabled !== false)}
-      </div>
-    </section>
-
-    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-      <button id="modal-cancel" style="padding: 0.5rem 1.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); background: #fff; font-size: 0.85rem; font-weight: 500; color: var(--fm-text-secondary); cursor: pointer;">Cancel</button>
-      <button id="modal-save-settings" style="padding: 0.5rem 1.25rem; border: none; border-radius: var(--fm-radius-md); background: var(--fm-primary-dark); font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer;">Save Changes</button>
     </div>
   `;
 }
 
-function renderSettingsToggle(id, label, description, checked) {
+function renderToggleRow(id, label, description, checked, disabled = false) {
   return `
-    <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
       <div>
-        <div style="font-size: 0.85rem; font-weight: 600; color: var(--fm-text);">${label}</div>
-        ${description ? `<div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.15rem;">${description}</div>` : ''}
+        <div style="font-size:0.85rem; font-weight:700; color:var(--fm-text);">${label}</div>
+        <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">${description}</div>
       </div>
-      <label style="position: relative; width: 40px; height: 22px; cursor: pointer;">
-        <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;" />
-        <span style="position: absolute; inset: 0; border-radius: 11px; background: ${checked ? 'var(--fm-primary)' : '#cbd5e1'}; transition: background 0.2s;"></span>
-        <span style="position: absolute; top: 2px; left: ${checked ? '20px' : '2px'}; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: left 0.2s;"></span>
+      <label style="position:relative; width:42px; height:24px; cursor:${disabled ? 'not-allowed' : 'pointer'};">
+        <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} style="opacity:0; width:0; height:0;" />
+        <span style="position:absolute; inset:0; border-radius:999px; background:${checked ? 'var(--fm-primary)' : '#cbd5e1'}; transition:background-color 120ms ease;"></span>
+        <span style="position:absolute; top:2px; left:${checked ? '20px' : '2px'}; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.18); transition:left 120ms ease;"></span>
       </label>
     </div>
   `;
@@ -207,91 +279,79 @@ function renderSettingsToggle(id, label, description, checked) {
 
 function renderHelpTab() {
   return `
-    <div style="padding: 1.5rem 2rem; border-radius: var(--fm-radius-xl); background: linear-gradient(135deg, var(--fm-primary), var(--fm-primary-light)); color: #fff; margin-bottom: 2rem; position: relative; overflow: hidden;">
-      <div style="position: absolute; right: -30px; bottom: -30px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.1);"></div>
-      <h2 style="font-size: 1.4rem; font-weight: 900; margin-bottom: 0.4rem;">How can we help?</h2>
-      <p style="font-size: 0.8rem; opacity: 0.9; line-height: 1.5; max-width: 320px;">Search our FAQs, check our extensive documentation, or contact support directly.</p>
-
-      <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
-        <button id="modal-help-docs" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border: 1px solid rgba(255,255,255,0.3); border-radius: var(--fm-radius-full); background: rgba(255,255,255,0.15); color: #fff; font-size: 0.75rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(4px);">
-          <span class="material-symbols-outlined" style="font-size: 16px;">menu_book</span> View Documentation
-        </button>
-        <button id="modal-help-contact" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border: 1px solid rgba(255,255,255,0.3); border-radius: var(--fm-radius-full); background: rgba(255,255,255,0.15); color: #fff; font-size: 0.75rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(4px);">
-          <span class="material-symbols-outlined" style="font-size: 16px;">mail</span> Contact Us
-        </button>
-        <button id="modal-help-feedback" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border: 1px solid rgba(255,255,255,0.3); border-radius: var(--fm-radius-full); background: rgba(255,255,255,0.15); color: #fff; font-size: 0.75rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(4px);">
-          <span class="material-symbols-outlined" style="font-size: 16px;">rate_review</span> Review & Feedback
-        </button>
-      </div>
-    </div>
-
-    <h3 style="font-size: 1rem; font-weight: 800; color: var(--fm-text); margin-bottom: 1rem;">Frequently Asked Questions</h3>
-
-    <div id="modal-faq-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem;">
-      ${[
-      { q: 'How does FormMate work?', a: 'FormMate analyzes web forms using AI to generate intelligent answers based on your stored profile data and preferences. Simply paste a form link and let the AI do the rest.' },
-      { q: 'Is my data secure?', a: 'Yes. All data is stored locally in your browser by default. When you sign in, encrypted cloud sync is available. We never share your data with third parties.' },
-      { q: 'Why did the AI answer a question wrong?', a: 'AI models can sometimes make mistakes. You can edit any answer manually, use the "Regenerate" button, or adjust the AI temperature in Settings for more precise results.' },
-      { q: 'What is the "Vault"?', a: 'The Vault is your personal data store for frequently-used information like name, address, and credentials. FormMate uses this data to auto-fill form fields accurately.' },
-    ].map((faq, i) => `
-        <div class="modal-faq-item" style="border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-md); overflow: hidden;">
-          <button class="modal-faq-toggle" data-faq="${i}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; background: #fff; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--fm-text); text-align: left; font-family: var(--fm-font-sans);">
-            ${faq.q}
-            <span class="material-symbols-outlined" style="font-size: 20px; color: #94a3b8; transition: transform 0.2s;">expand_more</span>
+    <div style="display:flex; flex-direction:column; gap:1.2rem;">
+      <div style="padding:1.4rem 1.5rem; border-radius:1.1rem; background:linear-gradient(135deg, var(--fm-primary), var(--fm-primary-light)); color:#fff; position:relative; overflow:hidden;">
+        <div style="position:absolute; right:-24px; bottom:-24px; width:108px; height:108px; border-radius:50%; background:rgba(255,255,255,0.12);"></div>
+        <h2 style="font-size:1.35rem; font-weight:900; margin-bottom:0.35rem;">How can we help?</h2>
+        <p style="font-size:0.8rem; opacity:0.92; line-height:1.5; max-width:340px;">Use the docs, jump to contact, or open the feedback section without leaving this account center.</p>
+        <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+          <button id="modal-help-docs" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:16px;">menu_book</span> Docs
           </button>
-          <div class="modal-faq-answer" data-faq-answer="${i}" style="display: none; padding: 0 1rem 0.85rem; font-size: 0.8rem; color: #64748b; line-height: 1.6;">
-            ${faq.a}
-          </div>
+          <button id="modal-help-contact" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:16px;">mail</span> Contact
+          </button>
+          <button id="modal-help-feedback" type="button" style="display:flex; align-items:center; gap:0.35rem; padding:0.45rem 0.85rem; border:1px solid rgba(255,255,255,0.3); border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:0.75rem; font-weight:700; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:16px;">rate_review</span> Feedback
+          </button>
         </div>
-      `).join('')}
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff;">
-      <span class="material-symbols-outlined" style="font-size: 22px; color: var(--fm-primary);">update</span>
-      <div style="flex: 1;">
-        <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">FormMate v0.9 (Beta Update)</div>
-        <div style="font-size: 0.7rem; color: #94a3b8;">Up to date</div>
       </div>
-      <a href="#" id="modal-help-changelog" style="font-size: 0.8rem; font-weight: 600; color: var(--fm-primary); text-decoration: none;">View Changelog</a>
+
+      <div style="display:flex; flex-direction:column; gap:0.6rem;">
+        <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text);">Frequently Asked Questions</h3>
+        ${[
+          { q: 'How does FormMate work?', a: 'FormMate analyzes forms, maps fields, and helps you review answers based on your account data and current workspace context.' },
+          { q: 'Is my data secure?', a: 'When Supabase is configured, authenticated accounts can sync profile, preferences, vault data, and history to the configured backend. Otherwise the app falls back to local browser storage.' },
+          { q: 'Why did the AI answer a question wrong?', a: 'AI can still miss context. Review, edit, or regenerate answers, and tune Preferences for more precise output.' },
+          { q: 'Where do I update my profile and preferences?', a: 'Right here. Profile, Preferences, and Help all live inside this single account modal.' },
+        ].map((faq, index) => `
+          <div class="modal-faq-item" style="border:1px solid var(--fm-border-light); border-radius:0.95rem; overflow:hidden; background:#fff;">
+            <button class="modal-faq-toggle" data-faq="${index}" type="button" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; background:#fff; border:none; cursor:pointer; font-size:0.84rem; font-weight:700; color:var(--fm-text); text-align:left;">
+              <span>${faq.q}</span>
+              <span class="material-symbols-outlined" style="font-size:20px; color:#94a3b8; transition:transform 120ms ease;">expand_more</span>
+            </button>
+            <div class="modal-faq-answer" data-faq-answer="${index}" style="display:none; padding:0 1rem 0.95rem; font-size:0.78rem; color:#64748b; line-height:1.6;">
+              ${faq.a}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="padding-top:0.15rem; font-size:0.72rem; font-weight:700; letter-spacing:0.04em; color:#94a3b8;">
+        Version 0.6.35
+      </div>
     </div>
   `;
 }
 
-function wireModalEvents(activeTab) {
+function wireModalShellEvents() {
   const overlay = document.getElementById('account-modal-overlay');
   if (!overlay) return;
 
-  // Close button
   document.getElementById('account-modal-close')?.addEventListener('click', closeModal);
-
-  // Close on overlay click
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeModal();
-  });
-
-  // Close on Escape
-  const escHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeModal();
-      document.removeEventListener('keydown', escHandler);
-    }
-  };
-  document.addEventListener('keydown', escHandler);
-
-  // Cancel button
   document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
 
-  // Tab switching
-  overlay.querySelectorAll('.account-modal-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      renderModal(tab);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeModal();
+  });
+
+  overlay.querySelectorAll('.account-modal-tab').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeTab = button.dataset.tab || 'profile';
+      overlay.querySelectorAll('.account-modal-tab').forEach((tabButton) => {
+        tabButton.classList.toggle('active', tabButton === button);
+      });
+      renderActiveTab();
     });
   });
 
-  // Sign Out
-  document.getElementById('account-modal-signout')?.addEventListener('click', () => {
-    signOut();
+  document.getElementById('account-modal-open-vault')?.addEventListener('click', () => {
+    closeModal();
+    navigateTo('vault');
+  });
+
+  document.getElementById('account-modal-signout')?.addEventListener('click', async () => {
+    await signOut();
     setState({
       isAuthenticated: false,
       authUser: null,
@@ -304,120 +364,160 @@ function wireModalEvents(activeTab) {
     navigateTo('auth');
   });
 
-  // -- Profile tab events --
-  if (activeTab === 'profile') {
-    document.getElementById('modal-prof-bio')?.addEventListener('input', (e) => {
-      const count = e.target.value.length;
-      const counter = document.getElementById('modal-bio-count');
-      if (counter) counter.textContent = count;
-    });
-
-    document.getElementById('modal-save-profile')?.addEventListener('click', () => {
-      updateProfile({
-        name: document.getElementById('modal-prof-name')?.value?.trim() || '',
-        email: document.getElementById('modal-prof-email')?.value?.trim() || '',
-        phone: document.getElementById('modal-prof-phone')?.value?.trim() || '',
-        occupation: document.getElementById('modal-prof-occupation')?.value?.trim() || '',
-        bio: document.getElementById('modal-prof-bio')?.value?.trim() || '',
-      });
-      toast.success('Profile saved!');
-      closeModal();
-    });
+  if (escapeHandler) {
+    document.removeEventListener('keydown', escapeHandler);
   }
+  escapeHandler = (event) => {
+    if (event.key === 'Escape') closeModal();
+  };
+  document.addEventListener('keydown', escapeHandler);
+}
 
-  // -- Settings tab events --
-  if (activeTab === 'settings') {
-    const tempSlider = document.getElementById('modal-set-temperature');
-    const tempVal = document.getElementById('modal-temp-val');
-    tempSlider?.addEventListener('input', () => {
-      tempVal.textContent = tempSlider.value;
+function wireProfileEvents() {
+  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('modal-prof-bio')?.addEventListener('input', (event) => {
+    const counter = document.getElementById('modal-bio-count');
+    if (counter) counter.textContent = String(event.target.value.length);
+  });
+
+  document.getElementById('modal-save-profile')?.addEventListener('click', () => {
+    updateProfile({
+      name: document.getElementById('modal-prof-name')?.value?.trim() || '',
+      email: document.getElementById('modal-prof-email')?.value?.trim() || '',
+      phone: document.getElementById('modal-prof-phone')?.value?.trim() || '',
+      occupation: document.getElementById('modal-prof-occupation')?.value?.trim() || '',
+      bio: document.getElementById('modal-prof-bio')?.value?.trim() || '',
     });
+    toast.success('Profile saved to this account.');
+    closeModal();
+  });
+}
 
-    document.querySelectorAll('.modal-verbosity-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.modal-verbosity-btn').forEach(b => {
-          b.style.borderColor = 'var(--fm-border)';
-          b.style.background = '#fff';
-          b.style.color = 'var(--fm-text-secondary)';
-          b.style.fontWeight = '500';
-        });
-        btn.style.borderColor = 'var(--fm-primary)';
-        btn.style.background = 'var(--fm-primary-50)';
-        btn.style.color = 'var(--fm-primary)';
-        btn.style.fontWeight = '700';
+function wireSettingsEvents() {
+  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
+
+  const tempSlider = document.getElementById('modal-set-temperature');
+  const tempVal = document.getElementById('modal-temp-val');
+  tempSlider?.addEventListener('input', () => {
+    if (tempVal) tempVal.textContent = tempSlider.value;
+  });
+
+  document.querySelectorAll('.modal-verbosity-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.modal-verbosity-btn').forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle('is-active', active);
+        candidate.style.borderColor = active ? 'var(--fm-primary)' : 'var(--fm-border)';
+        candidate.style.background = active ? 'var(--fm-primary-50)' : '#fff';
+        candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
+        candidate.style.fontWeight = active ? '700' : '500';
       });
     });
+  });
 
-    // Toggle switches
-    ['modal-set-compact', 'modal-set-animations'].forEach(id => {
-      const checkbox = document.getElementById(id);
-      const label = checkbox?.closest('label');
-      if (label) {
-        label.addEventListener('click', (e) => {
-          if (e.target === checkbox) return;
-          checkbox.checked = !checkbox.checked;
-          const bg = label.querySelectorAll('span')[0];
-          const dot = label.querySelectorAll('span')[1];
-          if (bg) bg.style.background = checkbox.checked ? 'var(--fm-primary)' : '#cbd5e1';
-          if (dot) dot.style.left = checkbox.checked ? '20px' : '2px';
-        });
+  document.querySelectorAll('.modal-personality-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.modal-personality-btn').forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle('is-active', active);
+        candidate.style.borderColor = active ? 'var(--fm-primary)' : 'var(--fm-border)';
+        candidate.style.background = active ? 'var(--fm-primary-50)' : '#fff';
+        candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
+        candidate.style.fontWeight = active ? '700' : '600';
+      });
+    });
+  });
+
+  ['modal-set-zen'].forEach((id) => {
+    const checkbox = document.getElementById(id);
+    const label = checkbox?.closest('label');
+    if (!checkbox || !label || checkbox.disabled) return;
+    label.addEventListener('click', (event) => {
+      if (event.target === checkbox) return;
+      event.preventDefault();
+      checkbox.checked = !checkbox.checked;
+      syncToggle(label, checkbox.checked, id === 'modal-set-zen' ? 20 : 20);
+      if (id === 'modal-set-zen') {
+        updateZenMode(getState().currentScreen, checkbox.checked);
       }
     });
-
-    document.getElementById('modal-save-settings')?.addEventListener('click', () => {
-      const temp = parseFloat(document.getElementById('modal-set-temperature')?.value || 0.7);
-      const verbosity = document.querySelector('.modal-verbosity-btn[style*="var(--fm-primary)"]')?.dataset?.value || 'balanced';
-      const compact = document.getElementById('modal-set-compact')?.checked || false;
-      const animations = document.getElementById('modal-set-animations')?.checked !== false;
-
-      updateSettings('ai.temperature', temp);
-      updateSettings('ai.verbosity', verbosity);
-      updateSettings('ui.compactMode', compact);
-      updateSettings('ui.animationsEnabled', animations);
-      if (typeof logSettingsChanged === 'function') logSettingsChanged('ai');
-      toast.success('Settings saved!');
-      closeModal();
+    checkbox.addEventListener('change', () => {
+      syncToggle(label, checkbox.checked, id === 'modal-set-zen' ? 20 : 20);
+      if (id === 'modal-set-zen') {
+        updateZenMode(getState().currentScreen, checkbox.checked);
+      }
     });
-  }
+  });
 
-  // -- Help tab events --
-  if (activeTab === 'help') {
-    overlay.querySelectorAll('.modal-faq-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = btn.dataset.faq;
-        const answer = overlay.querySelector(`[data-faq-answer="${idx}"]`);
-        const icon = btn.querySelector('.material-symbols-outlined');
-        if (answer) {
-          const isOpen = answer.style.display !== 'none';
-          answer.style.display = isOpen ? 'none' : 'block';
-          if (icon) icon.style.transform = isOpen ? 'rotate(0)' : 'rotate(180deg)';
-        }
+  document.querySelectorAll('.modal-theme-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.modal-theme-btn').forEach((candidate) => {
+        const active = candidate === button;
+        candidate.classList.toggle('is-active', active);
+        candidate.style.borderColor = active ? 'var(--fm-primary)' : 'var(--fm-border)';
+        candidate.style.background = active ? 'var(--fm-primary-50)' : '#fff';
+        candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
+        candidate.style.fontWeight = active ? '700' : '600';
       });
-    });
 
-    document.getElementById('modal-help-docs')?.addEventListener('click', () => {
-      closeModal();
-      navigateTo('docs');
+      const nextTheme = button.dataset.theme || 'light';
+      updateSettings('ui.theme', nextTheme);
+      applyTheme(nextTheme);
     });
+  });
 
-    document.getElementById('modal-help-contact')?.addEventListener('click', () => {
-      closeModal();
-      navigateTo('docs');
-    });
+  document.getElementById('modal-save-settings')?.addEventListener('click', () => {
+    const temp = parseFloat(document.getElementById('modal-set-temperature')?.value || '0.7');
+    const verbosity = document.querySelector('.modal-verbosity-btn.is-active')?.dataset?.value || 'balanced';
+    const personality = document.querySelector('.modal-personality-btn.is-active')?.dataset?.value || 'professional';
+    updateSettings('ai.temperature', temp);
+    updateSettings('ai.verbosity', verbosity);
+    updateSettings('ai.defaultPersonality', personality);
+    if (typeof logSettingsChanged === 'function') logSettingsChanged('ai');
+    toast.success('Preferences saved to this account.');
+    closeModal();
+  });
+}
 
-    document.getElementById('modal-help-feedback')?.addEventListener('click', () => {
-      closeModal();
-      navigateTo('docs');
+function wireHelpEvents() {
+  document.getElementById('modal-help-docs')?.addEventListener('click', () => {
+    closeModal();
+    navigateTo('docs');
+  });
+  document.getElementById('modal-help-contact')?.addEventListener('click', () => {
+    closeModal();
+    navigateTo('docs');
+    setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 250);
+  });
+  document.getElementById('modal-help-feedback')?.addEventListener('click', () => {
+    closeModal();
+    navigateTo('docs');
+    setTimeout(() => document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' }), 250);
+  });
+  document.querySelectorAll('.modal-faq-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.faq;
+      const answer = document.querySelector(`[data-faq-answer="${id}"]`);
+      const icon = button.querySelector('.material-symbols-outlined');
+      const open = answer?.style.display !== 'none';
+      if (answer) answer.style.display = open ? 'none' : 'block';
+      if (icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
     });
-  }
+  });
+}
+
+function syncToggle(label, checked) {
+  const spans = label.querySelectorAll('span');
+  if (spans[0]) spans[0].style.background = checked ? 'var(--fm-primary)' : '#cbd5e1';
+  if (spans[1]) spans[1].style.left = checked ? '20px' : '2px';
 }
 
 function closeModal() {
-  const overlay = document.getElementById('account-modal-overlay');
-  if (overlay) {
-    overlay.classList.add('closing');
-    setTimeout(() => {
-      if (modalRoot) modalRoot.innerHTML = '';
-    }, 150);
+  if (escapeHandler) {
+    document.removeEventListener('keydown', escapeHandler);
+    escapeHandler = null;
+  }
+  if (modalRoot) {
+    modalRoot.innerHTML = '';
   }
 }

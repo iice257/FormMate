@@ -6,16 +6,29 @@
 import { getState } from '../state';
 import { getHomeScreenForUser, navigateTo } from '../router';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { executeAction, searchActions } from '../actions/action-index';
 
 // Global account modal state
 let _accountModalOpenFn = null;
 const ZEN_MODE_STORAGE_PREFIX = 'fm_zen_mode_';
+const ZEN_MODE_EVENT = 'fm:zen-mode-change';
+const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'ai-chat', 'new', 'history', 'workspace', 'vault', 'examples']);
+const ZEN_SCREEN_LABELS = {
+  'dashboard': 'Dashboard',
+  'ai-chat': 'AI Chat',
+  'new': 'New Form',
+  'history': 'History',
+  'workspace': 'Active Form',
+  'vault': 'Vault',
+  'examples': 'Examples',
+};
 
 /**
- * Register the account modal opener. Called once by main.js after modal init.
+ * Register the account modal opener. Called once during app boot after modal init.
  */
 export function registerAccountModalOpener(fn) {
   _accountModalOpenFn = fn;
+  window.__fmOpenAccountModalTab = openAccountModal;
 }
 
 /**
@@ -26,6 +39,10 @@ export function openAccountModal(tab = 'profile') {
   if (_accountModalOpenFn) {
     _accountModalOpenFn(tab);
   }
+}
+
+export function isZenModeSupported(screenId) {
+  return SUPPORTED_ZEN_SCREENS.has(screenId);
 }
 
 function getZenModeStorageKey(screenId) {
@@ -48,22 +65,40 @@ export function setZenModeEnabled(screenId, enabled) {
   }
 }
 
-export function getZenModeToggleHtml(screenId, { label = 'Zen Mode', variant = 'header' } = {}) {
+export function updateZenMode(screenId, enabled) {
+  if (!isZenModeSupported(screenId)) {
+    return false;
+  }
+
+  setZenModeEnabled(screenId, enabled);
+  window.dispatchEvent(new CustomEvent(ZEN_MODE_EVENT, {
+    detail: { screenId, enabled }
+  }));
+  return true;
+}
+
+export function toggleZenMode(screenId) {
+  return updateZenMode(screenId, !isZenModeEnabled(screenId));
+}
+
+export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'header' } = {}) {
   const isActive = isZenModeEnabled(screenId);
-  const className = variant === 'minimal' ? 'zen-mode-toggle zen-mode-toggle-minimal' : 'layout-header-icon-btn zen-mode-toggle';
+  const className = variant === 'minimal'
+    ? 'zen-mode-toggle zen-mode-toggle-minimal'
+    : 'zen-mode-toggle zen-mode-toggle-header';
   const text = label ? `<span class="layout-zen-toggle-label">${escapeHtml(label)}</span>` : '';
 
   return `
     <button
       type="button"
-      id="btn-zen-toggle"
       class="${className}"
+      data-zen-toggle-btn="true"
       data-zen-screen="${escapeHtml(screenId)}"
       aria-pressed="${isActive ? 'true' : 'false'}"
       aria-label="${isActive ? 'Exit Zen Mode' : 'Enter Zen Mode'}"
       title="${isActive ? 'Exit Zen Mode' : 'Enter Zen Mode'}"
     >
-      <span class="material-symbols-outlined">${isActive ? 'fullscreen_exit' : 'fullscreen'}</span>
+      <span class="material-symbols-outlined">${isActive ? 'self_improvement' : 'self_improvement'}</span>
       ${text}
     </button>
   `;
@@ -71,19 +106,183 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen Mode', variant = '
 
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
+  const switchTargets = [...SUPPORTED_ZEN_SCREENS]
+    .filter((candidate) => candidate !== screenId)
+    .map((candidate) => `
+      <button
+        type="button"
+        class="zen-mode-menu-item"
+        data-zen-target="${escapeHtml(candidate)}"
+      >
+        <span>${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
+      </button>
+    `)
+    .join('');
+
   return `
-    <button
-      type="button"
-      id="btn-zen-exit"
-      class="zen-mode-exit-btn ${isActive ? 'visible' : ''}"
-      data-zen-screen="${escapeHtml(screenId)}"
-      aria-label="Exit Zen Mode"
-      ${isActive ? '' : 'hidden'}
-    >
-      <span class="material-symbols-outlined">close</span>
-      <span>Close</span>
-    </button>
+    <div class="zen-mode-fab-stack ${isActive ? 'visible' : ''}" ${isActive ? '' : 'hidden'}>
+      <button
+        type="button"
+        id="btn-zen-exit"
+        class="zen-mode-exit-btn ${isActive ? 'visible' : ''}"
+        data-zen-screen="${escapeHtml(screenId)}"
+        aria-label="Exit Zen Mode"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+
+      <div class="zen-mode-menu-wrap">
+        <button
+          type="button"
+          id="btn-zen-menu"
+          class="zen-mode-menu-btn"
+          data-zen-screen="${escapeHtml(screenId)}"
+          aria-label="Open Zen navigation"
+          aria-expanded="false"
+        >
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+
+        <div id="zen-mode-menu" class="zen-mode-menu" hidden>
+          ${switchTargets}
+        </div>
+      </div>
+    </div>
   `;
+}
+
+export function bindZenModeControls(wrapper, zenMode) {
+  if (!zenMode) {
+    return () => {
+      document.body.classList.remove('fm-zen-mode');
+    };
+  }
+
+  const zenScreenId = zenMode.screenId;
+  const zenShell = wrapper.querySelector('[data-zen-shell="true"]');
+  const zenToggleButtons = Array.from(wrapper.querySelectorAll('[data-zen-toggle-btn="true"]'));
+  const zenExitBtn = wrapper.querySelector('#btn-zen-exit');
+  const zenFabStack = wrapper.querySelector('.zen-mode-fab-stack');
+  const zenMenuBtn = wrapper.querySelector('#btn-zen-menu');
+  const zenMenu = wrapper.querySelector('#zen-mode-menu');
+  const zenMenuItems = wrapper.querySelectorAll('[data-zen-target]');
+
+  const syncZenUi = (enabled) => {
+    zenShell?.classList.toggle('is-zen-mode', enabled);
+    wrapper.classList.toggle('zen-mode-active', enabled);
+    document.body.classList.toggle('fm-zen-mode', enabled);
+
+    zenToggleButtons.forEach((zenToggleBtn) => {
+      zenToggleBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      zenToggleBtn.setAttribute('aria-label', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
+      zenToggleBtn.setAttribute('title', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
+      zenToggleBtn.classList.toggle('is-active', enabled);
+      const icon = zenToggleBtn.querySelector('.material-symbols-outlined');
+      if (icon) icon.textContent = 'self_improvement';
+    });
+
+    if (zenExitBtn) {
+      zenExitBtn.classList.toggle('visible', enabled);
+    }
+
+    if (zenFabStack) {
+      zenFabStack.hidden = !enabled;
+      zenFabStack.classList.toggle('visible', enabled);
+    }
+
+    if (!enabled && zenMenuBtn && zenMenu) {
+      zenMenuBtn.setAttribute('aria-expanded', 'false');
+      zenMenu.classList.remove('is-open');
+      zenMenu.hidden = true;
+    }
+
+    zenMode.onChange?.(enabled, { wrapper, zenShell });
+  };
+
+  const setZenMode = (enabled) => {
+    updateZenMode(zenScreenId, enabled);
+  };
+
+  const handleZenToggle = () => {
+    setZenMode(!isZenModeEnabled(zenScreenId));
+  };
+
+  const handleZenExit = () => setZenMode(false);
+  const handleZenMenuToggle = () => {
+    if (!zenMenu || !zenMenuBtn) return;
+    const nextOpen = zenMenu.hidden;
+    zenMenu.hidden = false;
+    zenMenu.classList.toggle('is-open', nextOpen);
+    zenMenuBtn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+    if (!nextOpen) {
+      window.setTimeout(() => {
+        if (!zenMenu.classList.contains('is-open')) {
+          zenMenu.hidden = true;
+        }
+      }, 140);
+    }
+  };
+  const closeZenMenu = () => {
+    if (!zenMenu || !zenMenuBtn) return;
+    zenMenuBtn.setAttribute('aria-expanded', 'false');
+    zenMenu.classList.remove('is-open');
+    window.setTimeout(() => {
+      if (!zenMenu.classList.contains('is-open')) {
+        zenMenu.hidden = true;
+      }
+    }, 140);
+  };
+  const handleEscape = (event) => {
+    if (event.key === 'Escape' && isZenModeEnabled(zenScreenId)) {
+      if (zenMenu?.classList.contains('is-open')) {
+        closeZenMenu();
+        return;
+      }
+      setZenMode(false);
+    }
+  };
+  const handleZenChange = (event) => {
+    if (event.detail?.screenId === zenScreenId) {
+      syncZenUi(Boolean(event.detail.enabled));
+    }
+  };
+  const handleZenMenuClickAway = (event) => {
+    if (!zenMenu || !zenMenuBtn) return;
+    const target = event.target;
+    if (zenMenu.contains(target) || zenMenuBtn.contains(target)) return;
+    closeZenMenu();
+  };
+
+  zenToggleButtons.forEach((zenToggleBtn) => {
+    zenToggleBtn.addEventListener('click', handleZenToggle);
+  });
+  zenExitBtn?.addEventListener('click', handleZenExit);
+  zenMenuBtn?.addEventListener('click', handleZenMenuToggle);
+  zenMenuItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      const targetScreen = item.getAttribute('data-zen-target');
+      if (!targetScreen) return;
+      setZenModeEnabled(targetScreen, true);
+      closeZenMenu();
+      navigateTo(targetScreen, false, 'forward');
+    });
+  });
+  document.addEventListener('keydown', handleEscape);
+  document.addEventListener('click', handleZenMenuClickAway);
+  window.addEventListener(ZEN_MODE_EVENT, handleZenChange);
+  syncZenUi(isZenModeEnabled(zenScreenId));
+
+  return () => {
+    zenToggleButtons.forEach((zenToggleBtn) => {
+      zenToggleBtn.removeEventListener('click', handleZenToggle);
+    });
+    zenExitBtn?.removeEventListener('click', handleZenExit);
+    zenMenuBtn?.removeEventListener('click', handleZenMenuToggle);
+    document.removeEventListener('keydown', handleEscape);
+    document.removeEventListener('click', handleZenMenuClickAway);
+    window.removeEventListener(ZEN_MODE_EVENT, handleZenChange);
+    document.body.classList.remove('fm-zen-mode');
+  };
 }
 
 /**
@@ -95,6 +294,7 @@ function getZenModeExitButtonHtml(screenId) {
 export function withLayout(pageId, contentHtml, options = {}) {
   const { isAuthenticated, userProfile, tier } = getState();
   const zenScreenId = options.zenMode?.screenId || pageId;
+  const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
   const displayName = escapeHtml(userProfile?.name || 'User');
   const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
@@ -135,19 +335,20 @@ export function withLayout(pageId, contentHtml, options = {}) {
         
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
-          <input type="text" class="layout-search-input" placeholder="Search forms, templates, or AI prompts..." id="layout-search" />
+          <input type="text" class="layout-search-input" placeholder="Search pages, actions, help, or preferences..." id="layout-search" autocomplete="off" />
+          <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <div class="layout-search-results" id="layout-search-results" hidden>
+            <div class="layout-search-results-list" id="layout-search-results-list"></div>
+          </div>
         </div>
 
         <div class="layout-header-actions">
-          ${options.zenMode ? getZenModeToggleHtml(zenScreenId, { label: '', variant: 'header' }) : ''}
           ${isAuthenticated ? `
           <button class="layout-header-primary-action" id="btn-header-new-form" aria-label="New Form">
             <span class="material-symbols-outlined">add_circle</span>
             <span>New Form</span>
-          </button>
-          <button class="layout-header-signin" id="btn-profile-header" aria-label="Open account">
-            <img src="${avatarSrc}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 999px; object-fit: cover;" />
-            <span>${displayName}</span>
           </button>
           ` : `
           <button id="btn-login-header" class="layout-header-signin">Sign In</button>
@@ -171,24 +372,22 @@ export function withLayout(pageId, contentHtml, options = {}) {
           
           <!-- Bottom Section: Account -->
           <div class="layout-sidebar-bottom">
+            ${supportsZenOnPage ? `
+              <div class="layout-sidebar-zen-row">
+                ${getZenModeToggleHtml(zenScreenId, { label: 'Zen Mode', variant: 'minimal' })}
+              </div>
+            ` : ''}
             <div class="layout-sidebar-account-block">
-              <div id="nav-profile-sidebar" class="layout-sidebar-user layout-sidebar-user--stacked" role="button" tabindex="0" aria-label="Open account">
+              <div id="nav-profile-sidebar" class="layout-sidebar-user" role="button" tabindex="0" aria-label="Open account">
                 <div class="layout-sidebar-avatar-wrap">
                   <img src="${avatarSrc}" alt="Avatar" />
                   ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
                 </div>
                 <div class="layout-sidebar-user-info">
                   <span class="layout-sidebar-user-name">${displayName}</span>
-                  <span class="layout-sidebar-user-plan ${tier !== 'free' ? 'pro' : ''}">${tier === 'free' ? 'Free Plan' : 'Pro Member'}</span>
                 </div>
-                <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-
-                <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open settings">
+                <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
                   <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
-                  <span class="layout-sidebar-settings-copy">
-                    <span class="layout-sidebar-user-name">Settings</span>
-                    <span class="layout-sidebar-user-plan">Manage preferences</span>
-                  </span>
                 </button>
               </div>
             </div>
@@ -196,7 +395,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
         </aside>
 
         <!-- Main Content Area -->
-        <div class="layout-content ${options.contentClassName || ''}" id="internal-page-container">
+        <div class="layout-content ${pageId !== 'ai-chat' ? 'layout-content-scrollable' : ''} ${options.contentClassName || ''}" id="internal-page-container">
            ${contentHtml}
         </div>
       </main>
@@ -239,9 +438,127 @@ export function initLayout(wrapper, options = {}) {
     navigateTo('new');
   });
 
-  wrapper.querySelector('#btn-profile-header')?.addEventListener('click', () => {
-    openAccountModal('profile');
+  const searchInput = wrapper.querySelector('#layout-search');
+  const searchClear = wrapper.querySelector('#btn-layout-search-clear');
+  const searchResults = wrapper.querySelector('#layout-search-results');
+  const searchResultsList = wrapper.querySelector('#layout-search-results-list');
+  let activeSearchResults = [];
+  let activeSearchIndex = 0;
+  const handleDocumentClick = (event) => {
+    const container = wrapper.querySelector('.layout-search-container');
+    if (container && !container.contains(event.target)) {
+      closeSearch();
+    }
+  };
+
+  const closeSearch = () => {
+    if (searchResults) searchResults.hidden = true;
+  };
+
+  const renderSearchResults = (query = '') => {
+    if (!searchInput || !searchResults || !searchResultsList) return;
+
+    activeSearchResults = searchActions(query, { limit: 8 });
+    activeSearchIndex = 0;
+    if (searchClear) searchClear.hidden = !query.trim();
+
+    if (!activeSearchResults.length) {
+      searchResultsList.innerHTML = `
+        <div class="layout-search-empty">
+          <span class="material-symbols-outlined">search_off</span>
+          <span>No matching actions found</span>
+        </div>
+      `;
+      searchResults.hidden = false;
+      return;
+    }
+
+    searchResultsList.innerHTML = activeSearchResults.map((action, index) => `
+      <button
+        type="button"
+        class="layout-search-result ${index === 0 ? 'is-active' : ''}"
+        data-action-id="${escapeHtml(action.id)}"
+      >
+        <span class="material-symbols-outlined layout-search-result-icon">${escapeHtml(action.icon || 'arrow_forward')}</span>
+        <span class="layout-search-result-copy">
+          <span class="layout-search-result-title">${escapeHtml(action.title)}</span>
+          <span class="layout-search-result-description">${escapeHtml(action.description || '')}</span>
+        </span>
+      </button>
+    `).join('');
+
+    searchResults.hidden = false;
+  };
+
+  const syncActiveSearchItem = () => {
+    searchResultsList?.querySelectorAll('.layout-search-result').forEach((item, index) => {
+      item.classList.toggle('is-active', index === activeSearchIndex);
+    });
+  };
+
+  const runSearchAction = (actionId) => {
+    closeSearch();
+    if (searchInput) {
+      searchInput.value = '';
+      if (searchClear) searchClear.hidden = true;
+    }
+    executeAction(actionId, {
+      currentScreen: getState().currentScreen,
+      openAccountModal
+    });
+  };
+
+  searchInput?.addEventListener('focus', () => {
+    renderSearchResults(searchInput.value);
   });
+
+  searchInput?.addEventListener('input', () => {
+    renderSearchResults(searchInput.value);
+  });
+
+  searchInput?.addEventListener('keydown', (event) => {
+    if (!searchResults || searchResults.hidden || !activeSearchResults.length) {
+      if (event.key === 'Enter' && searchInput.value.trim()) {
+        const [firstAction] = searchActions(searchInput.value, { limit: 1 });
+        if (firstAction) {
+          event.preventDefault();
+          runSearchAction(firstAction.id);
+        }
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      activeSearchIndex = (activeSearchIndex + 1) % activeSearchResults.length;
+      syncActiveSearchItem();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      activeSearchIndex = (activeSearchIndex - 1 + activeSearchResults.length) % activeSearchResults.length;
+      syncActiveSearchItem();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      runSearchAction(activeSearchResults[activeSearchIndex]?.id);
+    } else if (event.key === 'Escape') {
+      closeSearch();
+      searchInput.blur();
+    }
+  });
+
+  searchClear?.addEventListener('click', () => {
+    if (!searchInput) return;
+    searchInput.value = '';
+    renderSearchResults('');
+    searchInput.focus();
+  });
+
+  searchResultsList?.addEventListener('click', (event) => {
+    const target = event.target.closest('.layout-search-result[data-action-id]');
+    if (!target) return;
+    runSearchAction(target.dataset.actionId);
+  });
+
+  document.addEventListener('click', handleDocumentClick);
 
   // Sidebar user card → account modal (profile tab)
   wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
@@ -268,61 +585,13 @@ export function initLayout(wrapper, options = {}) {
   const zenMode = options.zenMode;
   if (!zenMode) {
     return () => {
+      document.removeEventListener('click', handleDocumentClick);
       document.body.classList.remove('fm-zen-mode');
     };
   }
-
-  const zenScreenId = zenMode.screenId;
-  const zenShell = wrapper.querySelector('[data-zen-shell="true"]');
-  const zenToggleBtn = wrapper.querySelector('#btn-zen-toggle');
-  const zenExitBtn = wrapper.querySelector('#btn-zen-exit');
-
-  const syncZenUi = (enabled) => {
-    zenShell?.classList.toggle('is-zen-mode', enabled);
-    wrapper.classList.toggle('zen-mode-active', enabled);
-    document.body.classList.toggle('fm-zen-mode', enabled);
-
-    if (zenToggleBtn) {
-      zenToggleBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-      zenToggleBtn.setAttribute('aria-label', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
-      zenToggleBtn.setAttribute('title', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
-      const icon = zenToggleBtn.querySelector('.material-symbols-outlined');
-      if (icon) icon.textContent = enabled ? 'fullscreen_exit' : 'fullscreen';
-    }
-
-    if (zenExitBtn) {
-      zenExitBtn.hidden = !enabled;
-      zenExitBtn.classList.toggle('visible', enabled);
-    }
-
-    zenMode.onChange?.(enabled, { wrapper, zenShell });
-  };
-
-  const setZenMode = (enabled) => {
-    setZenModeEnabled(zenScreenId, enabled);
-    syncZenUi(enabled);
-  };
-
-  const handleZenToggle = () => {
-    setZenMode(!isZenModeEnabled(zenScreenId));
-  };
-
-  const handleZenExit = () => setZenMode(false);
-  const handleEscape = (event) => {
-    if (event.key === 'Escape' && isZenModeEnabled(zenScreenId)) {
-      setZenMode(false);
-    }
-  };
-
-  zenToggleBtn?.addEventListener('click', handleZenToggle);
-  zenExitBtn?.addEventListener('click', handleZenExit);
-  document.addEventListener('keydown', handleEscape);
-  syncZenUi(isZenModeEnabled(zenScreenId));
-
+  const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
-    zenToggleBtn?.removeEventListener('click', handleZenToggle);
-    zenExitBtn?.removeEventListener('click', handleZenExit);
-    document.removeEventListener('keydown', handleEscape);
-    document.body.classList.remove('fm-zen-mode');
+    document.removeEventListener('click', handleDocumentClick);
+    cleanupZen?.();
   };
 }

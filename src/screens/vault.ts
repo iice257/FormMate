@@ -83,10 +83,14 @@ export function vaultScreen() {
     </div>
   `;
 
-  const html = withLayout('vault', vaultContent);
+  const html = withLayout('vault', vaultContent, {
+    zenMode: { screenId: 'vault' },
+    shellClassName: 'zen-layout-shell',
+    contentClassName: 'zen-layout-content'
+  });
 
   function init(wrapper) {
-    initLayout(wrapper);
+    initLayout(wrapper, { zenMode: { screenId: 'vault' } });
 
     wrapper.querySelectorAll('input[data-vault-key]').forEach(input => {
       input.addEventListener('change', (e) => {

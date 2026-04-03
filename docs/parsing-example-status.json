@@ -1,0 +1,83 @@
+[
+  {
+    "id": "job-application",
+    "title": "Senior Product Designer",
+    "url": "demo://job-application",
+    "providerLabel": "Lever / CreativeSync",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Lever parsing."
+  },
+  {
+    "id": "customer-feedback",
+    "title": "Post-Purchase Satisfaction",
+    "url": "demo://customer-feedback",
+    "providerLabel": "Google Forms",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Google Forms parsing."
+  },
+  {
+    "id": "travel-visa",
+    "title": "Schengen Visa Application",
+    "url": "demo://travel-visa",
+    "providerLabel": "Typeform / Gov.Travel",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Typeform parsing."
+  },
+  {
+    "id": "patient-intake",
+    "title": "New Patient Intake",
+    "url": "demo://patient-intake",
+    "providerLabel": "Jotform / Sutter Health",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Jotform parsing."
+  },
+  {
+    "id": "scholarship",
+    "title": "STEM Excellence Scholarship",
+    "url": "demo://scholarship",
+    "providerLabel": "Jotform / National Science Foundation",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and rendered by src/components/question-card.ts including file_upload.",
+    "notes": "Internal demo sample only. Does not validate live Jotform parsing."
+  },
+  {
+    "id": "insurance-quote",
+    "title": "Auto Insurance Quote",
+    "url": "demo://insurance-quote",
+    "providerLabel": "Typeform / GEICO",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Typeform parsing."
+  },
+  {
+    "id": "b2b-demo",
+    "title": "Enterprise Demo Request",
+    "url": "demo://b2b-demo",
+    "providerLabel": "Typeform / Salesforce",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Typeform parsing."
+  },
+  {
+    "id": "rental-app",
+    "title": "Apartment Lease Application",
+    "url": "demo://rental-app",
+    "providerLabel": "Google Forms / Zillow",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live Google Forms parsing."
+  },
+  {
+    "id": "grant-application",
+    "title": "Community Impact Grant",
+    "url": "demo://grant-application",
+    "providerLabel": "SurveyMonkey / Ford Foundation",
+    "status": "working",
+    "evidence": "Resolved by src/parser/form-parser.ts demo pipeline and seeded in src/parser/mock-forms.ts.",
+    "notes": "Internal demo sample only. Does not validate live SurveyMonkey parsing."
+  }
+]

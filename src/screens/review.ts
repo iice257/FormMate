@@ -5,7 +5,6 @@
 
 import { getState, updateAnswer } from '../state';
 import { navigateTo } from '../router';
-import { executeFormFill } from '../automation/form-filler';
 
 export function reviewScreen() {
   const { formData, answers } = getState();
@@ -105,7 +104,7 @@ export function reviewScreen() {
               <div class="flex gap-6 justify-between items-center">
                 <div class="flex flex-col">
                   <p class="text-slate-900 text-lg font-bold">Ready for Submission</p>
-                  <p class="text-slate-500 text-sm">All ${totalQuestions} fields have been generated.</p>
+                  <p class="text-slate-500 text-sm">${answeredCount} of ${totalQuestions} fields currently have answers.</p>
                 </div>
                 <div class="flex flex-col items-end">
                   <p class="text-primary text-xl font-bold">${progress}%</p>
@@ -130,33 +129,20 @@ export function reviewScreen() {
             <div class="flex items-start gap-4 p-5 rounded-xl bg-primary/5 border border-primary/10 mt-4">
               <span class="material-symbols-outlined text-primary mt-0.5">verified_user</span>
               <div class="flex flex-col gap-1">
-                <p class="text-slate-900 text-sm font-bold">Secure Submission</p>
-                <p class="text-slate-600 text-sm leading-relaxed">FormMate uses end-to-end encryption to fill your forms. Your data is only shared with the destination site during this session.</p>
-              </div>
-            </div>
-
-            <!-- Fill Progress (hidden initially) -->
-            <div id="fill-progress" class="hidden flex flex-col gap-4 p-6 bg-white rounded-xl shadow-sm border border-primary/20">
-              <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-primary animate-spin">sync</span>
-                <div>
-                  <p class="text-slate-900 font-bold" id="fill-progress-label">Filling form...</p>
-                  <p class="text-slate-500 text-sm" id="fill-progress-field">Starting...</p>
-                </div>
-              </div>
-              <div class="rounded-full bg-slate-100 h-2 overflow-hidden">
-                <div id="fill-progress-bar" class="h-full rounded-full bg-primary transition-all duration-300" style="width: 0%"></div>
+                <p class="text-slate-900 text-sm font-bold">Review Before Submission</p>
+                <p class="text-slate-600 text-sm leading-relaxed">Confirm these answers before copying or using them. Automatic browser submission is disabled in this release build, so no answers are sent from this screen.</p>
               </div>
             </div>
 
             <!-- Action Footer -->
             <div class="flex flex-col gap-3 py-6 sticky bottom-0 bg-background-light/80 backdrop-blur-md">
-              <button id="btn-fill" class="w-full flex items-center justify-center gap-2 rounded-xl h-14 bg-primary text-white font-bold text-lg hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/25 btn-press">
-                <span class="material-symbols-outlined">bolt</span>
-                Fill Form Automatically
+              <button id="btn-fill-disabled" class="w-full flex items-center justify-center gap-2 rounded-xl h-14 bg-slate-100 text-slate-400 font-bold text-lg border border-slate-200 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined">block</span>
+                Automatic Fill Not Available
               </button>
+              <p class="text-center text-xs text-slate-500">Automatic browser filling is disabled in this release build until the real automation path is ready.</p>
               <div class="flex justify-center gap-6">
-                <button class="text-slate-500 text-sm font-medium hover:text-primary transition-colors underline underline-offset-4 decoration-slate-300">Save for Later</button>
+                <button class="text-slate-400 text-sm font-medium cursor-not-allowed" disabled>Save for Later</button>
                 <button id="btn-back-workspace" class="text-slate-500 text-sm font-medium hover:text-primary transition-colors underline underline-offset-4 decoration-slate-300">Edit Answers</button>
               </div>
             </div>
@@ -170,12 +156,7 @@ export function reviewScreen() {
   function init(wrapper) {
     const btnBack = wrapper.querySelector('#btn-back');
     const btnClose = wrapper.querySelector('#btn-close');
-    const btnFill = wrapper.querySelector('#btn-fill');
     const btnBackWorkspace = wrapper.querySelector('#btn-back-workspace');
-    const fillProgress = wrapper.querySelector('#fill-progress');
-    const fillProgressBar = wrapper.querySelector('#fill-progress-bar');
-    const fillProgressLabel = wrapper.querySelector('#fill-progress-label');
-    const fillProgressField = wrapper.querySelector('#fill-progress-field');
 
     btnBack.addEventListener('click', () => goBack());
     btnClose.addEventListener('click', () => navigateTo('landing'));
@@ -202,25 +183,6 @@ export function reviewScreen() {
           answerEl.classList.toggle('italic', !newValue);
           editEl.classList.add('hidden');
           btn.querySelector('.material-symbols-outlined').textContent = 'edit';
-        }
-      });
-    });
-
-    // Fill form
-    btnFill.addEventListener('click', async () => {
-      btnFill.disabled = true;
-      btnFill.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Filling...';
-      fillProgress.classList.remove('hidden');
-
-      const { formData: fd, answers: ans } = getState();
-
-      await executeFormFill(fd, ans, (progress) => {
-        fillProgressBar.style.width = progress.percent + '%';
-        fillProgressLabel.textContent = `Filling form... ${progress.percent}%`;
-        fillProgressField.textContent = `Field: ${progress.fieldName}`;
-
-        if (progress.status === 'complete') {
-          setTimeout(() => navigateTo('success'), 600);
         }
       });
     });

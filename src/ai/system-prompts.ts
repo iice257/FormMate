@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { getState } from '../state';
+import { getAiActionInstructionText } from '../actions/action-index';
 
 function getBaseRules() {
   return `You are FormMate, an expert AI form assistant. You help the user fill out forms intelligently.
@@ -67,7 +68,7 @@ export function buildSystemPrompt(taskType, additionalContext = '') {
   } else if (taskType === 'quick_edit') {
     prompt += `Apply the requested quick edit (e.g. shorten, professionalize) to the provided answer. Return ONLY the edited answer text (no quotes, no JSON, no explanations).\n`;
   } else if (taskType === 'copilot_chat') {
-    prompt += `You are FormMate's chat copilot. You assist the user with filling out the form.\nBe helpful, provide concrete suggestions, and answer questions clearly.`;
+    prompt += `You are FormMate's chat copilot. You assist the user with filling out the form.\nBe helpful, provide concrete suggestions, and answer questions clearly.\n${getAiActionInstructionText()}`;
   }
 
   if (additionalContext) {

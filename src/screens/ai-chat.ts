@@ -9,6 +9,8 @@ import { navigateTo } from '../router';
 import { processChatMessage } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { escapeHtml } from '../utils/escape';
+import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import { openAccountModal } from '../components/layout';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 
@@ -90,7 +92,7 @@ export function aiChatScreen() {
       </div>
 
       <!-- Right Sidebar -->
-      <div class="hidden lg:flex zen-chat-sidebar" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;" class="no-scrollbar">
+      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <!-- User Card -->
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${avatarSrc}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
@@ -115,11 +117,10 @@ export function aiChatScreen() {
         </div>
 
         <div style="margin-top: auto; padding: 1rem; background: var(--fm-bg-sunken); border-radius: var(--fm-radius-xl);">
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.6rem;">Storage Usage</div>
-          <div style="width: 100%; height: 6px; background: var(--fm-border-light); border-radius: 3px; overflow: hidden; margin-bottom: 0.35rem;">
-            <div style="width: 35%; height: 100%; background: var(--fm-primary); border-radius: 3px;"></div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.6rem;">Current Context</div>
+          <div style="font-size: 0.75rem; color: #64748b; line-height: 1.5;">
+            ${formData?.title ? `Active form: ${escapeHtml(formData.title)}` : 'No active form is attached to this chat yet.'}
           </div>
-          <div style="font-size: 0.7rem; color: #64748b;">1.2 GB of 5 GB used</div>
         </div>
       </div>
 
@@ -141,6 +142,7 @@ export function aiChatScreen() {
     const emptyState = wrapper.querySelector('#chat-empty-state');
     let isChatPending = false;
     let chatHistory = [];
+    const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
 
     function appendBubble(role, text) {
       if (emptyState && emptyState.parentElement === chatMessages) {
@@ -158,7 +160,7 @@ export function aiChatScreen() {
           <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">${isUser ? 'person' : 'smart_toy'}</span>
         </div>
         <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
-          ${escapeHtml(text).replace(/\n/g, '<br>')}
+          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
         </div>
       `;
       chatMessages.appendChild(bubble);
@@ -229,6 +231,7 @@ export function aiChatScreen() {
     });
 
     return () => {
+      cleanupRichActions?.();
       cleanupLayout?.();
     };
   }

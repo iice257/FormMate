@@ -1,46 +1,13 @@
 // @ts-nocheck
-import { getState, setState } from '../state';
-import { getHomeScreenForUser, navigateTo } from '../router';
+import { setState } from '../state';
+import { navigateTo } from '../router';
 import { MOCK_FORMS } from '../parser/mock-forms';
+import { initLayout, withLayout } from '../components/layout';
 
 export function examplesScreen() {
-  const { isAuthenticated, userProfile } = getState();
-  const displayFirstName = userProfile?.name?.split(' ')[0] || 'User';
-  const avatarFromProfile = userProfile?.avatar || '';
-  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
-  const avatarSrc = avatarFromProfile || fallbackAvatar;
-
-  const authButtonHtml = isAuthenticated
-    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-         <span class="truncate max-w-[100px]">${displayFirstName}</span>
-       </button>`
-    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
-
-  const html = `
-    <div class="min-h-screen w-full bg-mesh flex flex-col">
-      
-      <!-- Header -->
-      <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 glass">
-        <div class="flex-1 flex justify-start">
-          <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            Back
-          </button>
-        </div>
-        <div class="flex-1 flex justify-center items-center">
-            <button type="button" class="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0" id="btn-home" aria-label="Go to home">
-                <img src="/logo.png" class="size-8" alt="Logo" />
-                <span class="text-xl font-black text-slate-900 tracking-tight">FormMate</span>
-            </button>
-        </div>
-        <div class="flex-1 flex items-center justify-end">
-          ${authButtonHtml}
-        </div>
-      </header>
-
-      <!-- Main Content -->
-      <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-12 md:py-20 animate-screen-enter">
+  const examplesContent = `
+    <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter">
+      <main class="w-full max-w-6xl mx-auto px-6 py-12 md:py-20">
         <div class="mb-12 text-center max-w-2xl mx-auto space-y-4">
           <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-widest rounded-full border border-primary/20">
             <span class="material-symbols-outlined text-[14px]">extension</span>
@@ -163,17 +130,17 @@ export function examplesScreen() {
     }
   ];
 
-  function init(wrapper) {
-    // Navigation
-    wrapper.querySelector('#btn-back').addEventListener('click', () => history.back());
-    wrapper.querySelector('#btn-home').addEventListener('click', () => {
-      navigateTo(getHomeScreenForUser());
-    });
-    wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
-    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
+  const html = withLayout('examples', examplesContent, {
+    zenMode: { screenId: 'examples' },
+    shellClassName: 'zen-layout-shell',
+    contentClassName: 'zen-layout-content'
+  });
 
-    // Render grid
+  function init(wrapper) {
+    initLayout(wrapper, { zenMode: { screenId: 'examples' } });
+
     const grid = wrapper.querySelector('#examples-grid');
+    if (!grid) return;
 
     const colorClasses = {
       blue: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -187,7 +154,7 @@ export function examplesScreen() {
       yellow: 'bg-amber-50 text-amber-600 border-amber-100'
     };
 
-    grid.innerHTML = demos.map(demo => `
+    grid.innerHTML = demos.map((demo) => `
       <div class="demo-card bg-white border border-slate-200 rounded-2xl p-6 cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col" data-url="${demo.url}" role="button" tabindex="0" aria-label="Use demo: ${demo.title}">
         <div class="flex items-start justify-between mb-4">
           <div class="flex items-center justify-center size-12 rounded-xl border ${colorClasses[demo.color]} shadow-sm scale-100 group-hover:scale-110 transition-transform duration-300">
@@ -195,7 +162,7 @@ export function examplesScreen() {
           </div>
           <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors translate-x-0 group-hover:translate-x-1 duration-300">arrow_forward</span>
         </div>
-        
+
         <div class="mb-4 flex-1">
           <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">${demo.company}</p>
           <h3 class="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-primary transition-colors">${demo.title}</h3>
@@ -203,7 +170,7 @@ export function examplesScreen() {
         </div>
 
         <div class="flex items-center gap-2 mb-3 flex-wrap">
-          ${(demo.tags || []).map(tag => `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">${tag}</span>`).join('')}
+          ${(demo.tags || []).map((tag) => `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">${tag}</span>`).join('')}
           ${demo.fields ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">${demo.fields} fields</span>` : ''}
         </div>
 
@@ -213,15 +180,14 @@ export function examplesScreen() {
       </div>
     `).join('');
 
-    // Attach analysis launch config
-    wrapper.querySelectorAll('.demo-card').forEach(card => {
+    wrapper.querySelectorAll('.demo-card').forEach((card) => {
       card.addEventListener('click', () => {
         setState({ formUrl: card.dataset.url });
         navigateTo('analyzing');
       });
-      card.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
         card.click();
       });
     });

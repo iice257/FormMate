@@ -6,11 +6,12 @@
 import { getState, setState } from '../state';
 import { getHomeScreenForUser, navigateTo, goBack } from '../router';
 import { parseFormUrl, detectFormPlatform } from '../parser/form-parser';
+import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { toast } from '../components/toast';
 import { initAurora } from './Aurora';
 import './Aurora.css';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
-import { getZenModeToggleHtml, isZenModeEnabled, setZenModeEnabled } from '../components/layout';
+import { isZenModeEnabled, bindZenModeControls, openAccountModal } from '../components/layout';
 
 export function newFormScreen() {
   const { isAuthenticated, userProfile, formUrl } = getState();
@@ -61,19 +62,16 @@ export function newFormScreen() {
             </button>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-3">
-          ${getZenModeToggleHtml('new', { label: 'Zen Mode', variant: 'minimal' })}
-          ${authButtonHtml}
-        </div>
+        <div class="flex-1 flex items-center justify-end gap-3">${authButtonHtml}</div>
       </header>
 
       <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 zen-new-form-main">
         <div class="max-w-[800px] w-full text-center space-y-10 relative z-10 zen-new-form-panel">
-          <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight">
+          <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
             Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
           </h1>
 
-          <div class="w-full max-w-2xl mx-auto relative z-20">
+          <div class="w-full max-w-2xl mx-auto relative z-20 zen-new-form-form">
             <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-primary/20">
               <div class="flex-1 relative">
                 <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
@@ -123,9 +121,6 @@ export function newFormScreen() {
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     const btnBack = wrapper.querySelector('#btn-back');
     const auroraBg = wrapper.querySelector('#aurora-bg');
-    const zenShell = wrapper.querySelector('[data-zen-shell="true"]');
-    const zenToggleBtn = wrapper.querySelector('#btn-zen-toggle');
-    const zenExitBtn = wrapper.querySelector('#btn-zen-exit');
 
     // Initialize Aurora
     const cleanupAurora = initAurora(auroraBg, {
@@ -135,42 +130,7 @@ export function newFormScreen() {
       speed: 0.8
     });
 
-    const syncZenUi = (enabled) => {
-      zenShell?.classList.toggle('is-zen-mode', enabled);
-      wrapper.classList.toggle('zen-mode-active', enabled);
-      document.body.classList.toggle('fm-zen-mode', enabled);
-
-      if (zenToggleBtn) {
-        zenToggleBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-        zenToggleBtn.setAttribute('aria-label', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
-        zenToggleBtn.setAttribute('title', enabled ? 'Exit Zen Mode' : 'Enter Zen Mode');
-        const icon = zenToggleBtn.querySelector('.material-symbols-outlined');
-        if (icon) icon.textContent = enabled ? 'fullscreen_exit' : 'fullscreen';
-      }
-
-      if (zenExitBtn) {
-        zenExitBtn.hidden = !enabled;
-        zenExitBtn.classList.toggle('visible', enabled);
-      }
-    };
-
-    const setZenMode = (enabled) => {
-      setZenModeEnabled('new', enabled);
-      syncZenUi(enabled);
-    };
-
-    const handleZenToggle = () => setZenMode(!isZenModeEnabled('new'));
-    const handleZenExit = () => setZenMode(false);
-    const handleZenEscape = (event) => {
-      if (event.key === 'Escape' && isZenModeEnabled('new')) {
-        setZenMode(false);
-      }
-    };
-
-    zenToggleBtn?.addEventListener('click', handleZenToggle);
-    zenExitBtn?.addEventListener('click', handleZenExit);
-    document.addEventListener('keydown', handleZenEscape);
-    syncZenUi(zenActive);
+    const cleanupZen = bindZenModeControls(wrapper, { screenId: 'new' });
 
     btnBack.addEventListener('click', () => goBack());
     wrapper.querySelector('#logo-home')?.addEventListener('click', () => {
@@ -178,30 +138,13 @@ export function newFormScreen() {
     });
 
     btnAnalyze.addEventListener('click', () => {
-      let url = urlInput.value.trim();
-
-      if (!url) {
-        toast.error('Please paste a form link first');
-        return;
-      }
-
-      // Auto-prepend https if missing
-      if (!/^https?:\/\//i.test(url)) {
-        url = 'https://' + url;
-        urlInput.value = url;
-      }
-
-      if (!isValidFormProvider(url)) {
-        toast.error('Unsupported form provider');
-        return;
-      }
-
       try {
-        new URL(url);
+        const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
+        urlInput.value = url;
         setState({ formUrl: url });
         navigateTo('analyzing');
-      } catch {
-        toast.error('Invalid URL format');
+      } catch (error) {
+        toast.error(error?.message || 'Invalid URL format');
       }
     });
 
@@ -214,37 +157,12 @@ export function newFormScreen() {
     wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
       navigateTo('ai-chat');
     });
-    wrapper.querySelector('#nav-help')?.addEventListener('click', () => navigateTo('docs'));
+    wrapper.querySelector('#nav-help')?.addEventListener('click', () => openAccountModal('help'));
 
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
-    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
-
-    function isValidFormProvider(url) {
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-        const whitelistedDomains = [
-          'docs.google.com', 'forms.gle', 'forms.google.com',
-          'form.typeform.com', 'typeform.com',
-          'form.jotform.com', 'jotform.com',
-          'surveymonkey.com', 'www.surveymonkey.com',
-          'lever.co', 'jobs.lever.co',
-          'greenhouse.io', 'boards.greenhouse.io',
-          'ashbyhq.com', 'jobs.ashbyhq.com',
-          'workday.com', 'myworkdayjobs.com',
-          'tally.so', 'airtable.com', 'feathery.io', 'qualtrics.com'
-        ];
-        return whitelistedDomains.some(d => host === d || host.endsWith(`.${d}`));
-      } catch {
-        return false;
-      }
-    }
-
+    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
     return () => {
-      zenToggleBtn?.removeEventListener('click', handleZenToggle);
-      zenExitBtn?.removeEventListener('click', handleZenExit);
-      document.removeEventListener('keydown', handleZenEscape);
-      document.body.classList.remove('fm-zen-mode');
+      cleanupZen?.();
       if (cleanupAurora) cleanupAurora();
     };
   }

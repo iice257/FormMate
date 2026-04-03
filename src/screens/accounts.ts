@@ -37,7 +37,7 @@ export function accountsScreen() {
             <span class="material-symbols-outlined">person</span> Account
           </button>
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" id="sidebar-nav-settings">
-            <span class="material-symbols-outlined">settings</span> Settings
+            <span class="material-symbols-outlined">settings</span> Preferences
           </button>
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="docs">
             <span class="material-symbols-outlined">help_outline</span> Help
@@ -90,7 +90,7 @@ export function accountsScreen() {
     { label: 'Vault', icon: 'shield' },
     { label: 'History', icon: 'history' },
     { label: 'Style', icon: 'palette' },
-    { label: 'Settings', icon: 'settings' },
+    { label: 'Preferences', icon: 'settings' },
   ], { id: 'account-tabs' })}
 
           <!-- Tab Content -->

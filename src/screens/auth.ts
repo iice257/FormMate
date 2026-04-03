@@ -5,7 +5,7 @@
 
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
-import { getDevTestUsers, isDevAuthEnabled, signUp, signIn, signInWithGoogle, signInWithApple, resetPassword } from '../auth/auth-service';
+import { signUp, signIn, signInWithGoogle, resetPassword } from '../auth/auth-service';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 
@@ -80,14 +80,10 @@ export function authScreen() {
             </div>
 
             <!-- Social Login -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3">
               <button id="btn-google" class="h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors btn-press" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);">
                 <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Google
-              </button>
-              <button id="btn-apple" class="h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors btn-press" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.32 2.32-1.55 4.3-3.74 4.25z"/></svg>
-                Apple
               </button>
             </div>
 
@@ -301,25 +297,17 @@ export function authScreen() {
     // Social login
     wrapper.querySelector('#btn-google').addEventListener('click', async (e) => {
       e.preventDefault();
+      const errorEl = wrapper.querySelector('#login-error');
+      const btn = wrapper.querySelector('#btn-google');
+      const originalHtml = btn.innerHTML;
       try {
-        const session = await signInWithGoogle();
-        applySessionState(session);
-        toast.success('Signed in with Google!');
-        navigateAfterAuth();
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Redirecting...';
+        await signInWithGoogle();
       } catch (err) {
-        toast.error('Google sign-in failed.');
-      }
-    });
-
-    wrapper.querySelector('#btn-apple').addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        const session = await signInWithApple();
-        applySessionState(session);
-        toast.success('Signed in with Apple!');
-        navigateAfterAuth();
-      } catch (err) {
-        toast.error('Apple sign-in failed.');
+        showError(errorEl, err.message || 'Google sign-in failed.');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
       }
     });
 

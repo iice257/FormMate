@@ -52,7 +52,7 @@ function getAllowedOrigin(req) {
   return allow.has(origin) ? origin : null;
 }
 
-function isPrivateIp(host: string) {
+function isPrivateIp(host) {
   const ipType = net.isIP(host);
   if (!ipType) return false;
 
@@ -130,8 +130,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Blocked URL: ${checked.reason}` });
     }
 
-    console.log(`[Scrape] Fetching: ${checked.url}`);
-
     const response = await fetch(checked.url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -141,7 +139,12 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: `Failed to fetch URL: ${response.statusText}` });
+      return res.status(response.status).json({
+        error: `Failed to fetch URL: ${response.statusText}`,
+        normalizedUrl: checked.url,
+        finalUrl: response.url || checked.url,
+        httpStatus: response.status,
+      });
     }
 
     let html = await response.text();
@@ -154,7 +157,13 @@ export default async function handler(req, res) {
       .replace(/\s+/g, ' ')
       .trim();
 
-    res.setHeader('Content-Type', 'text/html').send(cleanedHtml);
+    return res.status(200).json({
+      html: cleanedHtml,
+      normalizedUrl: checked.url,
+      finalUrl: response.url || checked.url,
+      httpStatus: response.status,
+      fetchStrategy: 'direct_html',
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[Scrape] Error:', message);

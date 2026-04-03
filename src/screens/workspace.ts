@@ -9,8 +9,9 @@ import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-
 import { getAiErrorMessage } from '../ai/ai-service';
 import { renderQuestionCard } from '../components/question-card';
 import { categorizeField } from '../ai/field-classifier';
-import { withLayout, initLayout, getZenModeToggleHtml } from '../components/layout';
+import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { toast } from '../components/toast';
+import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
 function syncWorkspaceZenPanel(enabled, wrapper) {
   const rightPanel = wrapper.querySelector('#right-panel');
@@ -54,29 +55,28 @@ export function workspaceScreen() {
   ).join('');
 
   const workspaceContent = `
-    <div class="flex-1 flex overflow-hidden relative zen-workspace-shell" id="editor-container">
+    <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
       <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll">
         <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
           
           <!-- Breadcrumb & Actions Bar -->
-          <div class="zen-workspace-toolbar" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+          <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
             <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
               <span style="font-size: 0.65rem; color: #cbd5e1;">›</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.7rem; font-weight: 700;">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
-              ${getZenModeToggleHtml('workspace', { label: 'Zen Mode', variant: 'minimal' })}
+              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
               <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
 
-          <h1 style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
+          <h1 class="workspace-title" style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
 
           <!-- Filter Tabs -->
-          <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div class="workspace-zen-hide app-surface-soft workspace-filter-row" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
             <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
             ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
             ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
@@ -87,7 +87,7 @@ export function workspaceScreen() {
           </div>
 
           <!-- Question Cards -->
-          <div id="questions-container" class="space-y-6 stagger-children">
+          <div id="questions-container" class="space-y-6 stagger-children workspace-question-list">
             ${questionsHtml}
           </div>
 
@@ -121,15 +121,15 @@ export function workspaceScreen() {
             <div style="margin-left: auto; padding: 0.25rem 0.6rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 600; color: #64748b;">Tonal: Friendly</div>
           </div>
 
-          <div style="padding: 0.5rem 1rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary); text-align: center;">Connected to Resume Data</div>
+          <div style="padding: 0.5rem 1rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary); text-align: center;">Profile-Aware Assistant</div>
 
-          <div id="chat-messages" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;" class="no-scrollbar">
+          <div id="chat-messages" class="no-scrollbar" style="flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
             <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
               <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
                 <span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span>
               </div>
               <div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; font-size: 0.8rem; color: var(--fm-text); line-height: 1.5; max-width: 85%;">
-                I've analyzed the job description and your previous portfolio entries. Would you like me to draft a more detailed response for the "Design Systems" question?
+                I can help refine answers for this form, explain field categories, and draft stronger responses where AI generation is available.
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function workspaceScreen() {
         </div>
 
         <!-- AI Actions Panel (hidden by default) -->
-        <div id="ai-actions-panel" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;" class="no-scrollbar">
+        <div id="ai-actions-panel" class="no-scrollbar" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
           <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text); margin-bottom: 0.15rem;">AI Actions</div>
           <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
           
@@ -198,7 +198,7 @@ export function workspaceScreen() {
               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--fm-primary);">location_on</span>
               <div>
                 <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fm-primary); margin-bottom: 0.25rem;">Match Insight</div>
-                <div style="font-size: 0.8rem; color: var(--fm-text); line-height: 1.45;">92% Match. Emphasize "Accessibility" and "System Tokens" to increase relevance.</div>
+                <div style="font-size: 0.8rem; color: var(--fm-text); line-height: 1.45;">${autoCount} autofillable, ${aiCount} AI-generatable, ${manualCount} manual-only fields detected for this form.</div>
               </div>
             </div>
           </div>
@@ -238,6 +238,7 @@ export function workspaceScreen() {
     const chatMessages = wrapper.querySelector('#chat-messages');
     const questionsContainer = wrapper.querySelector('#questions-container');
     let isChatPending = false;
+    const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
 
     // Panel Toggle
     const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
@@ -461,6 +462,13 @@ export function workspaceScreen() {
     });
 
     // Filter pills
+    const applyQuestionFilter = (filter) => {
+      wrapper.querySelectorAll('[data-card-id]').forEach((card) => {
+        const category = card.getAttribute('data-category');
+        card.style.display = filter === 'all' || category === filter ? '' : 'none';
+      });
+    };
+
     wrapper.querySelectorAll('.filter-pill').forEach(pill => {
       pill.addEventListener('click', () => {
         wrapper.querySelectorAll('.filter-pill').forEach(p => {
@@ -469,7 +477,7 @@ export function workspaceScreen() {
         });
         pill.style.background = 'var(--fm-text)'; pill.style.color = '#fff'; pill.style.borderColor = 'var(--fm-text)';
         pill.dataset.active = 'true';
-        // Filter logic (visual only for now)
+        applyQuestionFilter(pill.dataset.filter || 'all');
       });
     });
 
@@ -483,7 +491,7 @@ export function workspaceScreen() {
       bubble.innerHTML = `
         ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div>` : ''}
         <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;">
-          ${escapeHtml(text).replace(/\n/g, '<br>')}
+          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
         </div>
         ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">person</span></div>` : ''}
       `;
@@ -564,6 +572,7 @@ export function workspaceScreen() {
     syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
 
     return () => {
+      cleanupRichActions?.();
       cleanupLayout?.();
     };
   }

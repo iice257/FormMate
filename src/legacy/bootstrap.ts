@@ -2,6 +2,7 @@
 import { registerScreen, initRouter } from '../router';
 import { registerAccountModalOpener } from '../components/layout';
 import { initAccountModal } from '../components/account-modal';
+import { applyTheme } from '../theme';
 import { authScreen } from '../screens/auth';
 import { onboardingScreen } from '../screens/onboarding';
 import { landingScreen } from '../screens/landing';
@@ -163,6 +164,11 @@ async function boot() {
 
   try {
     initTransitions();
+    const { getState, subscribe } = await import('../state');
+    applyTheme(getState().settings?.ui?.theme);
+    subscribe((nextState) => {
+      applyTheme(nextState?.settings?.ui?.theme);
+    });
 
     const openModal = initAccountModal();
     registerAccountModalOpener(openModal);
@@ -178,7 +184,10 @@ async function boot() {
         try {
           const { hydrateFromRemote } = await import('../storage/storage-provider');
           const hydrated = await hydrateFromRemote(session.user);
-          if (hydrated) setState(hydrated);
+          if (hydrated) {
+            setState(hydrated);
+            applyTheme(hydrated?.settings?.ui?.theme ?? getState().settings?.ui?.theme);
+          }
         } catch (hydrateErr) {
           console.warn('[boot] Remote storage hydration failed; continuing with local cache.', hydrateErr);
         }
