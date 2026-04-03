@@ -37,7 +37,11 @@ import { applyTheme, normalizeTheme } from "@/theme"
 import { useAppState } from "@/hooks/use-app-state"
 import { signOut } from "@/auth/auth-service"
 import { toast } from "@/components/toast"
-import { isZenModeEnabled, isZenModeSupported, updateZenMode } from "@/components/layout"
+import {
+  isZenModeEnabled,
+  isZenModeSupported,
+  updateZenMode,
+} from "@/components/zen-mode"
 
 type AccountModalTab = ReturnType<typeof getAccountModalSnapshot>["activeTab"]
 

@@ -6,7 +6,7 @@ import { isOnboardingComplete } from './storage/local-store';
 const historyStack = [];
 let routerInitialized = false;
 
-const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'examples', 'docs', 'pricing', 'help'];
 const SCREEN_TITLES = {
   landing: 'Home | FormMate',
   auth: 'Sign In | FormMate',
@@ -35,7 +35,6 @@ function getPathForScreen(screen) {
 }
 
 function getModalTabForScreen(screen) {
-  if (screen === 'accounts') return 'profile';
   if (screen === 'settings') return 'settings';
   if (screen === 'help') return 'help';
   return null;

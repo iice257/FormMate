@@ -29,6 +29,24 @@ const DEV_SESSION = {
 const authListeners = new Set();
 let authBootstrapStarted = false;
 
+function buildDevSession(email, name = '') {
+  const normalizedEmail = String(email || 'dev@formmate.ai').trim() || 'dev@formmate.ai';
+  const normalizedName = String(name || normalizedEmail.split('@')[0] || 'User').trim() || 'User';
+  const tier = /pro|team|monthly/i.test(normalizedEmail) ? 'monthly' : 'free';
+  return {
+    ...DEV_SESSION,
+    createdAt: Date.now(),
+    tier,
+    user: {
+      ...DEV_SESSION.user,
+      email: normalizedEmail,
+      name: normalizedName,
+      tier,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedName)}&background=2298da&color=fff&bold=true`,
+    },
+  };
+}
+
 function isBrowser() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 }
@@ -237,6 +255,12 @@ export async function signUp(email, password, name = '') {
 
   await delay(250);
 
+  if (isDevAuthEnabled() && !getSupabaseClient()) {
+    const session = buildDevSession(email, name);
+    storeSession(session);
+    return session;
+  }
+
   const client = getClientOrThrow();
   const { data, error } = await client.auth.signUp({
     email,
@@ -282,6 +306,12 @@ export async function signIn(email, password) {
     return session;
   }
 
+  if (isDevAuthEnabled() && !getSupabaseClient()) {
+    const session = buildDevSession(email);
+    storeSession(session);
+    return session;
+  }
+
   const client = getClientOrThrow();
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
@@ -296,6 +326,12 @@ export async function signIn(email, password) {
 }
 
 export async function signInWithGoogle() {
+  if (isDevAuthEnabled() && !getSupabaseClient()) {
+    const session = buildDevSession('google@formmate.ai', 'Google User');
+    storeSession(session);
+    return session;
+  }
+
   const client = getClientOrThrow();
   const redirectTo = getAuthRedirectUrl();
   const { data, error } = await client.auth.signInWithOAuth({
@@ -333,6 +369,10 @@ export async function signOut() {
 export async function resetPassword(email) {
   if (!email) {
     throw authError('Email is required.', 'INVALID_CREDENTIALS');
+  }
+
+  if (isDevAuthEnabled() && !getSupabaseClient()) {
+    return { message: 'Password reset link sent to your email.' };
   }
 
   const client = getClientOrThrow();

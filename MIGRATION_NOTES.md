@@ -1,148 +1,45 @@
-# FormMate shadcn Luma Migration Notes
+# Luma Migration Notes
 
-## Initial audit
+## Final shadcn status
 
-### `npx shadcn@latest info --json` before initialization
+- Final `shadcn info --json` verification:
+  - `framework`: `Vite`
+  - `style`: `radix-luma`
+  - `base`: `radix`
+  - `tailwindVersion`: `v4`
+  - `tailwindCss`: `src/globals.css`
+  - `importAlias`: `@`
+- In this environment, a plain `npx shadcn@latest info --json` hit a local certificate-chain error against `ui.shadcn.com`.
+- Verification succeeded with `NODE_TLS_REJECT_UNAUTHORIZED=0` for the info command only.
 
-```json
-{
-  "project": {
-    "framework": "Vite",
-    "frameworkName": "vite",
-    "frameworkVersion": null,
-    "srcDirectory": true,
-    "rsc": false,
-    "typescript": true,
-    "tailwindVersion": null,
-    "tailwindConfig": null,
-    "tailwindCss": null,
-    "importAlias": null
-  },
-  "config": null,
-  "components": [],
-  "links": {
-    "docs": "https://ui.shadcn.com/docs",
-    "components": "https://ui.shadcn.com/docs/components/radix/[component].md",
-    "ui": "https://raw.githubusercontent.com/shadcn-ui/ui/refs/heads/main/apps/v4/registry/bases/radix/ui/[component].tsx",
-    "examples": "https://raw.githubusercontent.com/shadcn-ui/ui/refs/heads/main/apps/v4/registry/bases/radix/examples/[component]-example.tsx",
-    "schema": "https://ui.shadcn.com/schema.json"
-  }
-}
-```
+## CSS and theme audit
 
-### Repo state before initialization
+- `src/globals.css` now contains the active Luma token set in `:root` and `.dark`.
+- No residual `--fm-*`, `data-fm-theme`, Tailwind CDN bootstrap, or inline Tailwind config remains on the active app path.
+- Final scan of `src/components/ui` found no `bg-zinc-*`, `bg-slate-*`, `text-white`, `bg-black`, or `text-black` overrides.
+- Dark mode was validated by loading the authenticated app with `settings.ui.theme = "dark"` and confirming:
+  - `document.documentElement.classList.contains("dark") === true`
+  - `body` background resolves to `oklch(0.145 0 0)`
+  - `body` text resolves to `oklch(0.985 0 0)`
+  - card surfaces resolve to dark Luma values, not legacy light tokens
 
-- The repo was not an initialized shadcn project.
-- There was no `components.json`.
-- There was no `src/components/ui`.
-- There was no Tailwind v4 stylesheet entry.
-- Theme tokens lived in `src/design-tokens.css` under `--fm-*`.
-- Dark mode used `[data-fm-theme="dark"]` selectors in `src/design-tokens.css` and `src/styles.css`.
-- UI rendering was still driven by HTML-string screen modules mounted from `src/legacy/bootstrap.ts`.
+## Intentional exceptions
 
-## Environment notes
+- File upload fields remain manual.
+  - Reason: there is no direct official shadcn file-upload primitive in the installed registry surface.
+  - Current handling:
+    - `src/components/question-card-react.tsx`
+    - `src/screens/react/work-screens.tsx`
+- Material Symbols remain in use for icon glyphs.
+  - Reason: this is an icon source choice, not a component-library replacement.
+- `ui-avatars.com` fallback avatar URLs remain in use for missing profile images.
+  - Reason: avatar fallbacks are data/image concerns, not a shadcn primitive gap.
 
-- The shadcn preset fetch initially failed with `self-signed certificate in certificate chain`.
-- Initialization succeeded only after a temporary `NODE_TLS_REJECT_UNAUTHORIZED=0` override for the CLI process.
-- This workaround was limited to CLI fetches and did not change repository code or global npm config.
+## Removed legacy layer
 
-## Current initialized state
-
-- `components.json` now exists and resolves to `style: "radix-luma"`.
-- `npx shadcn@latest info --json` now reports:
-  - Tailwind v4
-  - `tailwindCss: "src/globals.css"`
-  - `importAlias: "@"`
-  - installed components now include:
-    - `accordion`
-    - `alert`
-    - `avatar`
-    - `badge`
-    - `breadcrumb`
-    - `button`
-    - `card`
-    - `checkbox`
-    - `command`
-    - `dialog`
-    - `drawer`
-    - `dropdown-menu`
-    - `input`
-    - `input-group`
-    - `label`
-    - `popover`
-    - `progress`
-    - `radio-group`
-    - `scroll-area`
-    - `select`
-    - `separator`
-    - `sheet`
-    - `sidebar`
-    - `skeleton`
-    - `slider`
-    - `sonner`
-    - `switch`
-    - `tabs`
-    - `textarea`
-    - `toggle`
-    - `toggle-group`
-    - `tooltip`
-- `src/globals.css` contains generated Luma `:root` and `.dark` tokens.
-- Scan result for `src/components/ui/*.tsx`: no direct `bg-zinc-*`, `bg-slate-*`, `text-white`, or hex-color overrides were found in the generated shadcn components.
-- Generated overlays were normalized away from `bg-black/30` to token-backed `bg-foreground/20` in:
-  - `src/components/ui/dialog.tsx`
-  - `src/components/ui/drawer.tsx`
-  - `src/components/ui/sheet.tsx`
-- The legacy account modal DOM builder has been replaced with a React host in `src/components/account-modal-host.tsx` that renders shadcn `Dialog`, `Tabs`, `Input`, `Textarea`, `Slider`, `Switch`, `Accordion`, `Button`, and related primitives.
-
-## Remaining migration work
-
-- Replace shared custom primitives in `src/components/ui-components.ts` with shadcn components.
-- `src/components/toast.ts` now proxies `sonner`, but callers still use the legacy wrapper path.
-- Replace the remaining custom modal/tabs/toggle/accordion/tooltip/empty-state/badge helpers in `src/components/ui-components.ts` and the screens that still depend on them.
-- Replace raw form controls and option pickers in `src/components/question-card.ts`.
-- Continue moving high-impact screens onto the hybrid React route path added in `src/router.ts` so shadcn components can be rendered directly without rewriting state and navigation storage first.
-- Remove the remaining hardcoded literals concentrated in:
+- Deleted the inactive string-rendered screen layer under `src/screens/*`.
+- Deleted the inactive legacy bootstrap and styling layer:
+  - `src/legacy/bootstrap.ts`
   - `src/styles.css`
-  - `src/components/layout.ts`
-  - `src/components/question-card.ts`
-  - `src/components/ui-components.ts`
-  - `src/screens/workspace.ts`
-  - `src/screens/docs.ts`
-  - `src/screens/ai-chat.ts`
-  - `src/screens/history.ts`
-- Replace the remaining raw buttons and form controls concentrated in:
-  - `src/screens/accounts.ts`
-  - `src/screens/landing.ts`
-  - `src/screens/docs.ts`
-  - `src/screens/workspace.ts`
-  - `src/screens/auth.ts`
-  - `src/components/layout.ts`
-  - `src/screens/help.ts`
-  - `src/screens/new-form.ts`
-  - `src/screens/ai-chat.ts`
-  - `src/screens/onboarding.ts`
-  - `src/components/question-card.ts`
-  - `src/screens/success.ts`
-  - `src/screens/review.ts`
-  - `src/screens/analyzing.ts`
-  - `src/screens/pricing.ts`
-  - `src/components/ui-components.ts`
-  - `src/screens/history.ts`
-  - `src/screens/analytics.ts`
-  - `src/screens/capture.ts`
-  - `src/screens/dashboard.ts`
-  - `src/screens/vault.ts`
-
-## Files to audit for hardcoded color/theme overrides
-
-- `src/components/account-modal-host.tsx`
-- `src/components/layout.ts`
-- `src/components/question-card.ts`
-- `src/components/toast.ts`
-- `src/components/ui-components.ts`
-- `src/styles.css`
-- `src/design-tokens.css`
-- `src/screens/workspace.ts`
-- `src/screens/docs.ts`
-- `src/screens/ai-chat.ts`
-- `src/screens/history.ts`
+  - `src/design-tokens.css`
+  - legacy UI helpers replaced by the React/shadcn runtime

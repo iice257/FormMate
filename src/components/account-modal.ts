@@ -1,4 +1,4 @@
-type AccountModalTab = "profile" | "settings" | "help"
+export type AccountModalTab = "profile" | "settings" | "help"
 
 type AccountModalSnapshot = {
   activeTab: AccountModalTab
@@ -22,7 +22,9 @@ export function getAccountModalSnapshot() {
 
 export function subscribeAccountModal(listener: () => void) {
   listeners.add(listener)
-  return () => listeners.delete(listener)
+  return () => {
+    listeners.delete(listener)
+  }
 }
 
 export function openAccountModal(tab: AccountModalTab = "profile") {

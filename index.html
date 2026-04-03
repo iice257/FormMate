@@ -18,43 +18,9 @@
 
   <link rel="icon" type="image/png" href="/logo.png" />
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-  <!-- Tailwind Config -->
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "primary": "#2298da",
-            "primary-light": "#4fafe7",
-            "background-light": "#f6f6f8",
-            "background-dark": "#0c0a14",
-          },
-          fontFamily: {
-            "display": ["Inter", "system-ui", "sans-serif"]
-          },
-          borderRadius: {
-            "none": "0",
-            "sm": "0.75rem",
-            "DEFAULT": "0.875rem",
-            "md": "1rem",
-            "lg": "1rem",
-            "xl": "1.25rem",
-            "2xl": "1.5rem",
-            "3xl": "2rem",
-            "full": "9999px"
-          },
-        },
-      },
-    }
-  </script>
-
 </head>
 
-<body class="font-display antialiased" style="background: var(--fm-bg); color: var(--fm-text);">
+<body class="antialiased">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

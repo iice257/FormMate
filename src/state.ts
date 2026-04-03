@@ -85,10 +85,25 @@ const state = {
   tier: 'free',
 };
 
+let snapshot = { ...state };
+
+function syncSnapshot() {
+  snapshot = { ...state };
+}
+
+function notifyStateChange() {
+  syncSnapshot();
+  listeners.forEach(fn => fn(snapshot));
+}
+
 // ─── State Access ────────────────────────
 
 export function getState() {
   return state;
+}
+
+export function getStateSnapshot() {
+  return snapshot;
 }
 
 export function setState(updates) {
@@ -113,7 +128,7 @@ export function setState(updates) {
   }
   if (updates.formData) save('form_data_state', updates.formData);
 
-  listeners.forEach(fn => fn(state));
+  notifyStateChange();
 }
 
 // ─── Answer Management ──────────────────
@@ -152,7 +167,7 @@ export function updateAnswer(questionId, text, source = 'user') {
   save('answer_history', state.answerHistory);
   save('answer_history_index', state.answerHistoryIndex);
 
-  listeners.forEach(fn => fn(state));
+  notifyStateChange();
 }
 
 export function undoAnswer(questionId) {
@@ -167,7 +182,7 @@ export function undoAnswer(questionId) {
   save('answers_state', state.answers);
   save('answer_history_index', state.answerHistoryIndex);
 
-  listeners.forEach(fn => fn(state));
+  notifyStateChange();
   return prev;
 }
 
@@ -183,7 +198,7 @@ export function redoAnswer(questionId) {
   save('answers_state', state.answers);
   save('answer_history_index', state.answerHistoryIndex);
 
-  listeners.forEach(fn => fn(state));
+  notifyStateChange();
   return next;
 }
 
@@ -204,14 +219,16 @@ export function addChatMessage(role, text, action = null) {
     ...state.chatMessages,
     { role, text, timestamp: new Date(), action },
   ];
-  listeners.forEach(fn => fn(state));
+  notifyStateChange();
 }
 
 // ─── Subscription ────────────────────────
 
 export function subscribe(fn) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 // ─── Event Bus ───────────────────────────
@@ -224,7 +241,9 @@ export function emit(event, data) {
 export function on(event, fn) {
   if (!eventListeners.has(event)) eventListeners.set(event, new Set());
   eventListeners.get(event).add(fn);
-  return () => eventListeners.get(event).delete(fn);
+  return () => {
+    eventListeners.get(event).delete(fn);
+  };
 }
 
 // ─── Settings Helpers ────────────────────

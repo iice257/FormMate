@@ -1,11 +1,13 @@
 import { useSyncExternalStore } from 'react';
 
-import { getState, subscribe } from '@/state';
+import { getStateSnapshot, subscribe } from '@/state';
 
 export function useAppState(selector = (state) => state) {
-  return useSyncExternalStore(
+  const state = useSyncExternalStore(
     subscribe,
-    () => selector(getState()),
-    () => selector(getState())
+    getStateSnapshot,
+    getStateSnapshot
   );
+
+  return selector(state);
 }
