@@ -4,7 +4,7 @@ export function normalizeTheme(theme: unknown): 'light' | 'dark' {
 
 export function applyTheme(theme: unknown): 'light' | 'dark' {
   const resolvedTheme = normalizeTheme(theme);
-  document.documentElement.dataset.fmTheme = resolvedTheme;
+  document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
   document.documentElement.style.colorScheme = resolvedTheme;
   return resolvedTheme;
 }
