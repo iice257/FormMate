@@ -13,7 +13,11 @@
     "jsx": "react-jsx",
     "types": ["node"],
     "strict": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src", "api", "tests", "playwright.config.ts", "vite.config.ts", "test-dom-parser.ts"]
 }
