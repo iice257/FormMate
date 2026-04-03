@@ -7,6 +7,7 @@ import { getState } from '../state';
 import { getHomeScreenForUser, navigateTo } from '../router';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
 import { executeAction, searchActions } from '../actions/action-index';
+import { renderButtonMarkup, renderInputMarkup } from './ui-markup';
 
 // Global account modal state
 let _accountModalOpenFn = null;
@@ -88,20 +89,14 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
     : 'zen-mode-toggle zen-mode-toggle-header';
   const text = label ? `<span class="layout-zen-toggle-label">${escapeHtml(label)}</span>` : '';
 
-  return `
-    <button
-      type="button"
-      class="${className}"
-      data-zen-toggle-btn="true"
-      data-zen-screen="${escapeHtml(screenId)}"
-      aria-pressed="${isActive ? 'true' : 'false'}"
-      aria-label="${isActive ? 'Exit Zen Mode' : 'Enter Zen Mode'}"
-      title="${isActive ? 'Exit Zen Mode' : 'Enter Zen Mode'}"
-    >
+  return renderButtonMarkup({
+    ariaLabel: isActive ? 'Exit Zen Mode' : 'Enter Zen Mode',
+    className,
+    contentHtml: `
       <span class="material-symbols-outlined">${isActive ? 'self_improvement' : 'self_improvement'}</span>
       ${text}
-    </button>
-  `;
+    `,
+  }).replace('<button', `<button data-zen-toggle-btn="true" data-zen-screen="${escapeHtml(screenId)}" aria-pressed="${isActive ? 'true' : 'false'}" title="${isActive ? 'Exit Zen Mode' : 'Enter Zen Mode'}"`);
 }
 
 function getZenModeExitButtonHtml(screenId) {
@@ -121,27 +116,20 @@ function getZenModeExitButtonHtml(screenId) {
 
   return `
     <div class="zen-mode-fab-stack ${isActive ? 'visible' : ''}" ${isActive ? '' : 'hidden'}>
-      <button
-        type="button"
-        id="btn-zen-exit"
-        class="zen-mode-exit-btn ${isActive ? 'visible' : ''}"
-        data-zen-screen="${escapeHtml(screenId)}"
-        aria-label="Exit Zen Mode"
-      >
-        <span class="material-symbols-outlined">close</span>
-      </button>
+      ${renderButtonMarkup({
+        ariaLabel: 'Exit Zen Mode',
+        className: `zen-mode-exit-btn ${isActive ? 'visible' : ''}`,
+        contentHtml: '<span class="material-symbols-outlined">close</span>',
+        id: 'btn-zen-exit',
+      }).replace('<button', `<button data-zen-screen="${escapeHtml(screenId)}"`)}
 
       <div class="zen-mode-menu-wrap">
-        <button
-          type="button"
-          id="btn-zen-menu"
-          class="zen-mode-menu-btn"
-          data-zen-screen="${escapeHtml(screenId)}"
-          aria-label="Open Zen navigation"
-          aria-expanded="false"
-        >
-          <span class="material-symbols-outlined">menu</span>
-        </button>
+        ${renderButtonMarkup({
+          ariaLabel: 'Open Zen navigation',
+          className: 'zen-mode-menu-btn',
+          contentHtml: '<span class="material-symbols-outlined">menu</span>',
+          id: 'btn-zen-menu',
+        }).replace('<button', `<button data-zen-screen="${escapeHtml(screenId)}" aria-expanded="false"`)}
 
         <div id="zen-mode-menu" class="zen-mode-menu" hidden>
           ${switchTargets}
@@ -313,11 +301,15 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const sidebarLinksHtml = sidebarLinks.map(link => {
     const isActive = pageId === link.id;
     return `
-      <button id="nav-${link.id}" class="layout-sidebar-link ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
-        ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
-        <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
-        <span class="layout-sidebar-label">${link.label}</span>
-      </button>
+      ${renderButtonMarkup({
+        className: `layout-sidebar-link ${isActive ? 'active' : ''}`,
+        contentHtml: `
+          ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
+          <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
+          <span class="layout-sidebar-label">${link.label}</span>
+        `,
+        id: `nav-${link.id}`,
+      }).replace('<button', `<button aria-current="${isActive ? 'page' : 'false'}"`)}
     `;
   }).join('');
 
@@ -326,19 +318,33 @@ export function withLayout(pageId, contentHtml, options = {}) {
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
       <!-- Header -->
       <header data-fm-hide-on-scroll="true" class="layout-header">
-        <button type="button" class="layout-brand" id="btn-logo-home" aria-label="Go to home">
-          <div class="layout-brand-icon">
-            <img src="/logo.png" alt="FormMate Logo" />
-          </div>
-          <span class="layout-brand-text">Form<span class="text-primary">Mate</span></span>
-        </button>
+        ${renderButtonMarkup({
+          ariaLabel: 'Go to home',
+          className: 'layout-brand',
+          contentHtml: `
+            <div class="layout-brand-icon">
+              <img src="/logo.png" alt="FormMate Logo" />
+            </div>
+            <span class="layout-brand-text">Form<span class="text-primary">Mate</span></span>
+          `,
+          id: 'btn-logo-home',
+          variant: 'ghost',
+        })}
         
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
-          <input type="text" class="layout-search-input" placeholder="Search pages, actions, help, or preferences..." id="layout-search" autocomplete="off" />
-          <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
-            <span class="material-symbols-outlined">close</span>
-          </button>
+          ${renderInputMarkup({
+            className: 'layout-search-input',
+            id: 'layout-search',
+            placeholder: 'Search pages, actions, help, or preferences...',
+          }).replace('<input', '<input autocomplete="off"')}
+          ${renderButtonMarkup({
+            ariaLabel: 'Clear search',
+            className: 'layout-search-clear',
+            contentHtml: '<span class="material-symbols-outlined">close</span>',
+            id: 'btn-layout-search-clear',
+            variant: 'ghost',
+          }).replace('<button', '<button hidden')}
           <div class="layout-search-results" id="layout-search-results" hidden>
             <div class="layout-search-results-list" id="layout-search-results-list"></div>
           </div>
@@ -346,12 +352,22 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
         <div class="layout-header-actions">
           ${isAuthenticated ? `
-          <button class="layout-header-primary-action" id="btn-header-new-form" aria-label="New Form">
-            <span class="material-symbols-outlined">add_circle</span>
-            <span>New Form</span>
-          </button>
+          ${renderButtonMarkup({
+            ariaLabel: 'New Form',
+            className: 'layout-header-primary-action',
+            contentHtml: `
+              <span class="material-symbols-outlined">add_circle</span>
+              <span>New Form</span>
+            `,
+            id: 'btn-header-new-form',
+          })}
           ` : `
-          <button id="btn-login-header" class="layout-header-signin">Sign In</button>
+          ${renderButtonMarkup({
+            className: 'layout-header-signin',
+            contentHtml: 'Sign In',
+            id: 'btn-login-header',
+            variant: 'outline',
+          })}
           `}
         </div>
       </header>
@@ -364,10 +380,15 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
             <div class="layout-sidebar-divider"></div>
             
-            <button id="nav-support" class="layout-sidebar-link" aria-label="Help Center">
-              <span class="material-symbols-outlined layout-sidebar-icon">help</span>
-              <span class="layout-sidebar-label">Help Center</span>
-            </button>
+            ${renderButtonMarkup({
+              ariaLabel: 'Help Center',
+              className: 'layout-sidebar-link',
+              contentHtml: `
+                <span class="material-symbols-outlined layout-sidebar-icon">help</span>
+                <span class="layout-sidebar-label">Help Center</span>
+              `,
+              id: 'nav-support',
+            })}
           </nav>
           
           <!-- Bottom Section: Account -->
@@ -386,9 +407,13 @@ export function withLayout(pageId, contentHtml, options = {}) {
                 <div class="layout-sidebar-user-info">
                   <span class="layout-sidebar-user-name">${displayName}</span>
                 </div>
-                <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
-                  <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
-                </button>
+                ${renderButtonMarkup({
+                  ariaLabel: 'Open preferences',
+                  className: 'layout-sidebar-settings-inline',
+                  contentHtml: '<span class="material-symbols-outlined layout-sidebar-icon">settings</span>',
+                  id: 'btn-sidebar-settings',
+                  variant: 'ghost',
+                })}
               </div>
             </div>
           </div>
@@ -473,19 +498,19 @@ export function initLayout(wrapper, options = {}) {
       return;
     }
 
-    searchResultsList.innerHTML = activeSearchResults.map((action, index) => `
-      <button
-        type="button"
-        class="layout-search-result ${index === 0 ? 'is-active' : ''}"
-        data-action-id="${escapeHtml(action.id)}"
-      >
-        <span class="material-symbols-outlined layout-search-result-icon">${escapeHtml(action.icon || 'arrow_forward')}</span>
-        <span class="layout-search-result-copy">
-          <span class="layout-search-result-title">${escapeHtml(action.title)}</span>
-          <span class="layout-search-result-description">${escapeHtml(action.description || '')}</span>
-        </span>
-      </button>
-    `).join('');
+      searchResultsList.innerHTML = activeSearchResults.map((action, index) =>
+        renderButtonMarkup({
+          className: `layout-search-result ${index === 0 ? 'is-active' : ''}`,
+          contentHtml: `
+            <span class="material-symbols-outlined layout-search-result-icon">${escapeHtml(action.icon || 'arrow_forward')}</span>
+            <span class="layout-search-result-copy">
+              <span class="layout-search-result-title">${escapeHtml(action.title)}</span>
+              <span class="layout-search-result-description">${escapeHtml(action.description || '')}</span>
+            </span>
+          `,
+          variant: 'ghost',
+        }).replace('<button', `<button data-action-id="${escapeHtml(action.id)}"`)
+      ).join('');
 
     searchResults.hidden = false;
   };
