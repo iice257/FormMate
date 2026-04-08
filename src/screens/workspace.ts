@@ -3,7 +3,7 @@
 // FormMate — Main Workspace Screen (Redesigned)
 // ═══════════════════════════════════════════
 
-import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo, subscribe } from '../state';
+import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo } from '../state';
 import { navigateTo } from '../router';
 import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
@@ -81,7 +81,7 @@ export function workspaceScreen() {
             ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
             ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
             ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
+            <div data-zen-hide="always" style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
               <span class="material-symbols-outlined" style="font-size: 16px;">sort</span> Sort
             </div>
           </div>
@@ -92,7 +92,7 @@ export function workspaceScreen() {
           </div>
 
           <!-- Bottom Review CTA -->
-          <div style="margin-top: 2.5rem; display: flex; justify-content: center;">
+          <div data-zen-hide="always" style="margin-top: 2.5rem; display: flex; justify-content: center;">
             <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
               <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
               Review & Submit

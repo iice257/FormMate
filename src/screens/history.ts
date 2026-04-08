@@ -10,39 +10,50 @@ export function historyScreen() {
   const { formHistory } = getState();
 
   const totalAnalyzed = formHistory.length || 0;
-  const avgTime = '—';
-  const accuracyRate = '—';
+  const avgTime = '--';
+  const accuracyRate = '--';
 
-  const PAGE_SIZE = 5;
-  const totalPages = Math.max(1, Math.ceil(totalAnalyzed / PAGE_SIZE));
+  const tableRowsHtml = formHistory.map((form) => {
+    const analyzedOn = new Date(form.timestamp).toLocaleDateString();
+    const title = form.title || 'Untitled Form';
+    const provider = form.provider || 'Google Forms';
 
-  const tableRowsHtml = formHistory.length > 0
-    ? formHistory.slice(0, PAGE_SIZE).map(form => `
-        <tr class="history-row" style="border-bottom: 1px solid var(--fm-border-light); transition: background 0.15s;" data-form-url="${escapeAttr(form.url || '')}">
-          <td style="padding: 1rem 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 36px; height: 36px; border-radius: var(--fm-radius-md); background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
-              </div>
-              <span style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${escapeHtml(form.title || 'Untitled Form')}</span>
+    return `
+      <tr
+        class="history-row"
+        data-form-url="${escapeAttr(form.url || '')}"
+        data-history-title="${escapeAttr(title)}"
+        data-history-provider="${escapeAttr(provider)}"
+        data-history-date="${escapeAttr(analyzedOn)}"
+        style="border-bottom: 1px solid var(--fm-border-light); transition: background 0.15s;"
+      >
+        <td style="padding: 1rem 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 36px; height: 36px; border-radius: var(--fm-radius-md); background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
             </div>
-          </td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b; font-family: var(--fm-font-mono);">${new Date(form.timestamp).toLocaleDateString()}</td>
-          <td style="padding: 1rem 0.75rem;">
-            <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: var(--fm-radius-full); background: var(--fm-bg-sunken); color: #64748b; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;">${escapeHtml(form.provider || 'Google Forms')}</span>
-          </td>
-          <td style="padding: 1rem 0.75rem; text-align: right;">
-            <button class="btn-open-history" data-form-url="${escapeAttr(form.url || '')}" disabled style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; background: none; border: none; display: flex; align-items: center; gap: 0.25rem; margin-left: auto;">
-              Saved <span class="material-symbols-outlined" style="font-size: 16px;">inventory_2</span>
-            </button>
-          </td>
-        </tr>
-      `).join('')
-    : `
-      <tr>
-        <td colspan="4" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.85rem;">No history found. Try analyzing a new form.</td>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${escapeHtml(title)}</span>
+          </div>
+        </td>
+        <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b; font-family: var(--fm-font-mono);">${escapeHtml(analyzedOn)}</td>
+        <td style="padding: 1rem 0.75rem;">
+          <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: var(--fm-radius-full); background: var(--fm-bg-sunken); color: #64748b; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;">${escapeHtml(provider)}</span>
+        </td>
+        <td style="padding: 1rem 0.75rem; text-align: right;">
+          <button
+            class="btn-open-history"
+            data-form-url="${escapeAttr(form.url || '')}"
+            disabled
+            aria-disabled="true"
+            title="Restore flow is not available yet."
+            style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; background: none; border: none; display: flex; align-items: center; gap: 0.25rem; margin-left: auto;"
+          >
+            Saved <span class="material-symbols-outlined" style="font-size: 16px;">inventory_2</span>
+          </button>
+        </td>
       </tr>
     `;
+  }).join('');
 
   const historyContent = `
     <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth animate-screen-enter zen-history-shell">
@@ -79,7 +90,7 @@ export function historyScreen() {
           <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center;">
             <div style="position: relative; flex: 1; max-width: 300px;">
               <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #94a3b8; pointer-events: none;">search</span>
-              <input type="text" placeholder="Search history..." disabled style="width: 100%; height: 36px; padding: 0 0.75rem 0 2.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: #94a3b8;" />
+              <input type="text" id="history-search" placeholder="Search history..." style="width: 100%; height: 36px; padding: 0 0.75rem 0 2.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
             </div>
           </div>
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -93,22 +104,14 @@ export function historyScreen() {
             </thead>
             <tbody>
               ${tableRowsHtml}
+              <tr id="history-empty-row" ${totalAnalyzed ? 'hidden' : ''}>
+                <td colspan="4" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.85rem;">No history found. Try analyzing a new form.</td>
+              </tr>
             </tbody>
           </table>
 
           <div class="history-zen-hide" style="padding: 1rem 1.25rem; border-top: 1px solid var(--fm-border-light); display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.75rem; color: #94a3b8;">Showing 1 to ${Math.min(PAGE_SIZE, totalAnalyzed)} of ${totalAnalyzed} entries</span>
-            <div style="display: flex; gap: 0.25rem;">
-              <button disabled style="width: 32px; height: 32px; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-sm); background: #fff; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">chevron_left</span>
-              </button>
-              ${Array.from({ length: Math.min(totalPages, 5) }, (_, i) => `
-                <button disabled style="width: 32px; height: 32px; border: 1px solid ${i === 0 ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius: var(--fm-radius-sm); background: ${i === 0 ? 'var(--fm-primary)' : '#fff'}; color: ${i === 0 ? '#fff' : 'var(--fm-text)'}; font-size: 0.75rem; font-weight: 700;">${i + 1}</button>
-              `).join('')}
-              <button disabled style="width: 32px; height: 32px; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-sm); background: #fff; color: #cbd5e1; display: flex; align-items: center; justify-content: center;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">chevron_right</span>
-              </button>
-            </div>
+            <span id="history-count-label" style="font-size: 0.75rem; color: #94a3b8;">Showing ${totalAnalyzed} of ${totalAnalyzed} entries</span>
           </div>
         </div>
       </div>
@@ -123,10 +126,57 @@ export function historyScreen() {
 
   function init(wrapper) {
     const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'history' } });
+    const searchInput = wrapper.querySelector('#history-search');
+    const rows = Array.from(wrapper.querySelectorAll('.history-row'));
+    const emptyRow = wrapper.querySelector('#history-empty-row');
+    const countLabel = wrapper.querySelector('#history-count-label');
+    const emptyCell = emptyRow?.querySelector('td');
 
+    const applySearch = () => {
+      const query = searchInput?.value.trim().toLowerCase() || '';
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const haystack = [
+          row.dataset.historyTitle,
+          row.dataset.historyProvider,
+          row.dataset.historyDate
+        ].join(' ').toLowerCase();
+        const matches = !query || haystack.includes(query);
+        row.hidden = !matches;
+        if (matches) {
+          visibleCount += 1;
+        }
+      });
+
+      if (rows.length === 0) {
+        emptyRow.hidden = false;
+        if (emptyCell) {
+          emptyCell.textContent = 'No history found. Try analyzing a new form.';
+        }
+      } else if (visibleCount === 0) {
+        emptyRow.hidden = false;
+        if (emptyCell) {
+          emptyCell.textContent = `No history matches "${searchInput.value.trim()}".`;
+        }
+      } else {
+        emptyRow.hidden = true;
+        if (emptyCell) {
+          emptyCell.textContent = 'No history found. Try analyzing a new form.';
+        }
+      }
+
+      if (countLabel) {
+        countLabel.textContent = `Showing ${visibleCount} of ${rows.length} entries`;
+      }
+    };
+
+    searchInput?.addEventListener('input', applySearch);
     wrapper.querySelector('#btn-export-all')?.addEventListener('click', () => {
       navigateTo('docs');
     });
+
+    applySearch();
 
     return () => {
       cleanupLayout?.();
