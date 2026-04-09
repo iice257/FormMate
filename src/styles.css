@@ -961,9 +961,10 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 .zen-mode-menu-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
   align-items: center;
-  justify-content: center;
+  justify-items: start;
   gap: 0.5rem;
   width: 100%;
   padding: 0.55rem 0.78rem;
@@ -974,7 +975,7 @@ input[type="range"]:active::-moz-range-thumb {
   font: inherit;
   font-size: 0.78rem;
   font-weight: 800;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -990,17 +991,37 @@ input[type="range"]:active::-moz-range-thumb {
 
 .zen-mode-menu-item-label {
   line-height: 1.1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.zen-mode-menu-item:hover {
+.zen-mode-menu-item-trailing {
+  font-size: 14px;
+  justify-self: end;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.zen-mode-menu-item:hover,
+.zen-mode-menu-item.is-current {
   background: rgba(var(--fm-primary-rgb), 0.1);
   color: var(--fm-primary);
   border-color: var(--fm-interactive-strike-strong);
-  transform: scale(1.04);
   box-shadow: var(--fm-interactive-glow-soft);
+}
+
+.zen-mode-menu-item:hover {
+  transform: scale(1.04);
+}
+
+.zen-mode-menu-item.is-current {
+  cursor: default;
+}
+
+.zen-mode-menu-item.is-current::after {
+  display: none;
 }
 
 .zen-mode-menu-item::after {
@@ -2011,6 +2032,7 @@ input[type="range"]:active::-moz-range-thumb {
 [data-fm-theme="dark"] .layout-sidebar-link.active,
 [data-fm-theme="dark"] .layout-search-result.is-active,
 [data-fm-theme="dark"] .zen-mode-menu-item:hover,
+[data-fm-theme="dark"] .zen-mode-menu-item.is-current,
 [data-fm-theme="dark"] .account-modal-tab.active,
 [data-fm-theme="dark"] .modal-verbosity-btn.is-active,
 [data-fm-theme="dark"] .modal-theme-btn.is-active {

@@ -131,18 +131,23 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
   const switchTargets = [...SUPPORTED_ZEN_SCREENS]
-    .filter((candidate) => candidate !== screenId)
     .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
-    .map((candidate) => `
+    .map((candidate) => {
+      const isCurrent = candidate === screenId;
+      return `
       <button
         type="button"
-        class="zen-mode-menu-item"
+        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''}"
         data-zen-target="${escapeHtml(candidate)}"
+        aria-current="${isCurrent ? 'page' : 'false'}"
+        aria-label="${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}${isCurrent ? ' (Current)' : ''}"
       >
         <span class="material-symbols-outlined zen-mode-menu-item-icon">${escapeHtml(ZEN_SCREEN_ICONS[candidate] || 'arrow_forward')}</span>
         <span class="zen-mode-menu-item-label">${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
+        <span class="material-symbols-outlined zen-mode-menu-item-trailing">${isCurrent ? 'check' : 'arrow_outward'}</span>
       </button>
-    `)
+    `;
+    })
     .join('');
 
   return `
@@ -306,6 +311,10 @@ export function bindZenModeControls(wrapper, zenMode) {
     item.addEventListener('click', () => {
       const targetScreen = item.getAttribute('data-zen-target');
       if (!targetScreen) return;
+      if (targetScreen === zenScreenId) {
+        closeZenMenu();
+        return;
+      }
       setZenModeEnabled(zenScreenId, true);
       closeZenMenu();
       navigateTo(targetScreen, false, 'forward');
