@@ -10,7 +10,7 @@ import { executeAction, searchActions } from '../actions/action-index';
 
 // Global account modal state
 let _accountModalOpenFn = null;
-const ZEN_MODE_STORAGE_PREFIX = 'fm_zen_mode_';
+const ZEN_MODE_STORAGE_KEY = 'fm_zen_mode_enabled';
 const ZEN_MODE_EVENT = 'fm:zen-mode-change';
 const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'ai-chat', 'new', 'history', 'workspace', 'vault', 'examples']);
 const SIDEBAR_COLLAPSED_CLASS = 'layout-shell-sidebar-collapsed';
@@ -55,34 +55,37 @@ export function isZenModeSupported(screenId) {
   return SUPPORTED_ZEN_SCREENS.has(screenId);
 }
 
-function getZenModeStorageKey(screenId) {
-  return `${ZEN_MODE_STORAGE_PREFIX}${screenId}`;
-}
-
 export function isZenModeEnabled(screenId) {
+  if (screenId && !isZenModeSupported(screenId)) {
+    return false;
+  }
   try {
-    return window.sessionStorage.getItem(getZenModeStorageKey(screenId)) === 'true';
+    return window.sessionStorage.getItem(ZEN_MODE_STORAGE_KEY) === 'true';
   } catch {
     return false;
   }
 }
 
 export function setZenModeEnabled(screenId, enabled) {
+  if (screenId && !isZenModeSupported(screenId)) {
+    return false;
+  }
   try {
-    window.sessionStorage.setItem(getZenModeStorageKey(screenId), enabled ? 'true' : 'false');
+    window.sessionStorage.setItem(ZEN_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
   } catch {
     // Ignore storage failures and continue with in-memory DOM state.
   }
+  return true;
 }
 
 export function updateZenMode(screenId, enabled) {
-  if (!isZenModeSupported(screenId)) {
+  if (screenId && !isZenModeSupported(screenId)) {
     return false;
   }
 
   setZenModeEnabled(screenId, enabled);
   window.dispatchEvent(new CustomEvent(ZEN_MODE_EVENT, {
-    detail: { screenId, enabled }
+    detail: { enabled }
   }));
   return true;
 }
@@ -285,9 +288,7 @@ export function bindZenModeControls(wrapper, zenMode) {
     }
   };
   const handleZenChange = (event) => {
-    if (event.detail?.screenId === zenScreenId) {
-      syncZenUi(Boolean(event.detail.enabled));
-    }
+    syncZenUi(Boolean(event.detail?.enabled));
   };
   const handleZenMenuClickAway = (event) => {
     if (!zenMenu || !zenMenuBtn) return;
@@ -305,7 +306,7 @@ export function bindZenModeControls(wrapper, zenMode) {
     item.addEventListener('click', () => {
       const targetScreen = item.getAttribute('data-zen-target');
       if (!targetScreen) return;
-      setZenModeEnabled(targetScreen, true);
+      setZenModeEnabled(zenScreenId, true);
       closeZenMenu();
       navigateTo(targetScreen, false, 'forward');
     });

@@ -250,7 +250,7 @@ function renderSettingsTab(settings) {
       </section>
 
       <section style="display:flex; flex-direction:column; gap:0.8rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff; ${zenSupported ? '' : 'opacity:0.65;'}">
-        ${renderToggleRow('modal-set-zen', 'Zen Mode', zenSupported ? `Focus the current ${escapeHtml(currentScreen)} screen.` : 'Available on AI Chat, New Form, History, and Active Form only.', zenEnabled, !zenSupported)}
+        ${renderToggleRow('modal-set-zen', 'Zen Mode', zenSupported ? 'Use one global Zen toggle across all supported screens.' : 'Zen Mode is only available on supported workspace screens.', zenEnabled, !zenSupported)}
       </section>
 
       <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
