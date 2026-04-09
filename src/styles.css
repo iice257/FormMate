@@ -2211,12 +2211,7 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 .dashboard-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.38rem 0.78rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.56);
+  display: inline-block;
   color: var(--fm-primary-dark);
   font-size: 0.66rem;
   font-weight: 900;
