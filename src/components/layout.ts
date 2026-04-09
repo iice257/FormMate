@@ -144,7 +144,6 @@ function getZenModeExitButtonHtml(screenId) {
       >
         <span class="material-symbols-outlined zen-mode-menu-item-icon">${escapeHtml(ZEN_SCREEN_ICONS[candidate] || 'arrow_forward')}</span>
         <span class="zen-mode-menu-item-label">${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
-        <span class="material-symbols-outlined zen-mode-menu-item-trailing">${isCurrent ? 'check' : 'arrow_outward'}</span>
       </button>
     `;
     })

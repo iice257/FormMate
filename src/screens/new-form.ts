@@ -8,7 +8,7 @@ import { toast } from '../components/toast';
 import { initAurora } from './Aurora';
 import './Aurora.css';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
-import { isZenModeEnabled, bindZenModeControls, openAccountModal, getZenModeToggleHtml } from '../components/layout';
+import { isZenModeEnabled, updateZenMode, bindZenModeControls, openAccountModal, getZenModeToggleHtml } from '../components/layout';
 
 export function newFormScreen() {
   const { isAuthenticated, userProfile, formUrl } = getState();
@@ -119,6 +119,8 @@ export function newFormScreen() {
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     const btnBack = wrapper.querySelector('#btn-back');
     const btnZenExit = wrapper.querySelector('#btn-zen-exit');
+    let zenEnabled = isZenModeEnabled('new');
+    let zenTurnedOnFromNew = false;
     const auroraBg = wrapper.querySelector('#aurora-bg');
 
     const cleanupAurora = initAurora(auroraBg, {
@@ -128,13 +130,28 @@ export function newFormScreen() {
       speed: 0.8
     });
     const cleanupZen = bindZenModeControls(wrapper, { screenId: 'new' });
+    const handleZenModeChanged = (event) => {
+      const nextEnabled = Boolean(event?.detail?.enabled);
+      if (nextEnabled && !zenEnabled) {
+        zenTurnedOnFromNew = true;
+      }
+      if (!nextEnabled) {
+        zenTurnedOnFromNew = false;
+      }
+      zenEnabled = nextEnabled;
+    };
     const handleZenExitAsBack = (event) => {
       if (!isZenModeEnabled('new')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (zenTurnedOnFromNew) {
+        updateZenMode('new', false);
+        return;
+      }
       goBack();
     };
     btnZenExit?.addEventListener('click', handleZenExitAsBack, true);
+    window.addEventListener('fm:zen-mode-change', handleZenModeChanged);
 
     btnBack.addEventListener('click', () => goBack());
     wrapper.querySelector('#logo-home')?.addEventListener('click', () => {
@@ -167,6 +184,7 @@ export function newFormScreen() {
 
     return () => {
       btnZenExit?.removeEventListener('click', handleZenExitAsBack, true);
+      window.removeEventListener('fm:zen-mode-change', handleZenModeChanged);
       cleanupZen?.();
       cleanupAurora?.();
     };

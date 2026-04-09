@@ -279,7 +279,7 @@ function renderToggleRow(id, label, description, checked, disabled = false) {
 
 function renderHelpTab() {
   return `
-    <div style="display:flex; flex-direction:column; gap:1.2rem;">
+    <div style="display:flex; flex-direction:column; gap:1.2rem; margin-top:0.55rem;">
       <div style="padding:1.4rem 1.5rem; border-radius:1.1rem; background:linear-gradient(135deg, var(--fm-primary), var(--fm-primary-light)); color:#fff; position:relative; overflow:hidden;">
         <div style="position:absolute; right:-24px; bottom:-24px; width:108px; height:108px; border-radius:50%; background:rgba(255,255,255,0.12);"></div>
         <h2 style="font-size:1.35rem; font-weight:900; margin-bottom:0.35rem;">How can we help?</h2>
