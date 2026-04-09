@@ -23,6 +23,15 @@ const ZEN_SCREEN_LABELS = {
   'vault': 'Vault',
   'examples': 'Examples',
 };
+const ZEN_SCREEN_ICONS = {
+  'dashboard': 'space_dashboard',
+  'ai-chat': 'chat_bubble',
+  'new': 'add_circle',
+  'history': 'schedule',
+  'workspace': 'description',
+  'vault': 'shield',
+  'examples': 'auto_stories',
+};
 
 /**
  * Register the account modal opener. Called once during app boot after modal init.
@@ -127,7 +136,8 @@ function getZenModeExitButtonHtml(screenId) {
         class="zen-mode-menu-item"
         data-zen-target="${escapeHtml(candidate)}"
       >
-        <span>${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
+        <span class="material-symbols-outlined zen-mode-menu-item-icon">${escapeHtml(ZEN_SCREEN_ICONS[candidate] || 'arrow_forward')}</span>
+        <span class="zen-mode-menu-item-label">${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
       </button>
     `)
     .join('');

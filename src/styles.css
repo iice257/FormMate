@@ -939,10 +939,10 @@ input[type="range"]:active::-moz-range-thumb {
   position: absolute;
   top: calc(100% + 0.55rem);
   right: 0;
-  min-width: 190px;
+  min-width: 156px;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
   padding: 0;
   border: none;
   border-radius: 0;
@@ -963,9 +963,10 @@ input[type="range"]:active::-moz-range-thumb {
 .zen-mode-menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0.62rem 0.92rem;
+  padding: 0.55rem 0.78rem;
   border: 1px solid var(--fm-interactive-strike);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
@@ -979,6 +980,17 @@ input[type="range"]:active::-moz-range-thumb {
   overflow: hidden;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
   transition: background-color var(--fm-transition-fast), color var(--fm-transition-fast), transform var(--fm-transition-fast), box-shadow var(--fm-transition-fast), border-color var(--fm-transition-fast);
+}
+
+.zen-mode-menu-item-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.zen-mode-menu-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .zen-mode-menu-item:hover {
