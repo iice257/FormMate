@@ -56,7 +56,10 @@ export function newFormScreen() {
           </button>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-3">${authButtonHtml}</div>
+        <div class="flex-1 flex items-center justify-end gap-3">
+          ${getZenModeToggleHtml('new', { label: '', variant: 'header' })}
+          ${authButtonHtml}
+        </div>
       </header>
 
       <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 zen-new-form-main">
@@ -86,9 +89,6 @@ export function newFormScreen() {
             </div>
 
             <div class="mt-8 flex flex-col items-center gap-4 zen-new-form-secondary">
-              <div class="flex justify-center">
-                ${getZenModeToggleHtml('new', { label: 'Zen Mode', variant: 'minimal' })}
-              </div>
               <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
               <div class="flex flex-wrap justify-center gap-3">
                 <button id="nav-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
@@ -118,6 +118,7 @@ export function newFormScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     const btnBack = wrapper.querySelector('#btn-back');
+    const btnZenExit = wrapper.querySelector('#btn-zen-exit');
     const auroraBg = wrapper.querySelector('#aurora-bg');
 
     const cleanupAurora = initAurora(auroraBg, {
@@ -127,6 +128,13 @@ export function newFormScreen() {
       speed: 0.8
     });
     const cleanupZen = bindZenModeControls(wrapper, { screenId: 'new' });
+    const handleZenExitAsBack = (event) => {
+      if (!isZenModeEnabled('new')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      goBack();
+    };
+    btnZenExit?.addEventListener('click', handleZenExitAsBack, true);
 
     btnBack.addEventListener('click', () => goBack());
     wrapper.querySelector('#logo-home')?.addEventListener('click', () => {
@@ -158,6 +166,7 @@ export function newFormScreen() {
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
 
     return () => {
+      btnZenExit?.removeEventListener('click', handleZenExitAsBack, true);
       cleanupZen?.();
       cleanupAurora?.();
     };
