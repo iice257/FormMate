@@ -3,7 +3,7 @@
 // FormMate — Shared Layout Component (Redesigned)
 // ═══════════════════════════════════════════
 
-import { getState } from '../state';
+import { getState, setState } from '../state';
 import { getHomeScreenForUser, navigateTo } from '../router';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
 import { executeAction, searchActions } from '../actions/action-index';
@@ -13,6 +13,7 @@ let _accountModalOpenFn = null;
 const ZEN_MODE_STORAGE_PREFIX = 'fm_zen_mode_';
 const ZEN_MODE_EVENT = 'fm:zen-mode-change';
 const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'ai-chat', 'new', 'history', 'workspace', 'vault', 'examples']);
+const SIDEBAR_COLLAPSED_CLASS = 'layout-shell-sidebar-collapsed';
 const ZEN_SCREEN_LABELS = {
   'dashboard': 'Dashboard',
   'ai-chat': 'AI Chat',
@@ -81,12 +82,23 @@ export function toggleZenMode(screenId) {
   return updateZenMode(screenId, !isZenModeEnabled(screenId));
 }
 
+function hasActiveWorkspace() {
+  return Boolean(getState().formData);
+}
+
+function isSidebarExpanded() {
+  return getState().sidebarOpen !== false;
+}
+
 export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'header' } = {}) {
   const isActive = isZenModeEnabled(screenId);
   const className = variant === 'minimal'
-    ? 'zen-mode-toggle zen-mode-toggle-minimal'
+    ? 'zen-mode-toggle zen-mode-toggle-minimal layout-sidebar-utility-btn'
     : 'zen-mode-toggle zen-mode-toggle-header';
-  const text = label ? `<span class="layout-zen-toggle-label">${escapeHtml(label)}</span>` : '';
+  const textClassName = variant === 'minimal'
+    ? 'layout-zen-toggle-label layout-sidebar-utility-label'
+    : 'layout-zen-toggle-label';
+  const text = label ? `<span class="${textClassName}">${escapeHtml(label)}</span>` : '';
 
   return `
     <button
@@ -108,6 +120,7 @@ function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
   const switchTargets = [...SUPPORTED_ZEN_SCREENS]
     .filter((candidate) => candidate !== screenId)
+    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
     .map((candidate) => `
       <button
         type="button"
@@ -148,6 +161,26 @@ function getZenModeExitButtonHtml(screenId) {
         </div>
       </div>
     </div>
+  `;
+}
+
+function getSidebarCollapseButtonHtml() {
+  const expanded = isSidebarExpanded();
+  const label = expanded ? 'Collapse Sidebar' : 'Expand Sidebar';
+  const icon = expanded ? 'left_panel_close' : 'left_panel_open';
+
+  return `
+    <button
+      type="button"
+      id="btn-sidebar-toggle"
+      class="layout-sidebar-utility-btn"
+      aria-label="${escapeHtml(label)}"
+      title="${escapeHtml(label)}"
+      aria-pressed="${expanded ? 'false' : 'true'}"
+    >
+      <span class="material-symbols-outlined">${icon}</span>
+      <span class="layout-sidebar-utility-label">${escapeHtml(label)}</span>
+    </button>
   `;
 }
 
@@ -296,6 +329,8 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const zenScreenId = options.zenMode?.screenId || pageId;
   const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
+  const sidebarExpanded = isSidebarExpanded();
+  const activeWorkspace = hasActiveWorkspace();
   const displayName = escapeHtml(userProfile?.name || 'User');
   const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
@@ -304,11 +339,12 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const sidebarLinks = [
     { id: 'dashboard', icon: 'space_dashboard', label: 'Dashboard', route: 'dashboard' },
     { id: 'new', icon: 'add_circle', label: 'New Form', route: 'new' },
-    { id: 'workspace', icon: 'description', label: 'Active Form', route: 'workspace' },
+    activeWorkspace ? { id: 'workspace', icon: 'description', label: 'Active Form', route: 'workspace' } : null,
     { id: 'history', icon: 'schedule', label: 'History', route: 'history' },
     { id: 'ai-chat', icon: 'chat_bubble', label: 'AI Chat', route: 'ai-chat' },
+    { id: 'vault', icon: 'shield', label: 'Vault', route: 'vault' },
     { id: 'examples', icon: 'auto_stories', label: 'Examples', route: 'examples' },
-  ];
+  ].filter(Boolean);
 
   const sidebarLinksHtml = sidebarLinks.map(link => {
     const isActive = pageId === link.id;
@@ -322,7 +358,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
   }).join('');
 
   return `
-    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''}" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
+    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
       <!-- Header -->
       <header data-fm-hide-on-scroll="true" class="layout-header">
@@ -372,6 +408,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
           
           <!-- Bottom Section: Account -->
           <div class="layout-sidebar-bottom">
+            <div class="layout-sidebar-collapse-row">
+              ${getSidebarCollapseButtonHtml()}
+            </div>
             ${supportsZenOnPage ? `
               <div class="layout-sidebar-zen-row">
                 ${getZenModeToggleHtml(zenScreenId, { label: 'Zen Mode', variant: 'minimal' })}
@@ -415,6 +454,7 @@ export function initLayout(wrapper, options = {}) {
     { id: 'nav-workspace', route: 'workspace' },
     { id: 'nav-history', route: 'history' },
     { id: 'nav-ai-chat', route: 'ai-chat' },
+    { id: 'nav-vault', route: 'vault' },
     { id: 'nav-examples', route: 'examples' },
   ];
 
@@ -437,6 +477,34 @@ export function initLayout(wrapper, options = {}) {
   wrapper.querySelector('#btn-header-new-form')?.addEventListener('click', () => {
     navigateTo('new');
   });
+
+  const layoutShell = wrapper.querySelector('.layout-shell');
+  const sidebarToggleBtn = wrapper.querySelector('#btn-sidebar-toggle');
+  const syncSidebarUi = (expanded) => {
+    layoutShell?.classList.toggle(SIDEBAR_COLLAPSED_CLASS, !expanded);
+
+    if (!sidebarToggleBtn) return;
+
+    const label = expanded ? 'Collapse Sidebar' : 'Expand Sidebar';
+    const icon = expanded ? 'left_panel_close' : 'left_panel_open';
+    sidebarToggleBtn.setAttribute('aria-label', label);
+    sidebarToggleBtn.setAttribute('title', label);
+    sidebarToggleBtn.setAttribute('aria-pressed', expanded ? 'false' : 'true');
+
+    const iconEl = sidebarToggleBtn.querySelector('.material-symbols-outlined');
+    if (iconEl) iconEl.textContent = icon;
+
+    const labelEl = sidebarToggleBtn.querySelector('.layout-sidebar-utility-label');
+    if (labelEl) labelEl.textContent = label;
+  };
+  const handleSidebarToggle = () => {
+    const nextExpanded = !isSidebarExpanded();
+    setState({ sidebarOpen: nextExpanded });
+    syncSidebarUi(nextExpanded);
+  };
+
+  sidebarToggleBtn?.addEventListener('click', handleSidebarToggle);
+  syncSidebarUi(isSidebarExpanded());
 
   const searchInput = wrapper.querySelector('#layout-search');
   const searchClear = wrapper.querySelector('#btn-layout-search-clear');
@@ -585,12 +653,14 @@ export function initLayout(wrapper, options = {}) {
   const zenMode = options.zenMode;
   if (!zenMode) {
     return () => {
+      sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
       document.removeEventListener('click', handleDocumentClick);
       document.body.classList.remove('fm-zen-mode');
     };
   }
   const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
+    sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
     document.removeEventListener('click', handleDocumentClick);
     cleanupZen?.();
   };

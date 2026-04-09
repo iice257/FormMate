@@ -9,11 +9,20 @@ import { escapeAttr, escapeHtml } from '../utils/escape';
 export function dashboardScreen() {
   const { userProfile, formHistory, tier, formData } = getState();
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
+  const planLabel = tier === 'free' ? 'Basic' : 'Pro';
+  const workspaceLabel = formData ? 'Active Workspace' : 'Ready Workspace';
 
   const totalForms = formHistory.length || 0;
   const aiCredits = tier === 'free' ? 'Limited' : 'Expanded';
-  const timeSaved = '—';
-  const accuracy = '—';
+  const timeSaved = '-';
+  const accuracy = '-';
+
+  const stats = [
+    { label: 'Total Forms', value: String(totalForms), meta: 'Forms tracked' },
+    { label: 'AI Credits', value: aiCredits, meta: `${planLabel} tier` },
+    { label: 'Time Saved', value: timeSaved, meta: 'Not yet measured' },
+    { label: 'Accuracy', value: accuracy, meta: 'Pending telemetry' }
+  ];
 
   const quickActions = [
     {
@@ -41,35 +50,36 @@ export function dashboardScreen() {
     ? formHistory.slice(0, 5).map(form => {
       const status = form.status || 'completed';
       const statusLabel = status === 'completed' ? 'Active' : status === 'draft' ? 'Draft' : 'Closed';
-      const statusColor = status === 'completed'
-        ? 'color: #059669; background: #d1fae5;'
+      const statusClass = status === 'completed'
+        ? 'dashboard-status-active'
         : status === 'draft'
-          ? 'color: #d97706; background: #fef3c7;'
-          : 'color: #dc2626; background: #fee2e2;';
+          ? 'dashboard-status-draft'
+          : 'dashboard-status-closed';
+      const answerCount = typeof form.answerCount === 'number' ? String(form.answerCount) : '-';
 
       return `
-        <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}" style="border-top: 1px solid var(--fm-border-light);">
-          <td style="padding: 1rem 1.35rem;">
-            <div style="display: flex; align-items: center; gap: 0.8rem;">
-              <div style="width: 2.25rem; height: 2.25rem; border-radius: 0.95rem; background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
+        <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}">
+          <td class="dashboard-table-cell dashboard-table-cell-form">
+            <div class="dashboard-activity-form">
+              <div class="dashboard-activity-form-icon">
+                <span class="material-symbols-outlined">description</span>
               </div>
-              <div>
-                <div style="font-size: 0.88rem; font-weight: 750; color: var(--fm-text);">${escapeHtml(form.title || 'Untitled Form')}</div>
-                <div style="font-size: 0.7rem; color: #94a3b8;">${escapeHtml(form.provider || 'Google Forms')}</div>
+              <div class="dashboard-activity-form-copy">
+                <div class="dashboard-activity-form-title">${escapeHtml(form.title || 'Untitled Form')}</div>
+                <div class="dashboard-activity-form-provider">${escapeHtml(form.provider || 'Google Forms')}</div>
               </div>
             </div>
           </td>
-          <td style="padding: 1rem 0.75rem;">
-            <span class="dashboard-status" style="display: inline-flex; align-items: center; padding: 0.24rem 0.58rem; border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; ${statusColor}">
+          <td class="dashboard-table-cell">
+            <span class="dashboard-status ${statusClass}">
               ${statusLabel}
             </span>
           </td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: #64748b;">—</td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.82rem; color: #64748b;">${new Date(form.timestamp).toLocaleDateString()}</td>
-          <td style="padding: 1rem 1.35rem 1rem 0.75rem; text-align: right;">
-            <button class="recent-form-menu" aria-label="No actions available yet" disabled style="width: 2rem; height: 2rem; border: none; background: transparent; color: #cbd5e1; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.7rem;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">more_horiz</span>
+          <td class="dashboard-table-cell dashboard-cell-muted">${answerCount}</td>
+          <td class="dashboard-table-cell dashboard-cell-muted">${new Date(form.timestamp).toLocaleDateString()}</td>
+          <td class="dashboard-table-cell dashboard-table-cell-actions">
+            <button class="recent-form-menu" aria-label="No actions available yet" disabled>
+              <span class="material-symbols-outlined">more_horiz</span>
             </button>
           </td>
         </tr>
@@ -77,7 +87,7 @@ export function dashboardScreen() {
     }).join('')
     : `
       <tr>
-        <td colspan="5" style="padding: 3.5rem 1rem; text-align: center; color: #94a3b8; font-style: italic;">
+        <td colspan="5" class="dashboard-activity-empty">
           No forms yet. Start by pasting a link to analyze your first form.
         </td>
       </tr>
@@ -85,39 +95,43 @@ export function dashboardScreen() {
 
   const dashboardContent = `
     <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter dashboard-page">
-      <div class="app-page-inner" style="padding-top: 1.5rem;">
+      <div class="app-page-inner dashboard-page-inner">
         <div class="app-page-stack">
           <section class="dashboard-hero">
-            <div style="display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.85fr); gap: 1.5rem; align-items: stretch;">
-              <div class="dashboard-hero-copy" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="dashboard-hero-grid">
+              <div class="dashboard-hero-copy">
                 <span class="dashboard-kicker">Dashboard</span>
-                <div style="display: flex; flex-direction: column; gap: 0.7rem;">
+                <div class="dashboard-hero-copy-block">
                   <h1 class="app-title">Welcome back, ${firstName}.</h1>
-                  <p class="app-copy" style="max-width: 560px;">
-                    Everything important is grouped into calmer, larger surfaces so you can get moving quickly without the dashboard feeling noisy.
+                  <p class="app-copy dashboard-hero-copy-text">
+                    A consolidated view of your form activity.
                   </p>
+                  <p class="dashboard-hero-meta">${planLabel} Plan | ${workspaceLabel}</p>
                 </div>
-                <div class="dashboard-hero-actions" style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-                  <button id="btn-dashboard-open-history" class="app-button-primary btn-press">
+                <div class="dashboard-hero-actions">
+                  <button id="btn-dashboard-open-history" class="app-button-secondary dashboard-secondary-action btn-press">
                     <span class="material-symbols-outlined">schedule</span>
                     <span>Open History</span>
                   </button>
-                  <button id="btn-dashboard-open-workspace" class="app-button-secondary btn-press">
+                  <button id="btn-dashboard-open-workspace" class="app-button-primary dashboard-primary-action btn-press">
                     <span class="material-symbols-outlined">description</span>
                     <span>${formData ? 'Resume Active Form' : 'Open Workspace'}</span>
                   </button>
                 </div>
               </div>
 
-              <div class="dashboard-hero-aside dashboard-section-surface" style="padding: 1.2rem 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-                <div class="app-eyebrow">At A Glance</div>
-                <div class="dashboard-hero-metrics" style="border-top: none; padding-top: 1rem;">
+              <div class="dashboard-hero-aside">
+                <div class="dashboard-hero-aside-top">
+                  <div class="app-eyebrow">At A Glance</div>
+                  <p class="dashboard-panel-copy">Track usage, plan, and workspace state without leaving the page.</p>
+                </div>
+                <div class="dashboard-hero-metrics">
                   <div>
                     <div class="dashboard-hero-metric-value">${totalForms}</div>
                     <div class="dashboard-hero-metric-label">Forms Touched</div>
                   </div>
                   <div>
-                    <div class="dashboard-hero-metric-value">${tier === 'free' ? 'Basic' : 'Pro'}</div>
+                    <div class="dashboard-hero-metric-value">${planLabel}</div>
                     <div class="dashboard-hero-metric-label">Plan</div>
                   </div>
                   <div>
@@ -129,90 +143,63 @@ export function dashboardScreen() {
             </div>
           </section>
 
-          <section class="dashboard-stats-row" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem;">
-            <article class="dashboard-stat-card">
-              <div class="dashboard-stat-edge"></div>
-              <div class="dashboard-stat-glow"></div>
-              <div class="app-eyebrow">Total Forms</div>
-              <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
-                <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${totalForms}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Observed usage</span>
-              </div>
-            </article>
-            <article class="dashboard-stat-card">
-              <div class="dashboard-stat-edge"></div>
-              <div class="dashboard-stat-glow"></div>
-              <div class="app-eyebrow">AI Credits</div>
-              <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
-                <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${aiCredits}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Tier state</span>
-              </div>
-            </article>
-            <article class="dashboard-stat-card">
-              <div class="dashboard-stat-edge"></div>
-              <div class="dashboard-stat-glow"></div>
-              <div class="app-eyebrow">Time Saved</div>
-              <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
-                <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${timeSaved}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Not yet measured</span>
-              </div>
-            </article>
-            <article class="dashboard-stat-card">
-              <div class="dashboard-stat-edge"></div>
-              <div class="dashboard-stat-glow"></div>
-              <div class="app-eyebrow">Accuracy</div>
-              <div style="margin-top: 0.55rem; display: flex; align-items: baseline; gap: 0.45rem;">
-                <span style="font-size: 1.55rem; font-weight: 900; color: var(--fm-text);">${accuracy}</span>
-                <span style="font-size: 0.68rem; font-weight: 700; color: #64748b;">Pending telemetry</span>
-              </div>
-            </article>
+          <section class="dashboard-stats-row">
+            ${stats.map(stat => `
+              <article class="dashboard-stat-card">
+                <div class="dashboard-stat-edge"></div>
+                <div class="dashboard-stat-glow"></div>
+                <div class="app-eyebrow">${stat.label}</div>
+                <div class="dashboard-stat-reading">
+                  <span class="dashboard-stat-value">${stat.value}</span>
+                  <span class="dashboard-stat-meta">${stat.meta}</span>
+                </div>
+              </article>
+            `).join('')}
           </section>
 
           <section class="dashboard-section-surface">
-            <div style="margin-bottom: 1rem;">
-              <span class="app-eyebrow">Quick Actions</span>
-              <h2 style="margin: 0.35rem 0 0; font-size: 1.12rem; font-weight: 850; color: var(--fm-text);">
-                Move faster without the dashboard feeling crowded
-              </h2>
+            <div class="dashboard-panel-header">
+              <div>
+                <span class="app-eyebrow">Quick Actions</span>
+                <h2 class="dashboard-panel-title">Move faster with the same essentials</h2>
+              </div>
             </div>
-            <div class="dashboard-quick-actions-grid" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;">
+            <div class="dashboard-quick-actions-grid">
               ${quickActions.map(action => `
                 <button
                   id="${action.buttonId}"
                   class="dashboard-quick-action ${action.featured ? 'dashboard-quick-action-featured' : ''}"
-                  style="${action.featured ? 'background: linear-gradient(145deg, #0f172a, #163452); color: #fff; border-color: rgba(15, 23, 42, 0.08); box-shadow: 0 22px 44px rgba(15, 23, 42, 0.14);' : ''}"
                 >
-                  <span class="dashboard-quick-action-icon" style="${action.featured ? 'background: rgba(255,255,255,0.12); color: #fff; box-shadow: none;' : ''}">
+                  <span class="dashboard-quick-action-icon">
                     <span class="material-symbols-outlined">${action.icon}</span>
                   </span>
-                  <span>
-                    <span class="dashboard-quick-action-eyebrow" style="${action.featured ? 'color: rgba(255,255,255,0.72);' : ''}">${action.featured ? 'Featured' : 'Shortcut'}</span>
-                    <span class="dashboard-quick-action-title" style="${action.featured ? 'color: #fff;' : ''}">${action.title}</span>
-                    <span class="dashboard-quick-action-copy" style="${action.featured ? 'color: rgba(255,255,255,0.78);' : ''}">${action.copy}</span>
+                  <span class="dashboard-quick-action-body">
+                    <span class="dashboard-quick-action-title">${action.title}</span>
+                    <span class="dashboard-quick-action-copy">${action.copy}</span>
                   </span>
-                  <span class="material-symbols-outlined dashboard-quick-action-arrow" style="${action.featured ? 'color: rgba(255,255,255,0.52);' : ''}">north_east</span>
+                  <span class="material-symbols-outlined dashboard-quick-action-arrow">north_east</span>
                 </button>
               `).join('')}
             </div>
           </section>
 
-          <section class="dashboard-activity dashboard-section-surface" style="padding: 0; overflow: hidden;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.35rem 1.35rem 1rem;">
+          <section class="dashboard-activity dashboard-section-surface">
+            <div class="dashboard-activity-header">
               <div>
                 <span class="app-eyebrow">Recent Activity</span>
-                <h2 style="margin: 0.35rem 0 0; font-size: 1.08rem; font-weight: 850; color: var(--fm-text);">Forms you touched recently</h2>
+                <h2 class="dashboard-panel-title">Forms you touched recently</h2>
               </div>
               <button id="btn-dashboard-view-all" class="app-button-secondary btn-press">View All</button>
             </div>
-            <div style="overflow-x: auto;">
-              <table class="dashboard-activity-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+            <div class="dashboard-activity-table-wrap">
+              <table class="dashboard-activity-table">
                 <thead>
-                  <tr style="border-top: 1px solid var(--fm-border-light);">
-                    <th style="padding: 0.8rem 1.35rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Form Name</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Status</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Captured Answers</th>
-                    <th style="padding: 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8;">Last Modified</th>
-                    <th style="padding: 0.8rem 1.35rem 0.8rem 0.75rem; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #94a3b8; text-align: right;">Actions</th>
+                  <tr>
+                    <th>Form Name</th>
+                    <th>Status</th>
+                    <th>Captured Answers</th>
+                    <th>Last Modified</th>
+                    <th class="dashboard-table-head-actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
