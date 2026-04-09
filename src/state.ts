@@ -58,6 +58,10 @@ const state = {
   activeQuestionId: null,
   sidebarOpen: true,
   chatPanelOpen: true,
+  zenMode: {
+    enabled: false,
+    screen: null,
+  },
 
   // Current AI personality
   personality: 'professional',

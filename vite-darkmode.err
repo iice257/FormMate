@@ -1,0 +1,5 @@
+Error: spawn EPERM
+    at ChildProcess.spawn (node:internal/child_process:420:11)
+    at Object.spawn (node:child_process:786:9)
+    at baseOpen (file:///C:/Users/ngaremuki/OneDrive%20-%20NESTLE/Documents/Misc/Code%20files/Repositories/FormMate/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:26487:36)
+[2m3:06:39 PM[22m [31m[1m[vite][22m[39m Pre-transform error: spawn EPERM

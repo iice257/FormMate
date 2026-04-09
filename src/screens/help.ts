@@ -4,16 +4,17 @@
 // ═══════════════════════════════════════════
 
 import { getState } from '../state';
-import { navigateTo, goBack } from '../router';
+import { navigateTo, goBack, getHomeScreenForUser } from '../router';
 import { renderAccordion, renderModal, showModal } from '../components/ui-components';
 import { toast } from '../components/toast';
+import { openAccountModal } from '../components/layout';
 
 export function helpScreen() {
   const faqs = [
     { title: 'How does FormMate work?', content: 'FormMate uses advanced AI models to read form structure, understand the context of each question, and generate appropriate answers based on your profile and past history.' },
-    { title: 'Is my data secure?', content: 'Yes. Your personal vault data, history, and profile information are stored entirely on your device (in localStorage). We do not store your private data on our servers.' },
+    { title: 'Is my data secure?', content: 'Authenticated accounts can sync profile, preferences, vault data, and history to the configured Supabase backend. If backend storage is not configured, FormMate falls back to local browser storage.' },
     { title: 'Why did the AI answer a question wrong?', content: 'AI generation is probabilistic. If an answer seems incorrect, you can click "Regenerate" to get a new variant, or manually edit the text. FormMate learns from your edits to get better over time.' },
-    { title: 'What is the "Vault"?', content: 'The Vault is a secure storage area in your Accounts Center where you can save frequently used information (like your resume, bio, or addresses). FormMate uses this data to instantly auto-fill identical personal questions without needing to generate them from scratch.' }
+    { title: 'Where do I update my profile and preferences?', content: 'Open the account module from your avatar or sidebar preferences. Profile, Preferences, and Help now live together as tabs in one place.' }
   ];
 
   const html = `
@@ -34,7 +35,7 @@ export function helpScreen() {
             <span class="material-symbols-outlined">person</span> Account
           </button>
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts">
-            <span class="material-symbols-outlined">settings</span> Settings
+            <span class="material-symbols-outlined">settings</span> Preferences
           </button>
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer w-full text-left" style="background: var(--fm-primary-50); color: var(--fm-primary);" aria-current="page">
             <span class="material-symbols-outlined">help_outline</span> Help
@@ -128,9 +129,15 @@ export function helpScreen() {
   function init(wrapper) {
     wrapper.querySelector('#btn-back').addEventListener('click', () => goBack());
 
-    wrapper.querySelector('#btn-help-home')?.addEventListener('click', () => navigateTo('dashboard'));
+    wrapper.querySelector('#btn-help-home')?.addEventListener('click', () => navigateTo(getHomeScreenForUser()));
     wrapper.querySelectorAll('button[data-nav]').forEach((btn) => {
-      btn.addEventListener('click', () => navigateTo(btn.dataset.nav));
+      btn.addEventListener('click', () => {
+        if (btn.dataset.nav === 'accounts') {
+          openAccountModal(btn.textContent?.includes('Preferences') ? 'settings' : 'profile');
+          return;
+        }
+        navigateTo(btn.dataset.nav);
+      });
     });
 
     // Init components

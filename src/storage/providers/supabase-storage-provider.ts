@@ -1,9 +1,26 @@
 // @ts-nocheck
 export class SupabaseStorageProvider {
-  constructor({ supabaseUrl, supabaseAnonKey, table = 'formmate_user_data' }) {
+  constructor({ supabaseUrl, supabaseAnonKey, table = 'formmate_user_data', getAccessToken = null }) {
     this.supabaseUrl = supabaseUrl;
     this.supabaseAnonKey = supabaseAnonKey;
     this.table = table;
+    this.getAccessToken = typeof getAccessToken === 'function' ? getAccessToken : null;
+  }
+
+  async getHeaders(contentType = false) {
+    const accessToken = await Promise.resolve(this.getAccessToken ? this.getAccessToken() : null).catch(() => null);
+    const bearer = String(accessToken || this.supabaseAnonKey || '').trim();
+    const headers = {
+      apikey: this.supabaseAnonKey,
+      Authorization: `Bearer ${bearer}`,
+      Accept: 'application/json',
+    };
+
+    if (contentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;
   }
 
   async getUserData(userId) {
@@ -12,11 +29,7 @@ export class SupabaseStorageProvider {
     url.searchParams.set('user_id', `eq.${userId}`);
 
     const res = await fetch(url.toString(), {
-      headers: {
-        apikey: this.supabaseAnonKey,
-        Authorization: `Bearer ${this.supabaseAnonKey}`,
-        Accept: 'application/json',
-      }
+      headers: await this.getHeaders()
     });
 
     if (!res.ok) {
@@ -46,18 +59,28 @@ export class SupabaseStorageProvider {
     const url = `${this.supabaseUrl.replace(/\/+$/, '')}/rest/v1/${encodeURIComponent(this.table)}`;
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        apikey: this.supabaseAnonKey,
-        Authorization: `Bearer ${this.supabaseAnonKey}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates',
-      },
+      headers: { ...(await this.getHeaders(true)), Prefer: 'resolution=merge-duplicates' },
       body: JSON.stringify(record),
     });
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new Error(`[SupabaseStorageProvider] upsertUserData failed (${res.status}): ${body}`);
+    }
+  }
+
+  async deleteUserData(userId) {
+    const url = new URL(`${this.supabaseUrl.replace(/\/+$/, '')}/rest/v1/${encodeURIComponent(this.table)}`);
+    url.searchParams.set('user_id', `eq.${userId}`);
+
+    const res = await fetch(url.toString(), {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`[SupabaseStorageProvider] deleteUserData failed (${res.status}): ${body}`);
     }
   }
 }

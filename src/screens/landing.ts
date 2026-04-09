@@ -6,6 +6,8 @@
 import { setState, getState } from '../state';
 import { getDashboardActionScreenForUser, getFormsEntryScreenForUser, navigateTo } from '../router';
 import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { normalizeSubmittedFormUrl } from '../parser/url-intake';
+import { openAccountModal } from '../components/layout';
 
 export function landingScreen() {
   const { isAuthenticated, userProfile } = getState();
@@ -467,38 +469,18 @@ export function landingScreen() {
 
     // Analyze button
     btnAnalyze.addEventListener('click', () => {
-      let url = urlInput.value.trim();
-
       // Basic reset
       urlInput.classList.remove('ring-2', 'ring-red-500', 'animate-shake-horizontal');
       btnAnalyze.innerHTML = `Analyze <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>`;
 
-      if (!url) {
-        triggerError('Please enter a link');
-        return;
-      }
-
-      // Auto-prepend https if missing
-      if (!/^https?:\/\//i.test(url)) {
-        url = 'https://' + url;
-        urlInput.value = url;
-      }
-
-      // Robust Whitelist Check
-      if (!isValidFormProvider(url)) {
-        triggerError('Unsupported form provider');
-        return;
-      }
-
       try {
-        new URL(url); // Ensure it's structurally valid
+        const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
+        urlInput.value = url;
+        setState({ formUrl: url });
+        navigateTo('analyzing');
       } catch (e) {
-        triggerError('Invalid URL format');
-        return;
+        triggerError(e?.message || 'Invalid URL format');
       }
-
-      setState({ formUrl: url });
-      navigateTo('analyzing');
     });
 
     function triggerError(msg) {
@@ -513,34 +495,6 @@ export function landingScreen() {
         btnAnalyze.classList.remove('bg-red-500', 'hover:bg-red-600');
       }, 2000);
     }
-
-    function isValidFormProvider(url) {
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-
-        // Robust checks covering forms, subdomains, and CDNs
-        const whitelistedDomains = [
-          'docs.google.com', 'forms.gle', 'forms.google.com', // Google Forms
-          'form.typeform.com', 'typeform.com', // Typeform
-          'form.jotform.com', 'jotform.com', // Jotform
-          'surveymonkey.com', 'www.surveymonkey.com', // SurveyMonkey
-          'lever.co', 'jobs.lever.co', // Lever
-          'greenhouse.io', 'boards.greenhouse.io', // Greenhouse
-          'ashbyhq.com', 'jobs.ashbyhq.com', // Ashby
-          'workday.com', 'myworkdayjobs.com', // Workday
-          'tally.so', // Tally
-          'airtable.com', // Airtable Forms
-          'feathery.io', // Feathery
-          'qualtrics.com' // Qualtrics
-        ];
-
-        return whitelistedDomains.some(d => host === d || host.endsWith(`.${d}`));
-      } catch {
-        return false; // If new URL() fails entirely
-      }
-    }
-
     // Enter key on input
     urlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') btnAnalyze.click();
@@ -586,7 +540,7 @@ export function landingScreen() {
     wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
     wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
-    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => navigateTo('accounts'));
+    wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
 
     wrapper.querySelector('#btn-cta-start')?.addEventListener('click', () => {
       urlInput.scrollIntoView({ behavior: 'smooth' });

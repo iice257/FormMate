@@ -1,18 +1,13 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Router (Enhanced)
-// ═══════════════════════════════════════════
-
-import { getState, setState, subscribe } from './state';
+import { getState, setState } from './state';
 import { getSession, isAuthenticated } from './auth/auth-service';
 import { isOnboardingComplete } from './storage/local-store';
 
 const routes = {};
 let currentCleanup = null;
 const historyStack = [];
-let navigationDirection = 'forward'; // 'forward' | 'backward'
+let navigationToken = 0;
 
-// Screens that don't require auth
 const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
 
 export function getHomeScreenForUser() {
@@ -31,44 +26,30 @@ export function registerScreen(name, renderFn) {
   routes[name] = renderFn;
 }
 
-export function navigateTo(screen, replace = false, direction = null) {
-  // Determine direction: explicit > inferred from replace flag
-  navigationDirection = direction || (replace ? 'backward' : 'forward');
-
-  const overlay = document.getElementById('page-transition-overlay');
-  const isForward = navigationDirection === 'forward';
-  const animationsEnabled = getState().settings?.ui?.animationsEnabled !== false;
-
-  if (isForward && overlay && animationsEnabled) {
-    const circle = document.createElement('div');
-    circle.className = 'transition-circle expanding';
-    circle.style.left = `${window.__fmClickX}px`;
-    circle.style.top = `${window.__fmClickY}px`;
-    overlay.appendChild(circle);
-
-    performNavigation(screen, replace);
-
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        circle.classList.remove('expanding');
-        circle.classList.add('fading');
-        setTimeout(() => circle.remove(), 400);
-      }, 120);
-    });
-  } else {
-    performNavigation(screen, replace);
-  }
+export function navigateTo(screen, replace = false, direction = replace ? 'back' : 'forward') {
+  void performNavigation(screen, replace, direction);
 }
 
-function performNavigation(screen, replace = false) {
+async function performNavigation(screen, replace = false, direction = replace ? 'back' : 'forward') {
   const app = document.getElementById('app');
+  const animationsEnabled = getState().settings?.ui?.animationsEnabled !== false;
+  const navToken = ++navigationToken;
+  const modalTab = screen === 'accounts'
+    ? 'profile'
+    : screen === 'settings'
+      ? 'settings'
+      : screen === 'help'
+        ? 'help'
+        : null;
 
-  // URL matching
+  if (modalTab && app?.childElementCount && typeof window.__fmOpenAccountModalTab === 'function') {
+    window.__fmOpenAccountModalTab(modalTab);
+    return;
+  }
+
   let path = `/${screen === 'landing' ? '' : screen}`;
   if (screen === 'landing') path = '/';
 
-  // Preserve query string for direct-entry screens (e.g. /capture?t=...) on initial load.
-  // Assisted Capture relies on the token in the query string.
   if (replace) {
     const currentPath = window.location.pathname;
     const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
@@ -77,13 +58,11 @@ function performNavigation(screen, replace = false) {
     }
   }
 
-  // Redirect settings -> accounts
   if (screen === 'settings') {
     screen = 'accounts';
     path = '/accounts';
   }
 
-  // Route guard (in-app navigations too)
   const authed = isAuthenticated();
   const onboardingComplete = isOnboardingComplete();
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
@@ -100,99 +79,100 @@ function performNavigation(screen, replace = false) {
     replace = true;
   }
 
-  // State push
   if (!replace) {
     window.history.pushState({ screen }, '', path);
   } else {
     window.history.replaceState({ screen }, '', path);
   }
 
-  // Directional exit animation
-  const currentContent = app.firstElementChild;
-  const isBack = navigationDirection === 'backward';
-  if (currentContent && replace) {
-    currentContent.classList.remove('screen-enter', 'screen-enter-forward', 'screen-enter-backward');
-    currentContent.classList.add(isBack ? 'screen-exit-backward' : 'screen-exit-forward');
+  window.scrollTo(0, 0);
+
+  const { currentScreen } = getState();
+  if (currentScreen && !replace) {
+    historyStack.push(currentScreen);
   }
 
-  // Switch content
-  const timeout = (currentContent && replace) ? 200 : 0;
-  
-  setTimeout(() => {
-    // Scroll to top on navigation
-    window.scrollTo(0, 0);
+  setState({ currentScreen: screen });
+  window.__fmPreviousScreen = historyStack.length > 0 ? historyStack[historyStack.length - 1] : null;
 
-    // Cleanup previous screen
+  const titleMap = {
+    'landing': 'Home | FormMate',
+    'auth': 'Sign In | FormMate',
+    'new': 'New Form | FormMate',
+    'workspace': 'Workspace | FormMate',
+    'analyzing': 'Analyzing Form... | FormMate',
+    'review': 'Review Results | FormMate',
+    'success': 'Success! | FormMate',
+    'accounts': 'My Account | FormMate',
+    'analytics': 'Analytics | FormMate',
+    'docs': 'Documentation | FormMate',
+    'pricing': 'Pricing | FormMate',
+    'help': 'Help Center | FormMate',
+    'examples': 'Examples | FormMate',
+    'onboarding': 'Welcome | FormMate',
+    'dashboard': 'Dashboard | FormMate',
+    'ai-chat': 'AI Chat | FormMate',
+    'history': 'History | FormMate',
+    'vault': 'Vault | FormMate',
+    'capture': 'Assisted Capture | FormMate'
+  };
+  document.title = titleMap[screen] || 'FormMate AI - AI-Assisted Form Companion';
+
+  if (!routes[screen]) return;
+
+  const { html, init } = routes[screen]();
+  if (!html && !init) return;
+
+  const mountScreen = (wrapper) => {
+    if (navToken !== navigationToken) return;
     if (currentCleanup) {
       currentCleanup();
       currentCleanup = null;
     }
 
-    const { currentScreen } = getState();
-    if (currentScreen && !replace) {
-      historyStack.push(currentScreen);
+    if (init) {
+      currentCleanup = init(wrapper) || null;
+    }
+  };
+
+  const currentWrapper = app.firstElementChild;
+  const nextWrapper = document.createElement('div');
+  nextWrapper.className = animationsEnabled ? `screen-shell screen-enter-${direction}` : 'screen-shell';
+  nextWrapper.innerHTML = html;
+
+  if (animationsEnabled && currentWrapper) {
+    currentWrapper.classList.remove('screen-enter-forward', 'screen-enter-backward');
+    currentWrapper.classList.add('screen-shell', 'screen-overlay-old', `screen-exit-${direction}`);
+    nextWrapper.classList.add('screen-overlay-new');
+    app.appendChild(nextWrapper);
+
+    mountScreen(nextWrapper);
+    await new Promise((resolve) => window.setTimeout(resolve, 170));
+    if (navToken !== navigationToken) {
+      nextWrapper.remove();
+      return;
     }
 
-    setState({ currentScreen: screen });
-    window.__fmPreviousScreen = historyStack.length > 0 ? historyStack[historyStack.length - 1] : null;
-    
-    // Update Document Title
-    const titleMap = {
-      'landing': 'Home | FormMate',
-      'auth': 'Sign In | FormMate',
-      'new': 'New Form | FormMate',
-      'workspace': 'Workspace | FormMate',
-      'analyzing': 'Analyzing Form... | FormMate',
-      'review': 'Review Results | FormMate',
-      'success': 'Success! | FormMate',
-      'accounts': 'My Account | FormMate',
-      'analytics': 'Analytics | FormMate',
-      'docs': 'Documentation | FormMate',
-      'pricing': 'Pricing | FormMate',
-      'help': 'Help Center | FormMate',
-      'examples': 'Examples | FormMate',
-      'onboarding': 'Welcome | FormMate',
-      'dashboard': 'Dashboard | FormMate',
-      'ai-chat': 'AI Chat | FormMate',
-      'history': 'History | FormMate',
-      'vault': 'Vault | FormMate',
-      'capture': 'Assisted Capture | FormMate'
-    };
-    document.title = titleMap[screen] || 'FormMate AI — AI-Assisted Form Companion';
+    currentWrapper.remove();
+    nextWrapper.classList.remove('screen-overlay-new');
+    return;
+  }
 
-    if (routes[screen]) {
-      app.innerHTML = '';
-      const { html, init } = routes[screen]();
-
-      if (!html && !init) return;
-
-      const wrapper = document.createElement('div');
-      const enterClass = navigationDirection === 'backward' ? 'screen-enter-backward' : 'screen-enter-forward';
-      wrapper.className = enterClass;
-      wrapper.innerHTML = html;
-      app.appendChild(wrapper);
-
-      if (init) {
-        currentCleanup = init(wrapper) || null;
-      }
-    }
-  }, timeout);
+  app.innerHTML = '';
+  app.appendChild(nextWrapper);
+  mountScreen(nextWrapper);
 }
 
 export function initRouter() {
-  // Listen for back button
   window.addEventListener('popstate', (e) => {
     if (e.state && e.state.screen) {
-      // Use replace=true to avoid double-pushing; direction=backward for slide-from-left
-      navigateTo(e.state.screen, true, 'backward');
+      navigateTo(e.state.screen, true, 'back');
     } else {
-      navigateTo('landing', true, 'backward');
-      // If we got here with no state, let's make sure we pushstate to avoid exiting on the next back press
+      navigateTo('landing', true, 'back');
       window.history.pushState({ screen: 'landing' }, '', '/');
     }
   });
 
-  // Determine start screen
   const authenticated = isAuthenticated();
   const onboarded = isOnboardingComplete();
 
@@ -215,31 +195,19 @@ export function initRouter() {
     }
   }
 
-  // Check URL first
   const path = window.location.pathname.replace(/^\/+/, '');
   const initialScreen = path || 'landing';
 
   if (!authenticated) {
-    if (PUBLIC_SCREENS.includes(initialScreen)) {
-      navigateTo(initialScreen, true, 'forward');
-    } else {
-      // Show auth screen first
-      navigateTo('auth', true, 'forward');
-    }
+    navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', true);
   } else if (!onboarded) {
-    navigateTo('onboarding', true, 'forward');
+    navigateTo('onboarding', true);
+  } else if (initialScreen === 'landing') {
+    navigateTo('landing', true);
+  } else if (routes[initialScreen]) {
+    navigateTo(initialScreen, true);
   } else {
-    // Signed-in users should land on the homepage by default
-    if (initialScreen === 'landing') {
-      navigateTo('landing', true, 'forward');
-      return;
-    }
-    // if requested a valid route, go there, else home
-    if (routes[initialScreen]) {
-      navigateTo(initialScreen, true, 'forward');
-    } else {
-      navigateTo('landing', true, 'forward');
-    }
+    navigateTo('landing', true);
   }
 }
 
@@ -248,9 +216,8 @@ export function goBack() {
     window.history.back();
   } else if (historyStack.length > 0) {
     const previousScreen = historyStack.pop();
-    navigateTo(previousScreen, true, 'backward');
+    navigateTo(previousScreen, true, 'back');
   } else {
-    // Fallback if no history
-    navigateTo(getHomeScreenForUser(), true, 'backward');
+    navigateTo(getHomeScreenForUser(), true, 'back');
   }
 }

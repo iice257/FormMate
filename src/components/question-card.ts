@@ -1,229 +1,252 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Question Card Component
-// ═══════════════════════════════════════════
+// FormMate - Question Card Component
 
 import { categorizeField } from '../ai/field-classifier';
 
-/**
- * Render a single question card.
- * Returns HTML string.
- */
 export function renderQuestionCard(question, answer, index) {
-  const { id, text, type, options, required } = question;
+  const { id, text, type, options = [], required } = question;
   const answerText = answer?.text || '';
   const source = answer?.source || 'empty';
   const confidence = answer?.confidence || 0;
-
-  const isActive = index === 0; // First card is active by default
+  const isActive = index === 0;
 
   const typeLabels = {
-    'short_text': { icon: 'short_text', label: 'Short Text' },
-    'long_text': { icon: 'notes', label: 'Long Text' },
-    'radio': { icon: 'radio_button_checked', label: 'Multiple Choice' },
-    'checkbox': { icon: 'check_box', label: 'Checkboxes' },
-    'dropdown': { icon: 'arrow_drop_down_circle', label: 'Dropdown' },
-    'date': { icon: 'calendar_today', label: 'Date' },
-    'scale': { icon: 'linear_scale', label: 'Scale Rating' },
-    'file_upload': { icon: 'upload_file', label: 'File Upload' },
+    short_text: { icon: 'short_text', label: 'Short Text' },
+    long_text: { icon: 'notes', label: 'Long Text' },
+    radio: { icon: 'radio_button_checked', label: 'Multiple Choice' },
+    checkbox: { icon: 'check_box', label: 'Checkboxes' },
+    dropdown: { icon: 'arrow_drop_down_circle', label: 'Dropdown' },
+    date: { icon: 'calendar_today', label: 'Date' },
+    scale: { icon: 'linear_scale', label: 'Scale Rating' },
+    file_upload: { icon: 'upload_file', label: 'File Upload' }
   };
 
-  const typeInfo = typeLabels[type] || typeLabels['short_text'];
+  const typeInfo = typeLabels[type] || typeLabels.short_text;
   const { category } = categorizeField(question);
 
   const getBadgeHtml = () => {
     if (source === 'autofill') {
-      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-success-light); color: var(--fm-success); border: 1px solid rgba(var(--fm-success-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">bolt</span> Autofilled</span>`;
+      return getBadge('bolt', 'Autofilled', 'rgba(var(--fm-success-rgb), 0.12)', 'var(--fm-success)', 'rgba(var(--fm-success-rgb), 0.18)');
     }
     if (source === 'ai') {
-      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-primary-50); color: var(--fm-primary); border: 1px solid rgba(var(--fm-primary-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI Generated</span>`;
+      return getBadge('auto_awesome', 'AI Generated', 'rgba(var(--fm-primary-rgb), 0.12)', 'var(--fm-primary)', 'rgba(var(--fm-primary-rgb), 0.18)');
     }
     if (source === 'user' || source === 'edited') {
-      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-bg-sunken); color: var(--fm-text-secondary); border: 1px solid var(--fm-border);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">edit</span> User Edited</span>`;
+      return getBadge('edit', 'User Edited', 'rgba(226, 232, 240, 0.68)', 'var(--fm-text-secondary)', 'rgba(203, 213, 225, 0.92)');
     }
     if (category === 'manual_only' && !answerText) {
-      return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-error-light); color: var(--fm-error); border: 1px solid rgba(var(--fm-error-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">edit_document</span> Manual Input Required</span>`;
+      return getBadge('edit_document', 'Manual Input Required', 'rgba(var(--fm-error-rgb), 0.11)', 'var(--fm-error)', 'rgba(var(--fm-error-rgb), 0.16)');
     }
-
-    // Default empty state
-    return `<span class="answer-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide" style="background: var(--fm-warning-light); color: var(--fm-warning); border: 1px solid rgba(var(--fm-warning-rgb), 0.2);" data-question-id="${id}"><span class="material-symbols-outlined text-[14px]">warning</span> Missing Data</span>`;
+    return getBadge('warning', 'Missing Data', 'rgba(var(--fm-warning-rgb), 0.12)', 'var(--fm-warning)', 'rgba(var(--fm-warning-rgb), 0.18)');
   };
 
-  const badgeHtml = getBadgeHtml();
-
-  // Confidence meter (if AI generated)
-  const confidenceHtml = (source === 'ai' || source === 'autofill') && confidence > 0 ? `
-    <div class="flex items-center gap-2 mt-4 pt-3 border-t" style="border-color: var(--fm-border);">
-      <div class="flex-1 max-w-[100px] h-1.5 rounded-full overflow-hidden" style="background: var(--fm-bg-sunken);">
-        <div class="h-full rounded-full" style="width: ${confidence * 100}%; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
+  const confidenceHtml = (source === 'ai' || source === 'autofill') && confidence > 0
+    ? `
+      <div class="question-card-confidence" style="display: flex; align-items: center; gap: 0.65rem; margin-top: 1rem; padding-top: 0.95rem; border-top: 1px solid var(--fm-border-light);">
+        <div style="flex: 1; max-width: 130px; height: 0.45rem; border-radius: 999px; overflow: hidden; background: var(--fm-bg-sunken);">
+          <div style="height: 100%; width: ${confidence * 100}%; border-radius: 999px; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
+        </div>
+        <span style="font-size: 0.67rem; font-weight: 700; color: #94a3b8;">${Math.round(confidence * 100)}% Match</span>
       </div>
-      <span class="text-[10px] font-semibold" style="color: var(--fm-text-tertiary);">
-        ${Math.round(confidence * 100)}% Match
-      </span>
-    </div>
-  ` : '';
+    `
+    : '';
 
-  let inputHtml = '';
+  const inputHtml = renderInput(question, answerText);
+
+  return `
+    <article class="question-card ${isActive ? 'question-card-active' : ''}" data-card-id="${id}" data-category="${category}">
+      <div class="drag-handle question-card-drag-handle" aria-hidden="true">
+        <span class="material-symbols-outlined">drag_indicator</span>
+      </div>
+
+      <div class="question-card-header">
+        <div class="question-card-headline">
+          <div class="question-card-badges">
+            <span class="question-card-index">${index + 1}.</span>
+            ${getBadgeHtml()}
+            ${required ? '<span class="question-card-required">Required</span>' : ''}
+          </div>
+          <h3 class="question-card-title">${escapeHtml(text)}</h3>
+          <p class="question-card-meta">
+            <span class="material-symbols-outlined">${typeInfo.icon}</span>
+            <span>${typeInfo.label}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="question-card-input">
+        ${inputHtml}
+        ${confidenceHtml}
+      </div>
+
+      <div class="question-card-actions">
+        <button class="btn-undo question-card-icon-btn" data-question-id="${id}" title="Undo">
+          <span class="material-symbols-outlined">undo</span>
+        </button>
+        <button class="btn-redo question-card-icon-btn" data-question-id="${id}" title="Redo">
+          <span class="material-symbols-outlined">redo</span>
+        </button>
+        <div class="question-card-actions-spacer"></div>
+        ${category !== 'manual_only'
+          ? `
+            <button class="btn-regenerate question-card-regenerate" data-question-id="${id}">
+              <span class="material-symbols-outlined">refresh</span>
+              <span>Regenerate</span>
+            </button>
+          `
+          : ''
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderInput(question, answerText) {
+  const { id, text, type, options = [] } = question;
 
   switch (type) {
     case 'short_text':
-      inputHtml = `
-        <input aria-label="${escapeAttr(`Answer: ${text}`)}"
+      return `
+        <input
+          aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="text"
-          class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
+          class="answer-textarea question-card-text-input"
           data-question-id="${id}"
           value="${escapeAttr(answerText)}"
           placeholder="Type your answer..."
         />
       `;
-      break;
 
     case 'long_text':
-      inputHtml = `
+      return `
         <textarea
-          class="answer-textarea w-full min-h-[120px] rounded-xl border-2 border-primary/20 bg-primary/5 text-slate-800 text-base leading-relaxed p-4 focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+          class="answer-textarea question-card-textarea"
           data-question-id="${id}"
           placeholder="Type your answer..."
           aria-label="${escapeAttr(`Answer: ${text}`)}"
         >${escapeHtml(answerText)}</textarea>
       `;
-      break;
 
     case 'radio':
-      inputHtml = `<div class="space-y-2">
-        ${options.map(opt => {
-        const selected = answerText === opt;
-        return `
-            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${selected ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" role="button" tabindex="0" aria-label="${escapeAttr(`Select option: ${opt}`)}"
-                 data-question-id="${id}" data-value="${escapeAttr(opt)}" data-type="radio">
-              <div class="size-4 border-2 ${selected ? 'border-primary' : 'border-slate-300'} rounded-full flex items-center justify-center">
-                <div class="radio-dot size-2 bg-primary rounded-full ${selected ? '' : 'hidden'}"></div>
+      return `
+        <div class="question-card-option-list">
+          ${options.map((option) => {
+            const selected = answerText === option;
+            return `
+              <div
+                class="option-select question-card-option ${selected ? 'is-selected' : ''}"
+                role="button"
+                tabindex="0"
+                aria-label="${escapeAttr(`Select option: ${option}`)}"
+                data-question-id="${id}"
+                data-value="${escapeAttr(option)}"
+                data-type="radio"
+              >
+                <div class="question-card-option-indicator question-card-option-indicator-radio ${selected ? 'is-selected' : ''}">
+                  <div class="radio-dot ${selected ? '' : 'hidden'}"></div>
+                </div>
+                <span>${escapeHtml(option)}</span>
               </div>
-              <span class="text-sm">${escapeHtml(opt)}</span>
-            </div>
-          `;
-      }).join('')}
-      </div>`;
-      break;
+            `;
+          }).join('')}
+        </div>
+      `;
 
-    case 'checkbox':
+    case 'checkbox': {
       const selectedItems = answerText ? answerText.split(', ') : [];
-      inputHtml = `<div class="space-y-2">
-        ${options.map(opt => {
-        const checked = selectedItems.includes(opt);
-        return `
-            <div class="option-select flex items-center gap-3 p-3 rounded-lg border ${checked ? 'border-primary bg-primary/5' : 'border-slate-100'} bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" role="button" tabindex="0" aria-label="${escapeAttr(`Toggle option: ${opt}`)}"
-                 data-question-id="${id}" data-value="${escapeAttr(opt)}" data-type="checkbox">
-              <div class="size-4 border-2 ${checked ? 'border-primary bg-primary' : 'border-slate-300'} rounded flex items-center justify-center">
-                <span class="check-mark material-symbols-outlined text-white text-xs ${checked ? '' : 'hidden'}">check</span>
+      return `
+        <div class="question-card-option-list">
+          ${options.map((option) => {
+            const checked = selectedItems.includes(option);
+            return `
+              <div
+                class="option-select question-card-option ${checked ? 'is-selected' : ''}"
+                role="button"
+                tabindex="0"
+                aria-label="${escapeAttr(`Toggle option: ${option}`)}"
+                data-question-id="${id}"
+                data-value="${escapeAttr(option)}"
+                data-type="checkbox"
+              >
+                <div class="question-card-option-indicator question-card-option-indicator-checkbox ${checked ? 'is-selected' : ''}">
+                  <span class="check-mark material-symbols-outlined ${checked ? '' : 'hidden'}">check</span>
+                </div>
+                <span>${escapeHtml(option)}</span>
               </div>
-              <span class="text-sm">${escapeHtml(opt)}</span>
-            </div>
-          `;
-      }).join('')}
-      </div>`;
-      break;
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
 
     case 'dropdown':
-      inputHtml = `
+      return `
         <select
-          class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
+          class="answer-textarea question-card-text-input"
           data-question-id="${id}"
           aria-label="${escapeAttr(`Answer: ${text}`)}"
         >
           <option value="">Select an option...</option>
-          ${options.map(opt => `<option value="${escapeAttr(opt)}" ${answerText === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
+          ${options.map((option) => `<option value="${escapeAttr(option)}" ${answerText === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
         </select>
       `;
-      break;
 
     case 'date':
-      inputHtml = `
-        <input aria-label="${escapeAttr(`Answer: ${text}`)}"
+      return `
+        <input
+          aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="date"
-          class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
+          class="answer-textarea question-card-text-input"
           data-question-id="${id}"
           value="${escapeAttr(answerText)}"
         />
       `;
-      break;
 
-    case 'scale':
-      const selectedVal = parseInt(answerText) || 0;
-      inputHtml = `<div class="flex gap-1">
-        ${Array.from({ length: 10 }, (_, i) => i + 1).map(num => `
-          <button type="button" class="scale-btn flex-1 h-10 flex items-center justify-center border rounded-lg text-xs font-bold transition-colors
-            ${num === selectedVal ? 'bg-primary text-white' : 'border-slate-200 hover:bg-slate-50'}"
-            data-question-id="${id}" data-value="${num}" aria-label="${escapeAttr(`Answer: ${text} - ${num}`)}">${num}</button>
-        `).join('')}
-      </div>`;
-      break;
+    case 'scale': {
+      const selectedValue = parseInt(answerText, 10) || 0;
+      return `
+        <div class="question-card-scale-row">
+          ${Array.from({ length: 10 }, (_, index) => index + 1).map((value) => `
+            <button
+              type="button"
+              class="scale-btn question-card-scale-btn ${value === selectedValue ? 'is-selected' : ''}"
+              data-question-id="${id}"
+              data-value="${value}"
+              aria-label="${escapeAttr(`Answer: ${text} - ${value}`)}"
+            >${value}</button>
+          `).join('')}
+        </div>
+      `;
+    }
 
     case 'file_upload':
-      inputHtml = `
-        <div class="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl hover:border-primary/40 transition-colors cursor-pointer" role="button" tabindex="0" aria-label="${escapeAttr(`Upload file for: ${text}`)}">
-          <div class="text-center">
-            <span class="material-symbols-outlined text-slate-400 text-2xl">cloud_upload</span>
-            <p class="text-xs text-slate-400 mt-1">Click to upload or drag & drop</p>
-          </div>
+      return `
+        <div class="question-card-upload" role="button" tabindex="0" aria-label="${escapeAttr(`Upload file for: ${text}`)}">
+          <span class="material-symbols-outlined">cloud_upload</span>
+          <p>Click to upload or drag and drop</p>
         </div>
       `;
-      break;
 
     default:
-      inputHtml = `
-        <input type="text" aria-label="${escapeAttr(`Answer: ${text}`)}" class="answer-textarea w-full rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-base py-3 px-4"
-          data-question-id="${id}" value="${escapeAttr(answerText)}" placeholder="Type your answer..." />
+      return `
+        <input
+          type="text"
+          aria-label="${escapeAttr(`Answer: ${text}`)}"
+          class="answer-textarea question-card-text-input"
+          data-question-id="${id}"
+          value="${escapeAttr(answerText)}"
+          placeholder="Type your answer..."
+        />
       `;
   }
+}
 
+function getBadge(icon, label, background, color, borderColor) {
   return `
-    <div class="group relative card-premium ${isActive ? 'border-primary ring-2 ring-primary/10 shadow-xl shadow-primary/20' : 'shadow-sm'} rounded-xl p-6 transition-all" data-card-id="${id}" data-category="${category}">
-
-      <!-- Drag handle -->
-      <div class="drag-handle absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 -ml-2">
-        <span class="material-symbols-outlined text-slate-300 cursor-grab">drag_indicator</span>
-      </div>
-
-      <!-- Header -->
-      <div class="flex justify-between items-start mb-4">
-        <div class="space-y-1 flex-1">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-xs font-bold text-slate-400">${index + 1}.</span>
-            ${badgeHtml}
-            ${required ? '<span class="text-red-400 text-xs font-bold">Required</span>' : ''}
-          </div>
-          <h3 class="text-lg md:text-xl font-bold text-slate-900">${escapeHtml(text)}</h3>
-          <p class="text-xs text-slate-400 flex items-center gap-1">
-            <span class="material-symbols-outlined text-sm">${typeInfo.icon}</span> ${typeInfo.label}
-          </p>
-        </div>
-      </div>
-
-      <!-- Input Area -->
-      <div class="mb-4">
-        ${inputHtml}
-        ${confidenceHtml}
-      </div>
-
-      <!-- Actions -->
-      <div class="flex items-center gap-1.5 pt-3 border-t border-slate-100 flex-wrap">
-        <button class="btn-undo flex items-center justify-center size-7 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all" data-question-id="${id}" title="Undo">
-          <span class="material-symbols-outlined text-[16px]">undo</span>
-        </button>
-        <button class="btn-redo flex items-center justify-center size-7 rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-all" data-question-id="${id}" title="Redo">
-          <span class="material-symbols-outlined text-[16px]">redo</span>
-        </button>
-        <div class="w-px h-4 bg-slate-200 mx-1"></div>
-        <div class="flex-1"></div>
-        ${category !== 'manual_only' ? `
-        <button class="btn-regenerate flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
-                data-question-id="${id}">
-          <span class="material-symbols-outlined text-sm">refresh</span> Regenerate
-        </button>
-        ` : ''}
-      </div>
-    </div>
+    <span class="question-card-badge" style="background: ${background}; color: ${color}; border-color: ${borderColor};">
+      <span class="material-symbols-outlined">${icon}</span>
+      <span>${label}</span>
+    </span>
   `;
 }
 

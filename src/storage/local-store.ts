@@ -124,6 +124,7 @@ export function getDefaultSettings() {
     },
     // UI Preferences
     ui: {
+      theme: 'light',
       compactMode: false,
       sidebarDefault: true,
       animationsEnabled: true,

@@ -50,13 +50,44 @@ function getAllowedOrigin(req) {
   return allow.has(origin) ? origin : null;
 }
 
-function cleanHtml(html: string) {
-  return html
+function cleanHtml(html) {
+  return String(html || '')
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function extractGoogleFormIdFromUrl(url) {
+  const normalized = String(url || '');
+  const embedMatch = normalized.match(/docs\.google\.com\/forms\/d\/e\/([a-zA-Z0-9_-]+)/);
+  if (embedMatch) return embedMatch[1];
+
+  const longMatch = normalized.match(/docs\.google\.com\/forms\/d\/([a-zA-Z0-9_-]+)/);
+  if (longMatch) return longMatch[1];
+
+  return null;
+}
+
+function normalizeGoogleFormUrl(rawUrl, formId) {
+  if (formId) {
+    return `https://docs.google.com/forms/d/${formId}/viewform`;
+  }
+
+  const parsed = new URL(String(rawUrl || ''));
+  if (parsed.hostname === 'forms.gle') {
+    return parsed.toString();
+  }
+
+  const extracted = extractGoogleFormIdFromUrl(parsed.toString());
+  if (extracted) {
+    return parsed.pathname.includes('/forms/d/e/')
+      ? `https://docs.google.com/forms/d/e/${extracted}/viewform`
+      : `https://docs.google.com/forms/d/${extracted}/viewform`;
+  }
+
+  return parsed.toString();
 }
 
 export default async function handler(req, res) {
@@ -83,10 +114,13 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Origin not allowed', authRequired: false });
     }
 
-    const { formId } = req.query;
-    if (!formId) return res.status(400).json({ error: 'formId is required' });
+    const rawUrl = typeof req.query.url === 'string' ? req.query.url : '';
+    const formId = typeof req.query.formId === 'string' ? req.query.formId : '';
+    if (!rawUrl && !formId) {
+      return res.status(400).json({ error: 'url or formId is required', authRequired: false });
+    }
 
-    console.log(`[GoogleForm] Fetching form: ${formId}`);
+    const normalizedUrl = normalizeGoogleFormUrl(rawUrl, formId);
 
     const fetchHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -96,7 +130,7 @@ export default async function handler(req, res) {
 
     const fetchOpts = {
       headers: fetchHeaders,
-      redirect: 'follow' as RequestRedirect,
+      redirect: 'follow',
       signal: AbortSignal.timeout(8500),
     };
 
@@ -108,47 +142,77 @@ export default async function handler(req, res) {
       "Can't access your Google Account",
       'This form can only be viewed by users in the owner',
     ];
-    const isAuthWall = (html: string) => authSignals.some((signal) => html.includes(signal));
+    const isAuthWall = (html) => authSignals.some((signal) => String(html || '').includes(signal));
 
-    const viewformUrl = `https://docs.google.com/forms/d/${formId}/viewform`;
-    let response = await fetch(viewformUrl, fetchOpts);
+    let response = await fetch(normalizedUrl, fetchOpts);
     let html = await response.text();
+    let finalUrl = response.url || normalizedUrl;
+    const resolvedFormId = extractGoogleFormIdFromUrl(finalUrl) || extractGoogleFormIdFromUrl(normalizedUrl);
 
     if (response.ok && !isAuthWall(html)) {
-      return res.status(200).json({ html: cleanHtml(html), strategy: 'viewform', authRequired: false });
+      return res.status(200).json({
+        html: cleanHtml(html),
+        strategy: 'viewform',
+        authRequired: false,
+        normalizedUrl,
+        finalUrl,
+        httpStatus: response.status,
+        resolvedFormId,
+      });
     }
 
-    const formResponseUrl = `https://docs.google.com/forms/d/${formId}/formResponse`;
-    try {
-      response = await fetch(formResponseUrl, fetchOpts);
-      html = await response.text();
+    if (resolvedFormId) {
+      const formResponseUrl = finalUrl.includes('/forms/d/e/')
+        ? `https://docs.google.com/forms/d/e/${resolvedFormId}/formResponse`
+        : `https://docs.google.com/forms/d/${resolvedFormId}/formResponse`;
+      try {
+        response = await fetch(formResponseUrl, fetchOpts);
+        html = await response.text();
+        finalUrl = response.url || formResponseUrl;
 
-      if (response.ok && !isAuthWall(html)) {
-        return res.status(200).json({ html: cleanHtml(html), strategy: 'formResponse', authRequired: false });
+        if (response.ok && !isAuthWall(html)) {
+          return res.status(200).json({
+            html: cleanHtml(html),
+            strategy: 'formResponse',
+            authRequired: false,
+            normalizedUrl,
+            finalUrl,
+            httpStatus: response.status,
+            resolvedFormId,
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`[GoogleForm] Strategy 2 setup fetch error: ${message}`);
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.log(`[GoogleForm] Strategy 2 setup fetch error: ${message}`);
     }
 
-    const fbDataMatch = html.match(/var\s+FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]*?);\s*<\/script>/);
+    const fbDataMatch = String(html || '').match(/var\s+FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]*?);\s*<\/script>/);
     if (fbDataMatch) {
       return res.status(200).json({
         fbPublicLoadData: fbDataMatch[1],
         strategy: 'fb_public_load_data',
-        authRequired: true,
+        authRequired: isAuthWall(html),
         html: cleanHtml(html),
+        normalizedUrl,
+        finalUrl,
+        httpStatus: response.status,
+        resolvedFormId,
       });
     }
 
     return res.status(200).json({
       html: cleanHtml(html),
       strategy: 'fallback',
-      authRequired: true,
+      authRequired: isAuthWall(html),
+      normalizedUrl,
+      finalUrl,
+      httpStatus: response.status,
+      resolvedFormId,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleForm] Error:', message);
-    res.status(500).json({ error: 'Failed to fetch Google Form or timed out', authRequired: true });
+    res.status(500).json({ error: 'Failed to fetch Google Form or timed out', authRequired: false });
   }
 }

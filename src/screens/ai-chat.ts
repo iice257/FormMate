@@ -1,39 +1,33 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — AI Chat Screen (Redesigned)
-// ═══════════════════════════════════════════
+// FormMate - AI Chat Screen
 
-import { getState, setState, addChatMessage } from '../state';
-import { withLayout, initLayout } from '../components/layout';
-import { navigateTo } from '../router';
+import { getState, addChatMessage } from '../state';
+import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { escapeHtml } from '../utils/escape';
+import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 
 function loadSessions() {
-  try { return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '[]'); } catch { return []; }
-}
-
-function saveSessions(sessions) {
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
 }
 
 export function aiChatScreen() {
   const { userProfile, formData } = getState();
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const sessions = loadSessions();
-
   const avatarSrc = userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 
   const chatContent = `
     <div class="flex-1 flex overflow-hidden animate-screen-enter zen-chat-shell">
-      
-      <!-- Chat Main Area -->
       <div class="zen-chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-        <!-- Chat Header -->
-        <div class="zen-chat-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
+        <div class="zen-chat-header" data-zen-hide="always" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <h2 style="font-size: 1.1rem; font-weight: 800; color: var(--fm-text);">FormMate AI</h2>
             <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
@@ -48,14 +42,13 @@ export function aiChatScreen() {
           </div>
         </div>
 
-        <!-- Chat Messages -->
         <div id="chat-messages" class="no-scrollbar zen-chat-messages" style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
           <div id="chat-empty-state" style="text-align: center; max-width: 420px;">
             <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--fm-primary-50); color: var(--fm-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
               <span class="material-symbols-outlined" style="font-size: 32px;">auto_awesome</span>
             </div>
             <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.5rem;">How can I help you today?</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions — just ask.</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions - just ask.</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <button class="chat-suggestion btn-press" data-msg="Analyze my latest form and suggest improvements" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff; cursor: pointer; text-align: left;">
                 <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">analytics</span>
@@ -69,14 +62,13 @@ export function aiChatScreen() {
           </div>
         </div>
 
-        <!-- Chat Input -->
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
             <div style="flex: 1; position: relative;">
-              <input type="text" id="chat-input" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
+              <input type="text" id="chat-input" data-zen-focus-target placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
               <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
@@ -89,9 +81,7 @@ export function aiChatScreen() {
         </div>
       </div>
 
-      <!-- Right Sidebar -->
-      <div class="hidden lg:flex zen-chat-sidebar" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;" class="no-scrollbar">
-        <!-- User Card -->
+      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${avatarSrc}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>
@@ -99,7 +89,7 @@ export function aiChatScreen() {
             <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 500;">Online</div>
           </div>
         </div>
-        
+
         <button id="btn-new-chat" class="btn-press" style="width: 100%; padding: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer; margin-bottom: 1.25rem;">
           <span class="material-symbols-outlined" style="font-size: 18px;">add</span> New Chat
         </button>
@@ -115,14 +105,12 @@ export function aiChatScreen() {
         </div>
 
         <div style="margin-top: auto; padding: 1rem; background: var(--fm-bg-sunken); border-radius: var(--fm-radius-xl);">
-          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.6rem;">Storage Usage</div>
-          <div style="width: 100%; height: 6px; background: var(--fm-border-light); border-radius: 3px; overflow: hidden; margin-bottom: 0.35rem;">
-            <div style="width: 35%; height: 100%; background: var(--fm-primary); border-radius: 3px;"></div>
+          <div style="font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.6rem;">Current Context</div>
+          <div style="font-size: 0.75rem; color: #64748b; line-height: 1.5;">
+            ${formData?.title ? `Active form: ${escapeHtml(formData.title)}` : 'No active form is attached to this chat yet.'}
           </div>
-          <div style="font-size: 0.7rem; color: #64748b;">1.2 GB of 5 GB used</div>
         </div>
       </div>
-
     </div>
   `;
 
@@ -134,13 +122,13 @@ export function aiChatScreen() {
 
   function init(wrapper) {
     const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'ai-chat' } });
-
     const chatInput = wrapper.querySelector('#chat-input');
     const btnSend = wrapper.querySelector('#btn-send');
     const chatMessages = wrapper.querySelector('#chat-messages');
     const emptyState = wrapper.querySelector('#chat-empty-state');
     let isChatPending = false;
     let chatHistory = [];
+    const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
 
     function appendBubble(role, text) {
       if (emptyState && emptyState.parentElement === chatMessages) {
@@ -158,7 +146,7 @@ export function aiChatScreen() {
           <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">${isUser ? 'person' : 'smart_toy'}</span>
         </div>
         <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
-          ${escapeHtml(text).replace(/\n/g, '<br>')}
+          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
         </div>
       `;
       chatMessages.appendChild(bubble);
@@ -207,14 +195,17 @@ export function aiChatScreen() {
     });
 
     chatInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); btnSend.click(); }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        btnSend.click();
+      }
     });
 
     btnSend?.addEventListener('click', () => {
       sendMessage(chatInput.value);
     });
 
-    wrapper.querySelectorAll('.chat-suggestion').forEach(btn => {
+    wrapper.querySelectorAll('.chat-suggestion').forEach((btn) => {
       btn.addEventListener('click', () => {
         sendMessage(btn.dataset.msg || '');
       });
@@ -229,6 +220,7 @@ export function aiChatScreen() {
     });
 
     return () => {
+      cleanupRichActions?.();
       cleanupLayout?.();
     };
   }

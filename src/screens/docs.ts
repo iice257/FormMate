@@ -83,7 +83,7 @@ export function docsScreen() {
              </div>
 
              <div>
-                <h4 class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-3">Account & Settings</h4>
+                <h4 class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-3">Account & Preferences</h4>
                 <div class="space-y-1">
                    <a href="#account" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Managing Your Account</a>
                    <a href="#history" class="sidebar-link flex items-center px-3 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors">Form History</a>
@@ -296,12 +296,12 @@ export function docsScreen() {
                  <a href="#account" class="opacity-0 group-hover:opacity-100 ml-2 text-primary transition-opacity"><span class="material-symbols-outlined text-xl">link</span></a>
                </h2>
                <p class="text-base text-slate-600 leading-relaxed mb-6">
-                 All of your preferences, data, and settings are handled in the <strong>Accounts Center</strong> (accessed via the Sidebar).
+                All of your preferences, data, and account-backed settings are handled in the <strong>Accounts Center</strong> (accessed via the Sidebar).
                </p>
                
                <div class="mb-6">
-                 <h4 class="font-bold text-slate-900 text-base mb-2">Settings & Theme</h4>
-                 <p class="text-sm text-slate-600">Under the <strong>Settings</strong> tab, you can fundamentally change how FormMate interacts with you. Change the default AI Temperature to be more "Creative" or more "Precise". Adjust the default verbosity level, and toggle UI animations or compact mode to fit your visual preference.</p>
+                  <h4 class="font-bold text-slate-900 text-base mb-2">Preferences & Theme</h4>
+                  <p class="text-sm text-slate-600">Under the <strong>Preferences</strong> tab, you can fundamentally change how FormMate interacts with you. Change the default AI Temperature to be more "Creative" or more "Precise". Adjust the default verbosity level, and toggle UI animations or compact mode to fit your visual preference.</p>
                </div>
             </article>
 
@@ -502,7 +502,10 @@ export function docsScreen() {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
-    wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => navigateTo('help'));
+    wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => {
+      const target = wrapper.querySelector('#contact');
+      target?.scrollIntoView({ behavior: 'smooth' });
+    });
 
     // --- Search & Chat Logic ---
     const searchInput = wrapper.querySelector('#docs-search-input');
@@ -520,7 +523,7 @@ export function docsScreen() {
       { id: 'vault', title: 'The Information Vault', text: 'The Vault is your secure, personal database inside FormMate. Think of it as your brain\'s notepad.', type: 'guide' },
       { id: 'copilot', title: 'Using the Form Copilot', text: 'On the right side of the Workspace screen sits your Form Copilot conversational assistant.', type: 'guide' },
       { id: 'editing', title: 'Reviewing & Editing', text: 'In your Workspace center screen, you\'ll notice a list of question cards.', type: 'guide' },
-      { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and settings are handled in the Accounts Center.', type: 'guide' },
+      { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and account-backed settings are handled in the Accounts Center.', type: 'guide' },
       { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
       { id: 'faqs', title: 'Pricing FAQ', text: 'Is FormMate free to use? Yes! You can fill up to 5 forms per month for free.', type: 'faq' },
       { id: 'faqs', title: 'Multi-step FAQ', text: 'Can FormMate handle multi-step forms? Absolutely.', type: 'faq' },

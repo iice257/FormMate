@@ -1,7 +1,5 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Dashboard Screen (Redesigned)
-// ═══════════════════════════════════════════
+// FormMate - Dashboard Screen
 
 import { getState } from '../state';
 import { withLayout, initLayout } from '../components/layout';
@@ -11,34 +9,39 @@ import { escapeAttr, escapeHtml } from '../utils/escape';
 export function dashboardScreen() {
   const { userProfile, formHistory, tier, formData } = getState();
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
+  const planLabel = tier === 'free' ? 'Basic' : 'Pro';
+  const workspaceLabel = formData ? 'Active Workspace' : 'Ready Workspace';
 
-  // Stats
   const totalForms = formHistory.length || 0;
-  const aiCredits = tier === 'free' ? '3/5' : 'Unlimited';
-  const timeSaved = totalForms > 0 ? `${(totalForms * 0.08).toFixed(1)}h` : '0h';
-  const accuracy = totalForms > 0 ? '99.2%' : '—';
+  const aiCredits = tier === 'free' ? 'Limited' : 'Expanded';
+  const timeSaved = '-';
+  const accuracy = '-';
+
+  const stats = [
+    { label: 'Total Forms', value: String(totalForms), meta: 'Forms tracked' },
+    { label: 'AI Credits', value: aiCredits, meta: `${planLabel} tier` },
+    { label: 'Time Saved', value: timeSaved, meta: 'Not yet measured' },
+    { label: 'Accuracy', value: accuracy, meta: 'Pending telemetry' }
+  ];
 
   const quickActions = [
     {
-      id: 'new',
       buttonId: 'btn-dashboard-focus-new',
       title: 'Paste a new form link',
-      copy: 'Convert any web form into a Mate structure instantly.',
+      copy: 'Convert any web form into a FormMate workspace instantly.',
       icon: 'link',
       featured: true
     },
     {
-      id: 'history',
       buttonId: 'btn-dashboard-focus-history',
       title: 'Open recent history',
-      copy: 'Jump back into your recently edited or viewed forms.',
+      copy: 'Jump back into recently analyzed forms without losing context.',
       icon: 'schedule'
     },
     {
-      id: 'chat',
       buttonId: 'btn-dashboard-focus-chat',
       title: 'Ask Copilot for help',
-      copy: 'Let our AI assist you with logic, validation, or design.',
+      copy: 'Use AI for rewriting, logic checks, and draft support.',
       icon: 'smart_toy'
     }
   ];
@@ -47,28 +50,36 @@ export function dashboardScreen() {
     ? formHistory.slice(0, 5).map(form => {
       const status = form.status || 'completed';
       const statusLabel = status === 'completed' ? 'Active' : status === 'draft' ? 'Draft' : 'Closed';
-      const statusColor = status === 'completed' ? 'color: #059669; background: #d1fae5;' : status === 'draft' ? 'color: #d97706; background: #fef3c7;' : 'color: #dc2626; background: #fee2e2;';
+      const statusClass = status === 'completed'
+        ? 'dashboard-status-active'
+        : status === 'draft'
+          ? 'dashboard-status-draft'
+          : 'dashboard-status-closed';
+      const answerCount = typeof form.answerCount === 'number' ? String(form.answerCount) : '-';
+
       return `
-        <tr class="recent-form-row" data-form-url="${escapeAttr(form.url || '')}" role="button" tabindex="0" style="cursor: pointer;">
-          <td style="padding: 1rem 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 32px; height: 32px; border-radius: var(--fm-radius-md); background: var(--fm-bg-sunken); display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-shrink: 0;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">description</span>
+        <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}">
+          <td class="dashboard-table-cell dashboard-table-cell-form">
+            <div class="dashboard-activity-form">
+              <div class="dashboard-activity-form-icon">
+                <span class="material-symbols-outlined">description</span>
               </div>
-              <div>
-                <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${escapeHtml(form.title || 'Untitled Form')}</div>
-                <div style="font-size: 0.7rem; color: #94a3b8;">${escapeHtml(form.provider || 'google_forms').toLowerCase().replace(/\s+/g, '_')}</div>
+              <div class="dashboard-activity-form-copy">
+                <div class="dashboard-activity-form-title">${escapeHtml(form.title || 'Untitled Form')}</div>
+                <div class="dashboard-activity-form-provider">${escapeHtml(form.provider || 'Google Forms')}</div>
               </div>
             </div>
           </td>
-          <td style="padding: 1rem 0.75rem;">
-            <span style="display: inline-block; padding: 0.2rem 0.55rem; border-radius: var(--fm-radius-full); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; ${statusColor}">${statusLabel}</span>
+          <td class="dashboard-table-cell">
+            <span class="dashboard-status ${statusClass}">
+              ${statusLabel}
+            </span>
           </td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b;">0</td>
-          <td style="padding: 1rem 0.75rem; font-size: 0.8rem; color: #64748b;">${new Date(form.timestamp).toLocaleDateString()}</td>
-          <td style="padding: 1rem 0.75rem; text-align: right;">
-            <button class="recent-form-menu" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
-              <span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+          <td class="dashboard-table-cell dashboard-cell-muted">${answerCount}</td>
+          <td class="dashboard-table-cell dashboard-cell-muted">${new Date(form.timestamp).toLocaleDateString()}</td>
+          <td class="dashboard-table-cell dashboard-table-cell-actions">
+            <button class="recent-form-menu" aria-label="No actions available yet" disabled>
+              <span class="material-symbols-outlined">more_horiz</span>
             </button>
           </td>
         </tr>
@@ -76,132 +87,146 @@ export function dashboardScreen() {
     }).join('')
     : `
       <tr>
-        <td colspan="5" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic;">No forms yet. Start by pasting a link to analyze your first form.</td>
+        <td colspan="5" class="dashboard-activity-empty">
+          No forms yet. Start by pasting a link to analyze your first form.
+        </td>
       </tr>
     `;
 
   const dashboardContent = `
-    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth animate-screen-enter">
-      <div style="max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem;">
-        
-        <!-- Welcome Header -->
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem;">
-          <div>
-            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; margin-bottom: 0.35rem;">Welcome back, ${firstName}!</h1>
-            <p style="font-size: 0.85rem; color: #64748b;">Your workspace is looking productive today.</p>
-          </div>
+    <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter dashboard-page">
+      <div class="app-page-inner dashboard-page-inner">
+        <div class="app-page-stack">
+          <section class="dashboard-hero">
+            <div class="dashboard-hero-grid">
+              <div class="dashboard-hero-copy">
+                <span class="dashboard-kicker">Dashboard</span>
+                <div class="dashboard-hero-copy-block">
+                  <h1 class="app-title">Welcome back, ${firstName}.</h1>
+                  <p class="app-copy dashboard-hero-copy-text">
+                    A consolidated view of your form activity.
+                  </p>
+                  <p class="dashboard-hero-meta">${planLabel} Plan | ${workspaceLabel}</p>
+                </div>
+                <div class="dashboard-hero-actions">
+                  <button id="btn-dashboard-open-history" class="app-button-secondary dashboard-secondary-action btn-press">
+                    <span class="material-symbols-outlined">schedule</span>
+                    <span>Open History</span>
+                  </button>
+                  <button id="btn-dashboard-open-workspace" class="app-button-primary dashboard-primary-action btn-press">
+                    <span class="material-symbols-outlined">description</span>
+                    <span>${formData ? 'Resume Active Form' : 'Open Workspace'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="dashboard-hero-aside">
+                <div class="dashboard-hero-aside-top">
+                  <div class="app-eyebrow">At A Glance</div>
+                  <p class="dashboard-panel-copy">Track usage, plan, and workspace state without leaving the page.</p>
+                </div>
+                <div class="dashboard-hero-metrics">
+                  <div>
+                    <div class="dashboard-hero-metric-value">${totalForms}</div>
+                    <div class="dashboard-hero-metric-label">Forms Touched</div>
+                  </div>
+                  <div>
+                    <div class="dashboard-hero-metric-value">${planLabel}</div>
+                    <div class="dashboard-hero-metric-label">Plan</div>
+                  </div>
+                  <div>
+                    <div class="dashboard-hero-metric-value">${formData ? 'Active' : 'Ready'}</div>
+                    <div class="dashboard-hero-metric-label">Workspace</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-stats-row">
+            ${stats.map(stat => `
+              <article class="dashboard-stat-card">
+                <div class="dashboard-stat-edge"></div>
+                <div class="dashboard-stat-glow"></div>
+                <div class="app-eyebrow">${stat.label}</div>
+                <div class="dashboard-stat-reading">
+                  <span class="dashboard-stat-value">${stat.value}</span>
+                  <span class="dashboard-stat-meta">${stat.meta}</span>
+                </div>
+              </article>
+            `).join('')}
+          </section>
+
+          <section class="dashboard-section-surface">
+            <div class="dashboard-panel-header">
+              <div>
+                <span class="app-eyebrow">Quick Actions</span>
+                <h2 class="dashboard-panel-title">Move faster with the same essentials</h2>
+              </div>
+            </div>
+            <div class="dashboard-quick-actions-grid">
+              ${quickActions.map(action => `
+                <button
+                  id="${action.buttonId}"
+                  class="dashboard-quick-action ${action.featured ? 'dashboard-quick-action-featured' : ''}"
+                >
+                  <span class="dashboard-quick-action-icon">
+                    <span class="material-symbols-outlined">${action.icon}</span>
+                  </span>
+                  <span class="dashboard-quick-action-body">
+                    <span class="dashboard-quick-action-title">${action.title}</span>
+                    <span class="dashboard-quick-action-copy">${action.copy}</span>
+                  </span>
+                  <span class="material-symbols-outlined dashboard-quick-action-arrow">north_east</span>
+                </button>
+              `).join('')}
+            </div>
+          </section>
+
+          <section class="dashboard-activity dashboard-section-surface">
+            <div class="dashboard-activity-header">
+              <div>
+                <span class="app-eyebrow">Recent Activity</span>
+                <h2 class="dashboard-panel-title">Forms you touched recently</h2>
+              </div>
+              <button id="btn-dashboard-view-all" class="app-button-secondary btn-press">View All</button>
+            </div>
+            <div class="dashboard-activity-table-wrap">
+              <table class="dashboard-activity-table">
+                <thead>
+                  <tr>
+                    <th>Form Name</th>
+                    <th>Status</th>
+                    <th>Captured Answers</th>
+                    <th>Last Modified</th>
+                    <th class="dashboard-table-head-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${recentFormsHtml}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
-
-        <!-- Top Stats Cards -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
-              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Forms Touched</span>
-              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">description</span>
-            </div>
-            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${totalForms}</div>
-            <div style="font-size: 0.7rem; color: var(--fm-success); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
-              <span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span>
-              +12% from last week
-            </div>
-          </div>
-
-          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
-              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Current Plan</span>
-              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">shield</span>
-            </div>
-            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${tier === 'free' ? 'Basic' : 'Pro'}</div>
-            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.25rem;">Next billing cycle: —</div>
-          </div>
-
-          <div style="padding: 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
-              <span style="font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Workspace Status</span>
-              <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary);">cloud_done</span>
-            </div>
-            <div style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em;">${formData ? 'Active' : 'Healthy'}</div>
-            <div style="font-size: 0.7rem; color: var(--fm-success); margin-top: 0.25rem;">All systems operational</div>
-          </div>
-        </div>
-
-        <!-- Quick Action Cards -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-          ${quickActions.map(action => `
-            <button id="${action.buttonId}" class="btn-press" style="display: flex; flex-direction: column; padding: 1.25rem; border-radius: var(--fm-radius-xl); border: 1px solid ${action.featured ? 'transparent' : 'var(--fm-border-light)'}; background: ${action.featured ? 'linear-gradient(135deg, #0d7377, #14919b)' : '#fff'}; color: ${action.featured ? '#fff' : 'var(--fm-text)'}; text-align: left; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s; position: relative; overflow: hidden; min-height: 150px;">
-              ${action.featured ? '<div style="position: absolute; right: -20px; bottom: -20px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.08);"></div><div style="position: absolute; right: 20px; bottom: 10px; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.05);"></div>' : ''}
-              <span class="material-symbols-outlined" style="font-size: 22px; margin-bottom: 0.75rem; ${!action.featured ? 'color: var(--fm-primary);' : ''}">${action.icon}</span>
-              <div style="font-size: 0.9rem; font-weight: 800; margin-bottom: 0.35rem; position: relative; z-index: 1;">${action.title}</div>
-              <div style="font-size: 0.75rem; opacity: 0.8; line-height: 1.45; position: relative; z-index: 1;">${action.copy}</div>
-              <span class="material-symbols-outlined" style="margin-top: auto; font-size: 18px; opacity: 0.6; position: relative; z-index: 1;">arrow_forward</span>
-            </button>
-          `).join('')}
-        </div>
-
-        <!-- Stats Row -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; padding: 1rem 1.25rem; background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl);">
-          <div>
-            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Total Forms</div>
-            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
-              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">${totalForms || 158}</span>
-              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">+4 this month</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">AI Credits</div>
-            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
-              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">${tier === 'free' ? '450' : '∞'}</span>
-              <span style="font-size: 0.65rem; color: #64748b; font-weight: 600;">of 500 used</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Time Saved</div>
-            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
-              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">12.4h</span>
-              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">Efficient</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0.35rem;">Accuracy</div>
-            <div style="display: flex; align-items: baseline; gap: 0.35rem;">
-              <span style="font-size: 1.4rem; font-weight: 900; color: var(--fm-text);">99.2%</span>
-              <span style="font-size: 0.65rem; color: var(--fm-success); font-weight: 600;">High</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Forms Activity -->
-        <div style="background: #fff; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); overflow: hidden;">
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem;">
-            <h2 style="font-size: 1.05rem; font-weight: 800; color: var(--fm-text);">Recent Forms Activity</h2>
-            <button id="btn-dashboard-view-all" style="font-size: 0.8rem; font-weight: 600; color: var(--fm-primary); background: none; border: none; cursor: pointer;">View All</button>
-          </div>
-          <table style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead>
-              <tr style="border-top: 1px solid var(--fm-border-light);">
-                <th style="padding: 0.75rem 1.25rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Form Name</th>
-                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Status</th>
-                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Responses</th>
-                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8;">Last Modified</th>
-                <th style="padding: 0.75rem; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; text-align: right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recentFormsHtml}
-            </tbody>
-          </table>
-        </div>
-
       </div>
     </div>
   `;
 
-  const html = withLayout('dashboard', dashboardContent);
+  const html = withLayout('dashboard', dashboardContent, {
+    zenMode: { screenId: 'dashboard' },
+    shellClassName: 'zen-layout-shell',
+    contentClassName: 'zen-layout-content'
+  });
 
   function init(wrapper) {
-    initLayout(wrapper);
+    initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
 
-    wrapper.querySelector('#btn-dashboard-resume')?.addEventListener('click', () => {
+    wrapper.querySelector('#btn-dashboard-open-history')?.addEventListener('click', () => {
+      navigateTo('history');
+    });
+
+    wrapper.querySelector('#btn-dashboard-open-workspace')?.addEventListener('click', () => {
       navigateTo('workspace');
     });
 
@@ -222,15 +247,9 @@ export function dashboardScreen() {
     });
 
     wrapper.querySelectorAll('.recent-form-row').forEach((el) => {
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('.recent-form-menu')) return;
-        navigateTo('workspace');
-      });
-      el.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        el.click();
-      });
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.style.cursor = 'default';
     });
   }
 
