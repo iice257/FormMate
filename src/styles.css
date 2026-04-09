@@ -1569,9 +1569,9 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 .layout-shell-sidebar-collapsed .layout-sidebar {
-  width: 84px;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  width: 72px;
+  padding-left: 0.38rem;
+  padding-right: 0.38rem;
 }
 
 .layout-shell-sidebar-collapsed .layout-sidebar-link {
@@ -1594,6 +1594,13 @@ input[type="range"]:active::-moz-range-thumb {
 
 .layout-shell-sidebar-collapsed .layout-sidebar-utility-btn,
 .layout-shell-sidebar-collapsed .layout-sidebar-zen-row .zen-mode-toggle-minimal {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 12px;
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
