@@ -27,7 +27,7 @@ function syncWorkspaceZenPanel(enabled, wrapper) {
 }
 
 export function workspaceScreen() {
-  const { formData, answers, tier } = getState();
+  const { formData, answers, tier, aiDiagnostics } = getState();
 
   if (!formData) {
     navigateTo('landing');
@@ -53,12 +53,13 @@ export function workspaceScreen() {
   const questionsHtml = formData.questions.map((q, i) =>
     renderQuestionCard(q, answers[q.id], i)
   ).join('');
+  const aiDiagnosticsBanner = renderAiDiagnosticsBanner(aiDiagnostics);
 
   const workspaceContent = `
     <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
       <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll">
-        <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
+          <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
           
           <!-- Breadcrumb & Actions Bar -->
           <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
@@ -72,6 +73,8 @@ export function workspaceScreen() {
               <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
+
+          ${aiDiagnosticsBanner}
 
           <h1 class="workspace-title" style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
 
@@ -588,4 +591,26 @@ function escapeHtml(text) {
 
 function formatTime(date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderAiDiagnosticsBanner(aiDiagnostics) {
+  if (!aiDiagnostics || aiDiagnostics.status === 'ok') return '';
+
+  const isFailed = aiDiagnostics.status === 'failed';
+  const icon = isFailed ? 'error' : 'warning';
+  const bg = isFailed ? 'rgba(254, 242, 242, 0.98)' : 'rgba(255, 251, 235, 0.98)';
+  const border = isFailed ? 'rgba(248, 113, 113, 0.2)' : 'rgba(245, 158, 11, 0.25)';
+  const text = isFailed ? '#991b1b' : '#92400e';
+  const title = isFailed ? 'AI suggestions unavailable' : 'Some AI suggestions need a retry';
+  const summary = aiDiagnostics.summary || 'AI output was only partially available for this form.';
+
+  return `
+    <div style="display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; padding: 0.9rem 1rem; border-radius: var(--fm-radius-xl); border: 1px solid ${border}; background: ${bg}; color: ${text};">
+      <span class="material-symbols-outlined" style="font-size: 18px; margin-top: 1px;">${icon}</span>
+      <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+        <div style="font-size: 0.78rem; font-weight: 800;">${title}</div>
+        <div style="font-size: 0.8rem; line-height: 1.45;">${escapeHtml(summary)}</div>
+      </div>
+    </div>
+  `;
 }

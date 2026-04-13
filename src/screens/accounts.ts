@@ -250,7 +250,6 @@ export function accountsScreen() {
                   </div>
                   <div class="p-5 rounded-xl space-y-4" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
                     ${renderToggle('set-compact', { label: 'Compact Mode', description: 'Reduce spacing for denser layouts', checked: settings?.ui?.compactMode })}
-                    ${renderToggle('set-animations', { label: 'Animations', description: 'Enable smooth transitions and effects', checked: settings?.ui?.animationsEnabled })}
                     ${renderToggle('set-sidebar', { label: 'Show Sidebar by Default', checked: settings?.ui?.sidebarDefault })}
                     ${renderToggle('set-chat-panel', { label: 'Show Chat Panel by Default', checked: settings?.ui?.chatPanelDefault })}
                   </div>
@@ -455,7 +454,6 @@ export function accountsScreen() {
 
     const toggleMap = {
       'set-compact': 'ui.compactMode',
-      'set-animations': 'ui.animationsEnabled',
       'set-sidebar': 'ui.sidebarDefault',
       'set-chat-panel': 'ui.chatPanelDefault'
     };

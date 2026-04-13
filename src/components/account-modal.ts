@@ -11,6 +11,11 @@ import { applyTheme, normalizeTheme } from '../theme';
 let modalRoot = null;
 let activeTab = 'profile';
 let escapeHandler = null;
+const ACCOUNT_MODAL_TABS = [
+  { id: 'profile', icon: 'person', label: 'Profile' },
+  { id: 'settings', icon: 'settings', label: 'Preferences' },
+  { id: 'help', icon: 'help', label: 'Help' },
+];
 
 function getAvatarSrc() {
   const { userProfile } = getState();
@@ -33,11 +38,6 @@ function renderModal() {
 
   const { userProfile } = getState();
   const avatarSrc = getAvatarSrc();
-  const tabs = [
-    { id: 'profile', icon: 'person', label: 'Profile' },
-    { id: 'settings', icon: 'settings', label: 'Preferences' },
-    { id: 'help', icon: 'help', label: 'Help' },
-  ];
 
   modalRoot.innerHTML = `
     <div class="account-modal-overlay" id="account-modal-overlay">
@@ -60,9 +60,18 @@ function renderModal() {
             </div>
           </div>
 
-          <nav class="account-modal-tabs" id="account-modal-tabs">
-            ${tabs.map((tab) => `
-              <button class="account-modal-tab ${tab.id === activeTab ? 'active' : ''}" data-tab="${tab.id}" type="button">
+          <nav class="account-modal-tabs" id="account-modal-tabs" role="tablist" aria-label="Account sections">
+            ${ACCOUNT_MODAL_TABS.map((tab) => `
+              <button
+                id="account-tab-${tab.id}"
+                class="account-modal-tab ${tab.id === activeTab ? 'active' : ''}"
+                data-tab="${tab.id}"
+                type="button"
+                role="tab"
+                aria-selected="${tab.id === activeTab ? 'true' : 'false'}"
+                aria-controls="account-modal-content"
+                tabindex="${tab.id === activeTab ? '0' : '-1'}"
+              >
                 <span class="material-symbols-outlined">${tab.icon}</span>
                 <span>${tab.label}</span>
               </button>
@@ -83,13 +92,38 @@ function renderModal() {
           </button>
         </aside>
 
-        <section class="account-modal-content" id="account-modal-content"></section>
+        <section class="account-modal-content" id="account-modal-content" role="tabpanel" aria-live="polite" aria-labelledby="account-tab-${activeTab}"></section>
       </div>
     </div>
   `;
 
   renderActiveTab();
+  syncActiveTabUi(modalRoot);
   wireModalShellEvents();
+}
+
+function syncActiveTabUi(scope = document) {
+  scope.querySelectorAll('.account-modal-tab').forEach((button) => {
+    const isActive = button.dataset.tab === activeTab;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    button.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+  scope.querySelector('#account-modal-content')?.setAttribute('aria-labelledby', `account-tab-${activeTab}`);
+}
+
+function setActiveTab(nextTab, { focus = false } = {}) {
+  if (!ACCOUNT_MODAL_TABS.some((tab) => tab.id === nextTab)) {
+    return;
+  }
+
+  activeTab = nextTab;
+  renderActiveTab();
+  syncActiveTabUi(document);
+
+  if (focus) {
+    document.getElementById(`account-tab-${nextTab}`)?.focus();
+  }
 }
 
 function renderActiveTab() {
@@ -337,12 +371,26 @@ function wireModalShellEvents() {
 
   overlay.querySelectorAll('.account-modal-tab').forEach((button) => {
     button.addEventListener('click', () => {
-      activeTab = button.dataset.tab || 'profile';
-      overlay.querySelectorAll('.account-modal-tab').forEach((tabButton) => {
-        tabButton.classList.toggle('active', tabButton === button);
-      });
-      renderActiveTab();
+      setActiveTab(button.dataset.tab || 'profile');
     });
+  });
+
+  document.getElementById('account-modal-tabs')?.addEventListener('keydown', (event) => {
+    const tabs = Array.from(document.querySelectorAll('.account-modal-tab'));
+    if (!tabs.length) return;
+
+    const currentIndex = Math.max(0, tabs.findIndex((button) => button.dataset.tab === activeTab));
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = tabs.length - 1;
+
+    if (nextIndex !== currentIndex || event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      setActiveTab(tabs[nextIndex].dataset.tab || 'profile', { focus: true });
+    }
   });
 
   document.getElementById('account-modal-open-vault')?.addEventListener('click', () => {

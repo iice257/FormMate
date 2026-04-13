@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.vercel/
 
 # Dependencies
 node_modules/
@@ -9,15 +10,22 @@ node_modules/
 
 # Build
 dist/
+.vite-cache/
 
 # Playwright
 test-results/
 playwright-report/
+.playwright-tmp/
 
 # Editor
 .vscode/
 *.swp
 *.swo
+*.log
+*.err
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS
 .DS_Store

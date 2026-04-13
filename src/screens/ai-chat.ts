@@ -25,7 +25,7 @@ export function aiChatScreen() {
   const avatarSrc = userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 
   const chatContent = `
-    <div class="flex-1 flex overflow-hidden animate-screen-enter zen-chat-shell">
+    <div class="flex-1 flex overflow-hidden zen-chat-shell">
       <div class="zen-chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
         <div class="zen-chat-header" data-zen-hide="always" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -153,6 +153,28 @@ export function aiChatScreen() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    function appendErrorBubble(text) {
+      if (emptyState && emptyState.parentElement === chatMessages) {
+        emptyState.remove();
+        chatMessages.style.justifyContent = 'flex-start';
+        chatMessages.style.alignItems = 'stretch';
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'animate-message-in';
+      bubble.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
+      bubble.innerHTML = `
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #ef4444; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">error</span>
+        </div>
+        <div style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
+          ${escapeHtml(text).replace(/\n/g, '<br>')}
+        </div>
+      `;
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
     async function sendMessage(text) {
       const trimmed = text.trim();
       if (!trimmed || isChatPending) return;
@@ -181,7 +203,7 @@ export function aiChatScreen() {
       } catch (error) {
         typingEl.remove();
         const msg = getAiErrorMessage(error, 'AI service is unavailable right now.');
-        appendBubble('assistant', msg);
+        appendErrorBubble(msg);
       } finally {
         btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;

@@ -11,6 +11,9 @@ export function dashboardScreen() {
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const planLabel = tier === 'free' ? 'Basic' : 'Pro';
   const workspaceLabel = formData ? 'Active Workspace' : 'Ready Workspace';
+  const workspaceRoute = formData ? 'workspace' : 'new';
+  const workspaceActionLabel = formData ? 'Resume Active Form' : 'Start New Form';
+  const workspaceActionIcon = formData ? 'description' : 'add_circle';
 
   const totalForms = formHistory.length || 0;
   const aiCredits = tier === 'free' ? 'Limited' : 'Expanded';
@@ -77,24 +80,19 @@ export function dashboardScreen() {
           </td>
           <td class="dashboard-table-cell dashboard-cell-muted">${answerCount}</td>
           <td class="dashboard-table-cell dashboard-cell-muted">${new Date(form.timestamp).toLocaleDateString()}</td>
-          <td class="dashboard-table-cell dashboard-table-cell-actions">
-            <button class="recent-form-menu" aria-label="No actions available yet" disabled>
-              <span class="material-symbols-outlined">more_horiz</span>
-            </button>
-          </td>
         </tr>
       `;
     }).join('')
     : `
       <tr>
-        <td colspan="5" class="dashboard-activity-empty">
+        <td colspan="4" class="dashboard-activity-empty">
           No forms yet. Start by pasting a link to analyze your first form.
         </td>
       </tr>
     `;
 
   const dashboardContent = `
-    <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter dashboard-page">
+    <div class="app-page-scroll no-scrollbar scroll-smooth dashboard-page">
       <div class="app-page-inner dashboard-page-inner">
         <div class="app-page-stack">
           <section class="dashboard-hero">
@@ -114,8 +112,8 @@ export function dashboardScreen() {
                     <span>Open History</span>
                   </button>
                   <button id="btn-dashboard-open-workspace" class="app-button-primary dashboard-primary-action btn-press">
-                    <span class="material-symbols-outlined">description</span>
-                    <span>${formData ? 'Resume Active Form' : 'Open Workspace'}</span>
+                    <span class="material-symbols-outlined">${workspaceActionIcon}</span>
+                    <span>${workspaceActionLabel}</span>
                   </button>
                 </div>
               </div>
@@ -199,7 +197,6 @@ export function dashboardScreen() {
                     <th>Status</th>
                     <th>Captured Answers</th>
                     <th>Last Modified</th>
-                    <th class="dashboard-table-head-actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -227,7 +224,7 @@ export function dashboardScreen() {
     });
 
     wrapper.querySelector('#btn-dashboard-open-workspace')?.addEventListener('click', () => {
-      navigateTo('workspace');
+      navigateTo(workspaceRoute);
     });
 
     wrapper.querySelector('#btn-dashboard-view-all')?.addEventListener('click', () => {
@@ -246,11 +243,6 @@ export function dashboardScreen() {
       navigateTo('ai-chat');
     });
 
-    wrapper.querySelectorAll('.recent-form-row').forEach((el) => {
-      el.removeAttribute('role');
-      el.removeAttribute('tabindex');
-      el.style.cursor = 'default';
-    });
   }
 
   return { html, init };

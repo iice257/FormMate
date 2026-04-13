@@ -26,7 +26,6 @@ import { captureScreen } from '../screens/capture';
 let booted = false;
 let screensRegistered = false;
 let hidingHeaderInitialized = false;
-let transitionsInitialized = false;
 let errorHandlersInitialized = false;
 
 function registerScreens() {
@@ -91,24 +90,6 @@ function initHidingHeader() {
   hidingHeaderInitialized = true;
 }
 
-function initTransitions() {
-  if (transitionsInitialized) return;
-
-  const overlay = document.createElement('div');
-  overlay.id = 'page-transition-overlay';
-  document.body.appendChild(overlay);
-
-  window.__fmClickX = window.innerWidth / 2;
-  window.__fmClickY = window.innerHeight / 2;
-
-  document.addEventListener('mousedown', (event) => {
-    window.__fmClickX = event.clientX;
-    window.__fmClickY = event.clientY;
-  }, { capture: true, passive: true });
-
-  transitionsInitialized = true;
-}
-
 function renderFatalError(error: unknown) {
   const app = document.getElementById('app');
   if (!app) return;
@@ -163,7 +144,6 @@ async function boot() {
   booted = true;
 
   try {
-    initTransitions();
     const { getState, subscribe } = await import('../state');
     applyTheme(getState().settings?.ui?.theme);
     subscribe((nextState) => {

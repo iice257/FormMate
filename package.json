@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --configLoader native",
-    "dev:vercel": "vercel dev",
+    "dev:vercel": "vercel dev --listen 3000",
+    "dev:stack": "node scripts/dev-stack.mjs",
     "build": "vite build --configLoader native",
     "preview": "vite preview --configLoader native",
+    "env:pull": "vercel env pull .env.local --yes",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"
   },

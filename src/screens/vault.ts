@@ -31,7 +31,7 @@ export function vaultScreen() {
   ];
 
   const vaultContent = `
-    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth animate-screen-enter">
+    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
       <div class="max-w-5xl mx-auto px-6 py-10">
         <div class="flex items-center justify-between mb-10">
           <div>

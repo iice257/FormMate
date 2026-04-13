@@ -7,6 +7,61 @@ let _remoteInitAttempted = false;
 let _pendingByUser = new Map(); // userId -> patch
 let _flushTimer = null;
 
+function persistCachedUserData(data) {
+  if (!data) return;
+  if (data.profile !== undefined) saveProfile(data.profile);
+  if (data.settings !== undefined) saveSettings(data.settings);
+  if (data.vault !== undefined) saveVault(data.vault);
+  if (data.formHistory !== undefined) save('form_history', data.formHistory);
+}
+
+function scheduleRemoteFlush(delayMs = 800) {
+  if (_flushTimer) return;
+  _flushTimer = setTimeout(() => {
+    void flushRemoteSyncQueue();
+  }, delayMs);
+}
+
+async function flushRemoteSyncQueue() {
+  _flushTimer = null;
+  const provider = await initRemoteProvider();
+  const entries = Array.from(_pendingByUser.entries());
+  if (!entries.length) return;
+
+  _pendingByUser.clear();
+
+  if (!provider) {
+    entries.forEach(([id, patch]) => {
+      const existing = _pendingByUser.get(id) || {};
+      _pendingByUser.set(id, { ...existing, ...patch });
+    });
+    scheduleRemoteFlush(2000);
+    return;
+  }
+
+  const results = await Promise.allSettled(entries.map(([id, patch]) => provider.upsertUserData(id, patch)));
+  const failures = [];
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      failures.push({
+        userId: entries[index][0],
+        patch: entries[index][1],
+        error: result.reason,
+      });
+    }
+  });
+
+  if (!failures.length) return;
+
+  failures.forEach(({ userId, patch }) => {
+    const existing = _pendingByUser.get(userId) || {};
+    _pendingByUser.set(userId, { ...existing, ...patch });
+  });
+  console.warn('[StorageProvider] Remote sync failed, queued for retry:', failures.map(({ userId, error }) => ({ userId, error })));
+  scheduleRemoteFlush(2000);
+}
+
 function getEnv(key) {
   // Vite injects import.meta.env in the browser; in Node it may be undefined.
   return (import.meta?.env && key in import.meta.env) ? import.meta.env[key] : undefined;
@@ -110,6 +165,7 @@ export async function hydrateFromRemote(user, options = {}) {
       if (!seedIfMissing) return null;
       const seeded = buildInitialRemoteData(session);
       await provider.upsertUserData(userId, seeded);
+      persistCachedUserData(seeded);
       return {
         userProfile: seeded.profile,
         settings: seeded.settings,
@@ -151,6 +207,7 @@ export async function ensureAccountData(session, options = {}) {
 
     const seeded = buildInitialRemoteData(session);
     await provider.upsertUserData(userId, seeded);
+    persistCachedUserData(seeded);
     return seeded;
   } catch (error) {
     console.warn('[StorageProvider] Failed to ensure account data:', error);
@@ -177,20 +234,6 @@ export function queueRemoteSync(user, patch) {
 
   const existing = _pendingByUser.get(userId) || {};
   _pendingByUser.set(userId, { ...existing, ...patch });
-
-  if (_flushTimer) return;
-  _flushTimer = setTimeout(async () => {
-    _flushTimer = null;
-    const provider = await initRemoteProvider();
-    if (!provider) {
-      _pendingByUser.clear();
-      return;
-    }
-
-    const entries = Array.from(_pendingByUser.entries());
-    _pendingByUser.clear();
-
-    await Promise.allSettled(entries.map(([id, p]) => provider.upsertUserData(id, p)));
-  }, 800);
+  scheduleRemoteFlush();
 }
 

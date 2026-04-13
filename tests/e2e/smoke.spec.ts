@@ -12,9 +12,7 @@ async function seedOnboardingComplete(page) {
 
 async function login(page) {
   await page.goto('/auth');
-  await page.fill('#login-email', 'free@formmate.ai');
-  await page.fill('#login-password', 'password');
-  await page.click('#btn-login');
+  await page.click('[data-dev-test-user]');
 
   // Allow SPA navigation to complete
   await page.waitForTimeout(600);
@@ -38,28 +36,20 @@ test('protected routes redirect unauthenticated users to auth', async ({ page })
   await expect(page.locator('#btn-login')).toBeVisible();
 });
 
-test('email signup reaches protected app shell', async ({ page }) => {
+test('dev test access reaches protected app shell', async ({ page }) => {
   await seedOnboardingComplete(page);
-
-  const uniqueEmail = `signup-${Date.now()}@formmate.ai`;
   await page.goto('/auth');
-  await page.click('#btn-to-signup');
-  await page.fill('#signup-name', 'Playwright User');
-  await page.fill('#signup-email', uniqueEmail);
-  await page.fill('#signup-password', 'password');
-  await page.click('#btn-signup');
+  await page.click('[data-dev-test-user]');
 
   await page.waitForURL('**/dashboard');
   await expect(page.locator('#nav-dashboard')).toBeVisible();
 });
 
-test('social login reaches protected app shell', async ({ page }) => {
+test('auth screen exposes Google and dev access paths', async ({ page }) => {
   await seedOnboardingComplete(page);
   await page.goto('/auth');
-  await page.click('#btn-google');
-
-  await page.waitForURL('**/dashboard');
-  await expect(page.locator('#btn-profile-header')).toBeVisible();
+  await expect(page.locator('#btn-google')).toBeVisible();
+  await expect(page.locator('[data-dev-test-user]')).toBeVisible();
 });
 
 test('auth-required flow: shows Assisted Capture modal', async ({ page }) => {

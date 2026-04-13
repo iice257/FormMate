@@ -151,7 +151,7 @@ export function captureScreen() {
         </button>
       </header>
 
-      <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-12 md:py-16 animate-screen-enter">
+      <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-12 md:py-16">
         <div class="mb-10 text-center max-w-2xl mx-auto space-y-4">
           <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-widest rounded-full border border-primary/20">
             <span class="material-symbols-outlined text-[14px]">bookmark</span>

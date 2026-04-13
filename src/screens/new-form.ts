@@ -28,7 +28,7 @@ export function newFormScreen() {
   const zenActive = isZenModeEnabled('new');
 
   const html = `
-    <div class="relative flex h-screen w-full flex-col overflow-hidden animate-screen-enter zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
+    <div class="relative flex h-screen w-full flex-col overflow-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
       <button
         type="button"
         id="btn-zen-exit"
@@ -98,7 +98,7 @@ export function newFormScreen() {
                   <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
                 </button>
                 <button id="nav-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
-                  <span class="material-symbols-outlined text-base">help</span> Help Center
+                  <span class="material-symbols-outlined text-base">menu_book</span> Docs &amp; Help
                 </button>
               </div>
             </div>
@@ -177,7 +177,7 @@ export function newFormScreen() {
     wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
       navigateTo('ai-chat');
     });
-    wrapper.querySelector('#nav-help')?.addEventListener('click', () => openAccountModal('help'));
+    wrapper.querySelector('#nav-help')?.addEventListener('click', () => navigateTo('docs'));
 
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));

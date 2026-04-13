@@ -130,14 +130,18 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
 
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
-  const switchTargets = [...SUPPORTED_ZEN_SCREENS]
-    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
+  const rawTargets = [...SUPPORTED_ZEN_SCREENS]
+    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace());
+  const switchTargets = rawTargets
+    .filter((candidate) => candidate !== 'new')
+    .concat(rawTargets.includes('new') ? ['new'] : [])
     .map((candidate) => {
       const isCurrent = candidate === screenId;
+      const isPrimaryAction = candidate === 'new';
       return `
       <button
         type="button"
-        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''}"
+        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''} ${isPrimaryAction ? 'zen-mode-menu-item-primary zen-mode-menu-item-separate' : ''}"
         data-zen-target="${escapeHtml(candidate)}"
         aria-current="${isCurrent ? 'page' : 'false'}"
         aria-label="${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}${isCurrent ? ' (Current)' : ''}"
@@ -390,7 +394,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
         
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
-          <input type="text" class="layout-search-input" placeholder="Search pages, actions, help, or preferences..." id="layout-search" autocomplete="off" />
+          <input type="text" class="layout-search-input" placeholder="Search pages, actions, or help" id="layout-search" autocomplete="off" />
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -419,9 +423,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
             <div class="layout-sidebar-divider"></div>
             
-            <button id="nav-support" class="layout-sidebar-link" aria-label="Help Center">
-              <span class="material-symbols-outlined layout-sidebar-icon">help</span>
-              <span class="layout-sidebar-label">Help Center</span>
+            <button id="nav-support" class="layout-sidebar-link" aria-label="Open docs and help">
+              <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
+              <span class="layout-sidebar-label">Docs &amp; Help</span>
             </button>
           </nav>
           
@@ -436,17 +440,21 @@ export function withLayout(pageId, contentHtml, options = {}) {
               </div>
             ` : ''}
             <div class="layout-sidebar-account-block">
-              <div id="nav-profile-sidebar" class="layout-sidebar-user" role="button" tabindex="0" aria-label="Open account">
-                <div class="layout-sidebar-avatar-wrap">
-                  <img src="${avatarSrc}" alt="Avatar" />
-                  ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
-                </div>
-                <div class="layout-sidebar-user-info">
-                  <span class="layout-sidebar-user-name">${displayName}</span>
-                </div>
+              <div class="layout-sidebar-account-shell">
+                <div class="layout-sidebar-account-row">
+                <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
+                  <div class="layout-sidebar-avatar-wrap">
+                    <img src="${avatarSrc}" alt="Avatar" />
+                    ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
+                  </div>
+                  <div class="layout-sidebar-user-info">
+                    <span class="layout-sidebar-user-name">${displayName}</span>
+                  </div>
+                </button>
                 <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
                   <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
                 </button>
+                </div>
               </div>
             </div>
           </div>
@@ -485,7 +493,7 @@ export function initLayout(wrapper, options = {}) {
 
   // Help Center → account modal (help tab)
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
-    openAccountModal('help');
+    navigateTo('docs');
   });
 
   // Logo → home
@@ -652,16 +660,8 @@ export function initLayout(wrapper, options = {}) {
     openAccountModal('profile');
   });
 
-  wrapper.querySelector('#btn-sidebar-settings')?.addEventListener('click', (event) => {
-    event.stopPropagation();
+  wrapper.querySelector('#btn-sidebar-settings')?.addEventListener('click', () => {
     openAccountModal('settings');
-  });
-
-  wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openAccountModal('profile');
-    }
   });
 
   // Login button

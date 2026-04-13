@@ -50,11 +50,16 @@ export class SupabaseStorageProvider {
   }
 
   async upsertUserData(userId, patch) {
+    const formHistory = Object.prototype.hasOwnProperty.call(patch || {}, 'form_history')
+      ? patch.form_history
+      : patch?.formHistory;
     const record = {
       user_id: userId,
       updated_at: new Date().toISOString(),
       ...patch,
+      ...(formHistory !== undefined ? { form_history: formHistory } : {}),
     };
+    delete record.formHistory;
 
     const url = `${this.supabaseUrl.replace(/\/+$/, '')}/rest/v1/${encodeURIComponent(this.table)}`;
     const res = await fetch(url, {

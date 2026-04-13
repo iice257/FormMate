@@ -54,7 +54,7 @@ export function landingScreen() {
 
         <main class="flex-1 flex flex-col items-center px-6 pt-24 pb-16 md:pt-40 z-10">
           <!-- Hero Section -->
-          <div class="max-w-[800px] w-full text-center space-y-6 animate-screen-enter">
+          <div class="max-w-[800px] w-full text-center space-y-6">
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
               <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
               Form Copilot

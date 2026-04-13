@@ -127,7 +127,6 @@ export function getDefaultSettings() {
       theme: 'light',
       compactMode: false,
       sidebarDefault: true,
-      animationsEnabled: true,
       chatPanelDefault: true,
     },
     // Personalization
@@ -199,8 +198,31 @@ export function saveVault(vault) {
   save('user_vault', vault);
 }
 
+function normalizeVault(vault) {
+  const normalized = { ...(vault || {}) };
+  const legacyMap = {
+    'Full Name': 'fullName',
+    'Email Address': 'email',
+    'Phone Number': 'phone',
+  };
+
+  Object.entries(legacyMap).forEach(([legacyKey, nextKey]) => {
+    if (normalized[legacyKey] !== undefined && normalized[nextKey] === undefined) {
+      normalized[nextKey] = normalized[legacyKey];
+    }
+    delete normalized[legacyKey];
+  });
+
+  return normalized;
+}
+
 export function loadVault() {
-  return load('user_vault') || {};
+  const vault = load('user_vault') || {};
+  const normalized = normalizeVault(vault);
+  if (JSON.stringify(normalized) !== JSON.stringify(vault)) {
+    saveVault(normalized);
+  }
+  return normalized;
 }
 
 /**

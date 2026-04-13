@@ -7,6 +7,7 @@ import { getState, setState } from '../state';
 import { navigateTo } from '../router';
 import { parseFormUrl, detectFormPlatform } from '../parser/form-parser';
 import { generateAnswers } from '../ai/ai-actions';
+import { getAiErrorMessage } from '../ai/ai-service';
 import { capturedPayloadToFormData } from '../parser/capture-parser';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
 import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store';
@@ -149,7 +150,7 @@ export function analyzingScreen() {
       </div>
       
       <!-- Full Screen Error Modal -->
-      <div id="error-modal" class="fixed inset-0 z-[100] bg-white hidden flex-col items-center justify-center p-6 text-center animate-screen-enter">
+      <div id="error-modal" class="fixed inset-0 z-[100] bg-white hidden flex-col items-center justify-center p-6 text-center">
         <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-6 border-4 border-white shadow-xl">
           <span class="material-symbols-outlined text-4xl">error</span>
         </div>
@@ -162,7 +163,7 @@ export function analyzingScreen() {
       </div>
 
       <!-- Assisted Capture Modal (Auth/Render required) -->
-      <div id="capture-modal" class="fixed inset-0 z-[101] bg-white hidden flex-col items-center justify-center p-6 text-center animate-screen-enter">
+      <div id="capture-modal" class="fixed inset-0 z-[101] bg-white hidden flex-col items-center justify-center p-6 text-center">
         <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6 border-4 border-white shadow-xl">
           <span id="capture-modal-icon" class="material-symbols-outlined text-4xl">lock</span>
         </div>
@@ -281,17 +282,26 @@ export function analyzingScreen() {
         if (cancelled) return;
 
         let answers;
+        let aiDiagnostics = null;
         if (formData.parseStrategy === 'demo' && formData.demoId && MOCK_AI_ANSWERS[formData.demoId]) {
           answers = MOCK_AI_ANSWERS[formData.demoId];
           updateProgress(96, 'Loading demo suggestions', 'Step 3 of 3', 'Using built-in demo answers...');
           await delay(250);
         } else {
-          answers = await generateAnswers(formData, (current, total) => {
+          const result = await generateAnswers(formData, (current, total) => {
             if (!cancelled) {
               const percent = 80 + Math.floor((current / total) * 15);
               updateProgress(percent, 'Generating AI answers', 'Step 3 of 3', `Field ${current} of ${total}`);
             }
           });
+          answers = result?.answers || {};
+          aiDiagnostics = result?.diagnostics || null;
+          if (aiDiagnostics?.status === 'partial') {
+            updateProgress(95, 'Generating AI answers', 'Step 3 of 3', 'Some AI suggestions need a later retry...');
+          }
+          if (aiDiagnostics?.status === 'failed') {
+            updateProgress(95, 'Generating AI answers', 'Step 3 of 3', 'AI suggestions unavailable, opening manual workspace...');
+          }
         }
         if (cancelled) return;
 
@@ -318,7 +328,7 @@ export function analyzingScreen() {
           });
         } catch (e) { console.warn('[AnalyzingScreen] Failed to save form history:', e); }
 
-        setState({ formData, answers, formHistory: loadFormHistory() });
+        setState({ formData, answers, aiDiagnostics, formHistory: loadFormHistory() });
 
         // Navigate to workspace
         await delay(600);
@@ -356,7 +366,7 @@ export function analyzingScreen() {
         if (errorModal) {
           errorModal.classList.remove('hidden');
           errorModal.classList.add('flex');
-          if (errorMsg) errorMsg.textContent = err.message || 'Could not map inputs from this form. Please ensure it is publicly accessible.';
+          if (errorMsg) errorMsg.textContent = getAiErrorMessage(err, err?.message || 'Could not map inputs from this form. Please ensure it is publicly accessible.');
         }
       }
     }
