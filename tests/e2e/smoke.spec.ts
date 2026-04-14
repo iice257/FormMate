@@ -94,7 +94,7 @@ test('render-required flow: shows Assisted Capture modal for JS shell pages', as
   await expect(page.locator('#capture-modal-msg')).toContainText('rendered client-side');
 });
 
-test('capture flow: postMessage payload imports into workspace', async ({ page }) => {
+test('capture flow: manual payload import imports into workspace', async ({ page }) => {
   await seedOnboardingComplete(page);
   await login(page);
 
@@ -112,9 +112,12 @@ test('capture flow: postMessage payload imports into workspace', async ({ page }
     ],
   };
 
-  await page.evaluate((msg) => {
-    window.postMessage(msg, '*');
-  }, { type: 'FORMMATE_CAPTURE_V1', token: 'e2e_token', payload });
+  await page.fill('#payload-input', JSON.stringify({
+    type: 'FORMMATE_CAPTURE_V1',
+    token: 'e2e_token',
+    payload,
+  }));
+  await page.click('#btn-import-payload');
 
   await page.waitForURL('**/workspace');
   await expect(page.locator('[data-card-id]')).toHaveCount(3);

@@ -16,7 +16,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
   },
   webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${port}`,
+    command: `node ./node_modules/vite/bin/vite.js dev --configLoader native --host 127.0.0.1 --port ${port}`,
     url: baseUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

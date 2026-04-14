@@ -516,6 +516,7 @@ export function docsScreen() {
     const chatInput = wrapper.querySelector('#docs-chat-input');
     const btnSend = wrapper.querySelector('#btn-docs-send');
     const chatMessages = wrapper.querySelector('#docs-chat-messages');
+    const cleanupTasks = [];
 
     const searchIndex = [
       { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate is your intelligent assistant for filling out tedious, long, and complex online forms.', type: 'guide' },
@@ -569,11 +570,13 @@ export function docsScreen() {
       }
     });
 
-    document.addEventListener('click', (e) => {
+    const handleDocumentClick = (e) => {
       if (!wrapper.querySelector('#docs-search-container')?.contains(e.target)) {
         searchDropdown.classList.add('hidden');
       }
-    });
+    };
+    document.addEventListener('click', handleDocumentClick);
+    cleanupTasks.push(() => document.removeEventListener('click', handleDocumentClick));
 
     searchResultsList?.addEventListener('click', (e) => {
       const btn = e.target.closest?.('button.docs-search-result[data-doc-target]');
@@ -624,14 +627,16 @@ export function docsScreen() {
 
     // Setup smooth scrolling for hash links within this view
     wrapper.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
+      const handleAnchorClick = function (e) {
         e.preventDefault();
         const targetId = this.getAttribute('href').substring(1);
         const target = wrapper.querySelector('#' + targetId);
         if (target) {
           target.scrollIntoView({ behavior: 'smooth' });
         }
-      });
+      };
+      anchor.addEventListener('click', handleAnchorClick);
+      cleanupTasks.push(() => anchor.removeEventListener('click', handleAnchorClick));
     });
 
     // --- Docs AI Chat Logic ---
@@ -651,19 +656,19 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
       const tooltip = wrapper.querySelector('#ai-focus-tooltip');
       let isChatPending = false;
 
-      chatInput.addEventListener('focus', () => {
+      const handleChatFocus = () => {
         if (!chatInput.value.trim()) {
           tooltip?.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
           tooltip?.classList.add('opacity-100', '-translate-y-1');
         }
-      });
+      };
 
-      chatInput.addEventListener('blur', () => {
+      const handleChatBlur = () => {
         tooltip?.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
         tooltip?.classList.remove('opacity-100', '-translate-y-1');
-      });
+      };
 
-      chatInput.addEventListener('input', function () {
+      const handleChatInput = function () {
         if (this.value.trim()) {
           tooltip?.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
           tooltip?.classList.remove('opacity-100', '-translate-y-1');
@@ -672,7 +677,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
         btnSend.disabled = !this.value.trim();
-      });
+      };
 
       const sendMessage = async () => {
         const text = chatInput.value.trim();
@@ -752,13 +757,23 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         }
       };
 
-      btnSend.addEventListener('click', sendMessage);
-      chatInput.addEventListener('keydown', (e) => {
+      const handleChatKeydown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           sendMessage();
         }
-      });
+      };
+
+      btnSend.addEventListener('click', sendMessage);
+      chatInput.addEventListener('focus', handleChatFocus);
+      chatInput.addEventListener('blur', handleChatBlur);
+      chatInput.addEventListener('input', handleChatInput);
+      chatInput.addEventListener('keydown', handleChatKeydown);
+      cleanupTasks.push(() => btnSend.removeEventListener('click', sendMessage));
+      cleanupTasks.push(() => chatInput.removeEventListener('focus', handleChatFocus));
+      cleanupTasks.push(() => chatInput.removeEventListener('blur', handleChatBlur));
+      cleanupTasks.push(() => chatInput.removeEventListener('input', handleChatInput));
+      cleanupTasks.push(() => chatInput.removeEventListener('keydown', handleChatKeydown));
     }
 
     // --- Resizable Sidebars Logic ---
@@ -796,7 +811,13 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
       };
 
       handle.addEventListener('mousedown', onMouseDown);
-      return () => handle.removeEventListener('mousedown', onMouseDown);
+      return () => {
+        handle.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
     };
 
     const cleanupLeft = setupResizer(handleLeft, sidebarLeft, 'left');
@@ -854,6 +875,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
     });
 
     return () => {
+      cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();
       cleanupLeft();
