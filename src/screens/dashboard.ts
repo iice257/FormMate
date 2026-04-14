@@ -1,7 +1,7 @@
 // @ts-nocheck
 // FormMate - Dashboard Screen
 
-import { getState } from '../state';
+import { getState, setState } from '../state';
 import { withLayout, initLayout } from '../components/layout';
 import { navigateTo } from '../router';
 import { escapeAttr, escapeHtml } from '../utils/escape';
@@ -57,11 +57,22 @@ export function dashboardScreen() {
         ? 'dashboard-status-active'
         : status === 'draft'
           ? 'dashboard-status-draft'
-          : 'dashboard-status-closed';
-      const answerCount = typeof form.answerCount === 'number' ? String(form.answerCount) : '-';
+        : 'dashboard-status-closed';
+      const fieldCount = typeof form.fields === 'number'
+        ? String(form.fields)
+        : typeof form.answerCount === 'number'
+          ? String(form.answerCount)
+          : '-';
 
       return `
-        <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}">
+        <tr
+          class="recent-form-row dashboard-activity-row"
+          data-form-url="${escapeAttr(form.url || '')}"
+          data-form-title="${escapeAttr(form.title || 'Untitled Form')}"
+          role="button"
+          tabindex="0"
+          aria-label="Reopen ${escapeAttr(form.title || 'Untitled Form')}"
+        >
           <td class="dashboard-table-cell dashboard-table-cell-form">
             <div class="dashboard-activity-form">
               <div class="dashboard-activity-form-icon">
@@ -78,15 +89,28 @@ export function dashboardScreen() {
               ${statusLabel}
             </span>
           </td>
-          <td class="dashboard-table-cell dashboard-cell-muted">${answerCount}</td>
+          <td class="dashboard-table-cell dashboard-cell-muted">${fieldCount}</td>
           <td class="dashboard-table-cell dashboard-cell-muted">${new Date(form.timestamp).toLocaleDateString()}</td>
+          <td class="dashboard-table-cell dashboard-table-cell-actions">
+            <button
+              type="button"
+              class="dashboard-row-action btn-press"
+              data-open-form-url="${escapeAttr(form.url || '')}"
+              ${form.url ? '' : 'disabled aria-disabled="true"'}
+            >
+              Reopen
+            </button>
+          </td>
         </tr>
       `;
     }).join('')
     : `
       <tr>
-        <td colspan="4" class="dashboard-activity-empty">
-          No forms yet. Start by pasting a link to analyze your first form.
+        <td colspan="5" class="dashboard-activity-empty">
+          <div class="dashboard-empty-state">
+            <p>No forms yet. Start by pasting a link to analyze your first form.</p>
+            <button type="button" id="btn-dashboard-empty-new" class="app-button-primary btn-press">Start New Form</button>
+          </div>
         </td>
       </tr>
     `;
@@ -190,17 +214,18 @@ export function dashboardScreen() {
               <button id="btn-dashboard-view-all" class="app-button-secondary btn-press">View All</button>
             </div>
             <div class="dashboard-activity-table-wrap">
-              <table class="dashboard-activity-table">
-                <thead>
-                  <tr>
-                    <th>Form Name</th>
-                    <th>Status</th>
-                    <th>Captured Answers</th>
-                    <th>Last Modified</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${recentFormsHtml}
+                <table class="dashboard-activity-table">
+                  <thead>
+                    <tr>
+                      <th>Form Name</th>
+                      <th>Status</th>
+                    <th>Fields</th>
+                      <th>Last Modified</th>
+                      <th class="dashboard-table-head-actions">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${recentFormsHtml}
                 </tbody>
               </table>
             </div>
@@ -218,6 +243,12 @@ export function dashboardScreen() {
 
   function init(wrapper) {
     initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
+
+    const openRecentForm = (formUrl) => {
+      if (!formUrl) return;
+      setState({ formUrl, capturePayload: null });
+      navigateTo('analyzing');
+    };
 
     wrapper.querySelector('#btn-dashboard-open-history')?.addEventListener('click', () => {
       navigateTo('history');
@@ -243,6 +274,25 @@ export function dashboardScreen() {
       navigateTo('ai-chat');
     });
 
+    wrapper.querySelector('#btn-dashboard-empty-new')?.addEventListener('click', () => {
+      navigateTo('new');
+    });
+
+    wrapper.querySelectorAll('[data-open-form-url]').forEach((button) => {
+      button.addEventListener('click', () => openRecentForm(button.dataset.openFormUrl));
+    });
+
+    wrapper.querySelectorAll('.recent-form-row').forEach((row) => {
+      row.addEventListener('click', (event) => {
+        if (event.target.closest('button')) return;
+        openRecentForm(row.dataset.formUrl);
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openRecentForm(row.dataset.formUrl);
+      });
+    });
   }
 
   return { html, init };

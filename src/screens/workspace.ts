@@ -13,6 +13,16 @@ import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
+let sortableModulePromise = null;
+
+async function loadSortable() {
+  if (!sortableModulePromise) {
+    sortableModulePromise = import('sortablejs').then((module) => module.default || module);
+  }
+
+  return sortableModulePromise;
+}
+
 function syncWorkspaceZenPanel(enabled, wrapper) {
   const rightPanel = wrapper.querySelector('#right-panel');
   const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
@@ -240,6 +250,7 @@ export function workspaceScreen() {
     const btnSend = wrapper.querySelector('#btn-send-chat');
     const chatMessages = wrapper.querySelector('#chat-messages');
     const questionsContainer = wrapper.querySelector('#questions-container');
+    let sortableInstance = null;
     let isChatPending = false;
     const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
 
@@ -270,29 +281,42 @@ export function workspaceScreen() {
     });
 
     // Drag and Drop
-    if (!window.Sortable) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
-      script.onload = () => initSortable();
-      document.body.appendChild(script);
-    } else {
-      initSortable();
-    }
+    void initSortable();
 
-    function initSortable() {
-       if (questionsContainer && window.Sortable) {
-          window.Sortable.create(questionsContainer, {
-            animation: 250,
-            handle: '.drag-handle',
-            ghostClass: 'opacity-40',
-            onEnd: function (evt) {
-              const { formData } = getState();
-              const movedItem = formData.questions.splice(evt.oldIndex, 1)[0];
-              formData.questions.splice(evt.newIndex, 0, movedItem);
-              setState({ formData });
-            }
-          });
-        }
+    async function initSortable() {
+      if (!questionsContainer) return;
+
+      try {
+        const Sortable = await loadSortable();
+        sortableInstance?.destroy?.();
+        sortableInstance = Sortable.create(questionsContainer, {
+          animation: 250,
+          handle: '.drag-handle',
+          ghostClass: 'opacity-40',
+          onEnd: function (evt) {
+            const currentFormData = getState().formData;
+            const nextQuestions = Array.isArray(currentFormData?.questions)
+              ? [...currentFormData.questions]
+              : [];
+
+            if (!nextQuestions.length || evt.oldIndex === evt.newIndex) return;
+
+            const [movedItem] = nextQuestions.splice(evt.oldIndex, 1);
+            if (!movedItem) return;
+
+            nextQuestions.splice(evt.newIndex, 0, movedItem);
+            setState({
+              formData: {
+                ...currentFormData,
+                questions: nextQuestions,
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error('[Workspace] Failed to initialize drag-and-drop:', error);
+        toast.error('Question reordering is unavailable right now.');
+      }
     }
 
     // Question card interactions
@@ -396,6 +420,7 @@ export function workspaceScreen() {
       if (e.target.matches('.answer-textarea')) {
         updateAnswer(e.target.dataset.questionId, e.target.value, 'user');
         updateAnsweredCount();
+        syncUndoRedoButtons();
       }
     });
 
@@ -575,6 +600,7 @@ export function workspaceScreen() {
     syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
 
     return () => {
+      sortableInstance?.destroy?.();
       cleanupRichActions?.();
       cleanupLayout?.();
     };

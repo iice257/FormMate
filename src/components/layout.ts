@@ -394,7 +394,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
         
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
-          <input type="text" class="layout-search-input" placeholder="Search pages, actions, or help" id="layout-search" autocomplete="off" />
+          <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" />
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -423,9 +423,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
             <div class="layout-sidebar-divider"></div>
             
-            <button id="nav-support" class="layout-sidebar-link" aria-label="Open docs and help">
+            <button id="nav-support" class="layout-sidebar-link" aria-label="Open Help Center">
               <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
-              <span class="layout-sidebar-label">Docs &amp; Help</span>
+              <span class="layout-sidebar-label">Help Center</span>
             </button>
           </nav>
           
@@ -491,7 +491,7 @@ export function initLayout(wrapper, options = {}) {
     });
   });
 
-  // Help Center → account modal (help tab)
+  // Help Center → docs
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
     navigateTo('docs');
   });

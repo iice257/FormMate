@@ -1,7 +1,7 @@
 // @ts-nocheck
 // FormMate - History Screen
 
-import { getState } from '../state';
+import { getState, setState } from '../state';
 import { withLayout, initLayout } from '../components/layout';
 import { navigateTo } from '../router';
 import { escapeAttr, escapeHtml } from '../utils/escape';
@@ -17,6 +17,11 @@ export function historyScreen() {
     const analyzedOn = new Date(form.timestamp).toLocaleDateString();
     const title = form.title || 'Untitled Form';
     const provider = form.provider || 'Google Forms';
+    const fieldCount = typeof form.fields === 'number'
+      ? String(form.fields)
+      : typeof form.answerCount === 'number'
+        ? String(form.answerCount)
+        : '-';
 
     return `
       <tr
@@ -39,16 +44,17 @@ export function historyScreen() {
         <td style="padding: 1rem 0.75rem;">
           <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: var(--fm-radius-full); background: var(--fm-bg-sunken); color: #64748b; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;">${escapeHtml(provider)}</span>
         </td>
+        <td style="padding: 1rem 0.75rem; color: #64748b; font-size: 0.8rem; font-weight: 700;">${fieldCount}</td>
         <td style="padding: 1rem 0.75rem; text-align: right;">
           <button
-            class="btn-open-history"
+            type="button"
+            class="btn-open-history btn-press"
             data-form-url="${escapeAttr(form.url || '')}"
-            disabled
-            aria-disabled="true"
-            title="Restore flow is not available yet."
-            style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; background: none; border: none; display: flex; align-items: center; gap: 0.25rem; margin-left: auto;"
+            ${form.url ? '' : 'disabled aria-disabled="true"'}
+            title="Reopen this analyzed form in the analyzer."
+            style="font-size: 0.8rem; font-weight: 700; color: var(--fm-primary); background: rgba(var(--fm-primary-rgb), 0.08); border: 1px solid rgba(var(--fm-primary-rgb), 0.16); display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; padding: 0.45rem 0.7rem; border-radius: var(--fm-radius-full);"
           >
-            Saved <span class="material-symbols-outlined" style="font-size: 16px;">inventory_2</span>
+            Reopen <span class="material-symbols-outlined" style="font-size: 16px;">restart_alt</span>
           </button>
         </td>
       </tr>
@@ -64,7 +70,7 @@ export function historyScreen() {
             <p style="font-size: 0.85rem; color: #64748b;">Review your analyzed forms and the metadata captured for each run.</p>
           </div>
           <button id="btn-export-all" class="btn-press" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer;">
-            <span class="material-symbols-outlined" style="font-size: 17px;">info</span> Export Deferred
+            <span class="material-symbols-outlined" style="font-size: 17px;">arrow_back</span> Back to Dashboard
           </button>
         </div>
 
@@ -90,7 +96,7 @@ export function historyScreen() {
           <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center;">
             <div style="position: relative; flex: 1; max-width: 300px;">
               <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #94a3b8; pointer-events: none;">search</span>
-              <input type="text" id="history-search" placeholder="Search history..." style="width: 100%; height: 36px; padding: 0 0.75rem 0 2.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
+              <input type="text" id="history-search" aria-label="Search history" placeholder="Search analyzed forms..." style="width: 100%; height: 36px; padding: 0 0.75rem 0 2.25rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
             </div>
           </div>
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -99,13 +105,14 @@ export function historyScreen() {
                 <th style="padding: 0.75rem 1.25rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Form Name</th>
                 <th style="padding: 0.75rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Analyzed On</th>
                 <th style="padding: 0.75rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Provider</th>
-                <th style="padding: 0.75rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; text-align: right;">Status</th>
+                <th style="padding: 0.75rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Fields</th>
+                <th style="padding: 0.75rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody>
               ${tableRowsHtml}
               <tr id="history-empty-row" ${totalAnalyzed ? 'hidden' : ''}>
-                <td colspan="4" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.85rem;">No history found. Try analyzing a new form.</td>
+                <td colspan="5" style="padding: 3rem 1rem; text-align: center; color: #94a3b8; font-style: italic; font-size: 0.85rem;">No history found. Try analyzing a new form.</td>
               </tr>
             </tbody>
           </table>
@@ -131,6 +138,12 @@ export function historyScreen() {
     const emptyRow = wrapper.querySelector('#history-empty-row');
     const countLabel = wrapper.querySelector('#history-count-label');
     const emptyCell = emptyRow?.querySelector('td');
+
+    const reopenForm = (formUrl) => {
+      if (!formUrl) return;
+      setState({ formUrl, capturePayload: null });
+      navigateTo('analyzing');
+    };
 
     const applySearch = () => {
       const query = searchInput?.value.trim().toLowerCase() || '';
@@ -173,7 +186,11 @@ export function historyScreen() {
 
     searchInput?.addEventListener('input', applySearch);
     wrapper.querySelector('#btn-export-all')?.addEventListener('click', () => {
-      navigateTo('docs');
+      navigateTo('dashboard');
+    });
+
+    wrapper.querySelectorAll('.btn-open-history').forEach((button) => {
+      button.addEventListener('click', () => reopenForm(button.dataset.formUrl));
     });
 
     applySearch();

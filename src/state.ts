@@ -22,6 +22,7 @@ import { queueRemoteSync } from './storage/storage-provider';
 
 const listeners = new Set();
 const eventListeners = new Map(); // event-name → Set<fn>
+let answerPersistTimer = null;
 
 // ─── State ───────────────────────────────
 
@@ -120,6 +121,23 @@ export function setState(updates) {
   listeners.forEach(fn => fn(state));
 }
 
+function persistAnswerState() {
+  save('answers_state', state.answers);
+  save('answer_history', state.answerHistory);
+  save('answer_history_index', state.answerHistoryIndex);
+}
+
+function scheduleAnswerPersistence() {
+  if (answerPersistTimer) {
+    clearTimeout(answerPersistTimer);
+  }
+
+  answerPersistTimer = setTimeout(() => {
+    answerPersistTimer = null;
+    persistAnswerState();
+  }, 180);
+}
+
 // ─── Answer Management ──────────────────
 
 export function updateAnswer(questionId, text, source = 'user') {
@@ -152,9 +170,7 @@ export function updateAnswer(questionId, text, source = 'user') {
     [questionId]: answer,
   };
 
-  save('answers_state', state.answers);
-  save('answer_history', state.answerHistory);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
 }
@@ -168,8 +184,7 @@ export function undoAnswer(questionId) {
   const prev = history[idx - 1];
   state.answers = { ...state.answers, [questionId]: { ...prev } };
 
-  save('answers_state', state.answers);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
   return prev;
@@ -184,8 +199,7 @@ export function redoAnswer(questionId) {
   const next = history[idx + 1];
   state.answers = { ...state.answers, [questionId]: { ...next } };
 
-  save('answers_state', state.answers);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
   return next;
