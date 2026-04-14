@@ -17,44 +17,17 @@
   <meta name="theme-color" content="#4fafe7" media="(prefers-color-scheme: dark)" />
 
   <link rel="icon" type="image/png" href="/logo.png" />
-
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-  <!-- Tailwind Config -->
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "primary": "#2298da",
-            "primary-light": "#4fafe7",
-            "background-light": "#f6f6f8",
-            "background-dark": "#0c0a14",
-          },
-          fontFamily: {
-            "display": ["Inter", "system-ui", "sans-serif"]
-          },
-          borderRadius: {
-            "none": "0",
-            "sm": "0.75rem",
-            "DEFAULT": "0.875rem",
-            "md": "1rem",
-            "lg": "1rem",
-            "xl": "1.25rem",
-            "2xl": "1.5rem",
-            "3xl": "2rem",
-            "full": "9999px"
-          },
-        },
-      },
-    }
-  </script>
-
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add,add_circle,add_comment,analytics,apartment,arrow_back,arrow_drop_down_circle,arrow_forward,arrow_upward,attachment,auto_awesome,auto_stories,badge,block,bolt,bookmark,bookmark_add,business_center,calendar_today,call,cancel,chat,chat_bubble,chat_bubble_outline,check,check_box,check_circle,checklist,chevron_right,close,cloud_upload,content_copy,dashboard,dark_mode,delete,description,directions_car,download,drag_indicator,edit,edit_document,edit_note,error,expand_less,expand_more,explore,extension,face,flight_takeoff,folder,help,help_outline,history,home,inbox,info,inventory_2,ios_share,key,left_panel_close,left_panel_open,linear_scale,link,light_mode,local_fire_department,location_on,lock,logout,mail,manage_accounts,medical_services,menu,menu_book,mic,monitoring,new_releases,north_east,notes,open_in_new,palette,payments,pending,person,poll,psychology_alt,public,quiz,radio_button_checked,rate_review,redo,refresh,replay,restart_alt,reviews,rocket_launch,schedule,school,search,search_off,security,self_improvement,sell,send,settings,share,shield,short_text,smart_toy,sort,space_dashboard,star,support_agent,sync,timer,trending_up,undo,upload_file,verified_user,volunteer_activism,warning,waving_hand,work&display=block" />
 </head>
 
-<body class="font-display antialiased" style="background: var(--fm-bg); color: var(--fm-text);">
+<body class="font-display antialiased">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

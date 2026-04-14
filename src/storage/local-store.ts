@@ -1,12 +1,102 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Local Storage Persistence Layer
-// ═══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// FormMate â€” Browser Storage Persistence Layer
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const STORAGE_PREFIX = 'formmate_';
+const SESSION_KEYS = new Set([
+  'activity_log',
+  'answer_history',
+  'answer_history_index',
+  'answers_state',
+  'form_data_state',
+  'form_history',
+  'user_profile',
+  'user_vault',
+]);
+
+function isBrowser() {
+  return typeof window !== 'undefined';
+}
+
+function getStorageArea(type) {
+  if (!isBrowser()) return null;
+  if (type === 'session' && typeof window.sessionStorage !== 'undefined') return window.sessionStorage;
+  if (typeof window.localStorage !== 'undefined') return window.localStorage;
+  return null;
+}
+
+function getStorageKey(key) {
+  return STORAGE_PREFIX + key;
+}
+
+function getPreferredStorageType(key) {
+  return key.startsWith('usage_') || !SESSION_KEYS.has(key) ? 'local' : 'session';
+}
+
+function getFallbackStorageType(type) {
+  return type === 'session' ? 'local' : 'session';
+}
+
+function listStorageKeys(storageArea) {
+  if (!storageArea || typeof storageArea.length !== 'number' || typeof storageArea.key !== 'function') {
+    return [];
+  }
+
+  const keys = [];
+  for (let index = 0; index < storageArea.length; index += 1) {
+    const key = storageArea.key(index);
+    if (typeof key === 'string') {
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+function safeParseEntry(raw, storageArea, storageKey) {
+  try {
+    return JSON.parse(raw);
+  } catch (parseErr) {
+    console.warn('[Storage] Failed to parse JSON for key:', storageKey, parseErr);
+    storageArea?.removeItem(storageKey);
+    return null;
+  }
+}
+
+function readEntry(key, type) {
+  const storageArea = getStorageArea(type);
+  if (!storageArea) return null;
+
+  const storageKey = getStorageKey(key);
+  const raw = storageArea.getItem(storageKey);
+  if (!raw) return null;
+
+  const entry = safeParseEntry(raw, storageArea, storageKey);
+  if (!entry) return null;
+
+  if (entry.ttl && Date.now() - entry.timestamp > entry.ttl) {
+    storageArea.removeItem(storageKey);
+    return null;
+  }
+
+  return { entry, storageArea, storageKey };
+}
+
+function migrateEntryIfNeeded(key, primaryType) {
+  const fallbackResult = readEntry(key, getFallbackStorageType(primaryType));
+  if (!fallbackResult) return null;
+
+  const primaryStorage = getStorageArea(primaryType);
+  if (primaryStorage) {
+    primaryStorage.setItem(getStorageKey(key), JSON.stringify(fallbackResult.entry));
+    fallbackResult.storageArea?.removeItem(fallbackResult.storageKey);
+  }
+
+  return fallbackResult.entry;
+}
 
 /**
- * Save a value to localStorage with optional TTL.
+ * Save a value to browser storage with optional TTL.
  * @param {string} key - Storage key
  * @param {*} value - Value to store (will be JSON-serialized)
  * @param {number} [ttlMs] - Optional time-to-live in milliseconds
@@ -18,37 +108,30 @@ export function save(key, value, ttlMs = null) {
       timestamp: Date.now(),
       ttl: ttlMs,
     };
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(entry));
+    const primaryType = getPreferredStorageType(key);
+    const primaryStorage = getStorageArea(primaryType);
+    const fallbackStorage = getStorageArea(getFallbackStorageType(primaryType));
+    const storageKey = getStorageKey(key);
+
+    primaryStorage?.setItem(storageKey, JSON.stringify(entry));
+    fallbackStorage?.removeItem(storageKey);
   } catch (err) {
     console.warn('[Storage] Failed to save:', key, err);
   }
 }
 
 /**
- * Load a value from localStorage.
+ * Load a value from browser storage.
  * Returns null if not found or expired.
  */
 export function load(key) {
   try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + key);
-    if (!raw) return null;
+    const primaryType = getPreferredStorageType(key);
+    const primaryResult = readEntry(key, primaryType);
+    if (primaryResult) return primaryResult.entry.value;
 
-    let entry;
-    try {
-      entry = JSON.parse(raw);
-    } catch (parseErr) {
-      console.warn('[Storage] Failed to parse JSON for key:', key, parseErr);
-      localStorage.removeItem(STORAGE_PREFIX + key);
-      return null;
-    }
-
-    // Check TTL expiration
-    if (entry.ttl && Date.now() - entry.timestamp > entry.ttl) {
-      localStorage.removeItem(STORAGE_PREFIX + key);
-      return null;
-    }
-
-    return entry.value;
+    const migrated = migrateEntryIfNeeded(key, primaryType);
+    return migrated ? migrated.value : null;
   } catch (err) {
     console.warn('[Storage] Failed to load:', key, err);
     return null;
@@ -56,30 +139,40 @@ export function load(key) {
 }
 
 /**
- * Remove a value from localStorage.
+ * Remove a value from browser storage.
  */
 export function remove(key) {
-  localStorage.removeItem(STORAGE_PREFIX + key);
+  const storageKey = getStorageKey(key);
+  getStorageArea('local')?.removeItem(storageKey);
+  getStorageArea('session')?.removeItem(storageKey);
 }
 
 /**
- * Clear all FormMate data from localStorage.
+ * Clear all FormMate data from browser storage.
  */
 export function clearAll() {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX));
-  keys.forEach(k => localStorage.removeItem(k));
+  ['local', 'session'].forEach((type) => {
+    const storageArea = getStorageArea(type);
+    if (!storageArea) return;
+    const keys = listStorageKeys(storageArea).filter(k => k.startsWith(STORAGE_PREFIX));
+    keys.forEach(k => storageArea.removeItem(k));
+  });
 }
 
 /**
  * Get all stored keys (without prefix).
  */
 export function getAllKeys() {
-  return Object.keys(localStorage)
+  const localKeys = listStorageKeys(getStorageArea('local'))
     .filter(k => k.startsWith(STORAGE_PREFIX))
     .map(k => k.slice(STORAGE_PREFIX.length));
+  const sessionKeys = listStorageKeys(getStorageArea('session'))
+    .filter(k => k.startsWith(STORAGE_PREFIX))
+    .map(k => k.slice(STORAGE_PREFIX.length));
+  return Array.from(new Set([...localKeys, ...sessionKeys]));
 }
 
-// ─── Typed helpers ───────────────────────
+// â”€â”€â”€ Typed helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Save user profile data.
@@ -115,40 +208,34 @@ export function loadSettings() {
 
 export function getDefaultSettings() {
   return {
-    // AI Behavior
     ai: {
       temperature: 0.7,
-      verbosity: 'balanced', // concise | balanced | detailed
+      verbosity: 'balanced',
       defaultPersonality: 'professional',
       modelPreferences: {},
     },
-    // UI Preferences
     ui: {
       theme: 'light',
       compactMode: false,
       sidebarDefault: true,
       chatPanelDefault: true,
     },
-    // Personalization
     personalization: {
       defaultTone: 'professional',
       language: 'en',
       autoSave: true,
       autoFillPersonal: true,
     },
-    // Notifications
     notifications: {
       toasts: true,
       sounds: false,
     },
-    // Privacy
     privacy: {
       dataRetentionDays: 90,
       analyticsOptOut: false,
     },
-    // Formatting
     formatting: {
-      responseLength: 'medium', // short | medium | long
+      responseLength: 'medium',
       preferBullets: false,
       paragraphStyle: 'standard',
     },
@@ -164,7 +251,6 @@ export function appendActivity(entry) {
     ...entry,
     timestamp: Date.now(),
   });
-  // Keep last 500 entries
   if (log.length > 500) log.splice(0, log.length - 500);
   save('activity_log', log);
 }
@@ -182,7 +268,6 @@ export function saveFormHistory(formEntry) {
     ...formEntry,
     timestamp: Date.now(),
   });
-  // Keep last 50 forms
   if (history.length > 50) history.pop();
   save('form_history', history);
 }

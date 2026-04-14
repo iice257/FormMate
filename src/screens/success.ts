@@ -6,6 +6,21 @@
 import { getState, setState } from '../state';
 import { navigateTo, goBack } from '../router';
 
+let confettiModulePromise = null;
+
+function loadConfetti() {
+  if (!confettiModulePromise) {
+    confettiModulePromise = import('canvas-confetti')
+      .then((mod) => mod.default || mod)
+      .catch((error) => {
+        console.warn('[Success] Failed to load confetti module:', error);
+        return null;
+      });
+  }
+
+  return confettiModulePromise;
+}
+
 export function successScreen() {
   const { formData, answers } = getState();
   const answeredCount = formData ? Object.values(answers).filter(a => a?.text).length : 0;
@@ -138,25 +153,22 @@ export function successScreen() {
   `;
 
   function init(wrapper) {
-    // Add confetti animation
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
-    script.onload = () => {
+    void loadConfetti().then((confetti) => {
+      if (!confetti) return;
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, disableForReducedMotion: true };
 
-      const interval = setInterval(function () {
+      const interval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
         if (timeLeft <= 0) return clearInterval(interval);
         const particleCount = 50 * (timeLeft / duration);
-        window.confetti(Object.assign({}, defaults, {
+        confetti(Object.assign({}, defaults, {
           particleCount,
           origin: { x: Math.random() - 0.2 + (Math.random() * 0.4), y: Math.random() - 0.2 }
         }));
       }, 250);
-    };
-    document.body.appendChild(script);
+    });
 
     wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
 

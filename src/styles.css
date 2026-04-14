@@ -1,3 +1,8 @@
+@import "tailwindcss" source("../src");
+@config "../tailwind.config.js";
+@plugin "@tailwindcss/forms";
+@source "../index.html";
+
 /* FormMate Global Styles (Enhanced) */
 
 /* Scrollbar hiding */

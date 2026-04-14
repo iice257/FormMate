@@ -12,7 +12,7 @@ const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 
 function loadSessions() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '[]');
+    return JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || '[]');
   } catch {
     return [];
   }
