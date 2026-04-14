@@ -2,6 +2,7 @@
 import { MOCK_FORMS } from './mock-forms';
 import { parseDOM } from './dom-parser';
 import { parseFormHtml } from '../ai/ai-actions';
+import { getRequestAuthHeaders } from '../auth/auth-service';
 
 const RENDER_REQUIRED_PLATFORMS = new Set([
   'Typeform',
@@ -178,9 +179,12 @@ export async function parseFormUrl(url) {
 async function parseGoogleForm(url) {
   const diagnostics = createDiagnostics(url, 'Google Forms');
   diagnostics.fetchStrategy = 'google_proxy';
+  const authHeaders = getRequestAuthHeaders();
 
   try {
-    const response = await fetch(`/api/proxy/google-form?url=${encodeURIComponent(url)}`);
+    const response = await fetch(`/api/proxy/google-form?url=${encodeURIComponent(url)}`, {
+      headers: authHeaders,
+    });
     if (!response.ok) {
       throw createParseError('NETWORK', `Google Form fetch failed: ${response.statusText}`, { platform: 'Google Forms', url });
     }
@@ -268,9 +272,12 @@ async function parseGenericForm(url) {
   const platform = detectFormPlatform(url);
   const diagnostics = createDiagnostics(url, platform);
   diagnostics.fetchStrategy = 'scrape_proxy';
+  const authHeaders = getRequestAuthHeaders();
 
   try {
-    const response = await fetch(`/api/proxy/scrape?url=${encodeURIComponent(url)}`);
+    const response = await fetch(`/api/proxy/scrape?url=${encodeURIComponent(url)}`, {
+      headers: authHeaders,
+    });
     if (!response.ok) {
       throw createParseError('NETWORK', `Proxy fetch failed: ${response.statusText}`, { platform, url });
     }

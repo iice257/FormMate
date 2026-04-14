@@ -36,9 +36,81 @@ const DEV_SESSION = {
 
 const authListeners = new Set();
 let authBootstrapStarted = false;
+let inMemorySession = null;
 
 function isBrowser() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+function getSessionStorage() {
+  if (!isBrowser() || typeof window.sessionStorage === 'undefined') return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredSession() {
+  if (!isBrowser()) return inMemorySession;
+
+  const sessionStorageRef = getSessionStorage();
+  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+
+  if (sessionStorageRef) {
+    try {
+      const raw = sessionStorageRef.getItem(sessionStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        inMemorySession = parsed?.value ?? parsed ?? null;
+        return inMemorySession;
+      }
+    } catch (error) {
+      console.warn('[Auth] Failed to parse session storage cache:', error);
+      sessionStorageRef.removeItem(sessionStorageKey);
+    }
+  }
+
+  const legacySession = load(AUTH_KEY);
+  if (legacySession) {
+    writeStoredSession(legacySession);
+    remove(AUTH_KEY);
+    return legacySession;
+  }
+
+  return inMemorySession;
+}
+
+function writeStoredSession(session) {
+  inMemorySession = session || null;
+
+  if (!isBrowser()) return;
+
+  const sessionStorageRef = getSessionStorage();
+  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+
+  if (sessionStorageRef) {
+    try {
+      if (!session) {
+        sessionStorageRef.removeItem(sessionStorageKey);
+      } else {
+        sessionStorageRef.setItem(sessionStorageKey, JSON.stringify({
+          value: session,
+          timestamp: Date.now(),
+          ttl: null,
+        }));
+      }
+      return;
+    } catch (error) {
+      console.warn('[Auth] Failed to write session storage cache:', error);
+    }
+  }
+
+  if (!session) {
+    remove(AUTH_KEY);
+  } else {
+    save(AUTH_KEY, session);
+  }
 }
 
 export function isDevAuthEnabled() {
@@ -57,8 +129,7 @@ export function getDevTestUsers() {
 }
 
 export function getSession() {
-  if (!isBrowser()) return null;
-  return load(AUTH_KEY);
+  return readStoredSession();
 }
 
 export function isAuthenticated() {
@@ -68,6 +139,21 @@ export function isAuthenticated() {
 
 export function getCurrentUser() {
   return getSession()?.user || null;
+}
+
+export function getRequestAuthHeaders() {
+  const session = getSession();
+  const headers = {};
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  if (session?.devOnly) {
+    headers['X-FormMate-Dev-Auth'] = '1';
+  }
+
+  return headers;
 }
 
 export function onAuthStateChange(fn) {
@@ -152,15 +238,14 @@ async function hydrateAccountData(session, { seedIfMissing = true } = {}) {
 }
 
 function storeSession(session) {
-  if (!isBrowser()) return session;
   if (!session) {
-    remove(AUTH_KEY);
+    writeStoredSession(null);
     notifyListeners(null);
     return null;
   }
 
   const normalized = normalizeSession(session);
-  save(AUTH_KEY, normalized);
+  writeStoredSession(normalized);
   notifyListeners(normalized);
   return normalized;
 }
@@ -375,7 +460,7 @@ export async function signInWithApple() {
 
 export async function signOut() {
   const session = getSession();
-  remove(AUTH_KEY);
+  writeStoredSession(null);
   clearLocalAccountCache();
   notifyListeners(null);
 

@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!assertTrustedAppSignal(req, res, 'Access denied.')) {
+    if (!(await assertTrustedAppSignal(req, res, 'Access denied.'))) {
       return;
     }
 

@@ -19,9 +19,14 @@ const PRIVATE_HOST_PATTERNS = [
   '.local',
   '.internal',
 ];
+const sessionCache = new Map();
 
 function readHeader(req, name) {
   return req?.headers?.[name] || req?.headers?.[name.toLowerCase()] || '';
+}
+
+function getEnv(key) {
+  return String(process.env[key] || '').trim();
 }
 
 export function buildAllowedOrigins() {
@@ -60,12 +65,20 @@ export function isAllowedOrigin(origin) {
   return buildAllowedOrigins().has(origin);
 }
 
-function hasSessionLikeHeader(req) {
+function getBearerToken(req) {
   const authorization = String(readHeader(req, 'authorization') || '').trim();
+  if (authorization.toLowerCase().startsWith('bearer ')) {
+    const token = authorization.slice(7).trim();
+    return token || '';
+  }
+  return '';
+}
+
+function hasSessionLikeHeader(req) {
   const sessionHeader = String(readHeader(req, 'x-formmate-session') || '').trim();
   const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim();
   return Boolean(
-    (authorization.toLowerCase().startsWith('bearer ') && authorization.slice(7).trim()) ||
+    getBearerToken(req) ||
       sessionHeader ||
       devAuthHeader === '1' ||
       devAuthHeader.toLowerCase() === 'true',
@@ -96,10 +109,51 @@ export function hasTrustedAppSignal(req) {
   return hasBrowserTrustSignal(req);
 }
 
-export function assertTrustedAppSignal(req, res, message = 'Access denied.') {
-  if (hasTrustedAppSignal(req)) return true;
+async function validateSupabaseAccessToken(token) {
+  if (!token) return false;
 
-  res.status(403).json({
+  const cached = sessionCache.get(token);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.valid;
+  }
+
+  const supabaseUrl = getEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
+  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+
+    const valid = response.ok;
+    sessionCache.set(token, { valid, expiresAt: Date.now() + 60_000 });
+    return valid;
+  } catch {
+    return false;
+  }
+}
+
+export async function assertTrustedAppSignal(req, res, message = 'Access denied.') {
+  const origin = getRequestOrigin(req);
+  const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim().toLowerCase();
+  if (['1', 'true'].includes(devAuthHeader) && isAllowedOrigin(origin)) {
+    return true;
+  }
+
+  const bearerToken = getBearerToken(req);
+  if (bearerToken && await validateSupabaseAccessToken(bearerToken)) {
+    return true;
+  }
+
+  res.status(401).json({
     error: 'AUTH_REQUIRED',
     message,
   });

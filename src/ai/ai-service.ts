@@ -1,5 +1,6 @@
 // @ts-nocheck
 // FormMate AI Service Layer (Multi-Model Router)
+import { getRequestAuthHeaders } from '../auth/auth-service';
 
 export const MODELS = {
   HEAVY: 'llama-3.3-70b-versatile',
@@ -21,6 +22,7 @@ export const TASK_ROUTES = {
 };
 
 export const AI_ERROR_CODES = {
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
   BAD_REQUEST: 'BAD_REQUEST',
   CLIENT_RATE_LIMITED: 'CLIENT_RATE_LIMITED',
   CONFIG_MISSING: 'CONFIG_MISSING',
@@ -98,6 +100,7 @@ function mapLegacyCode(code, status) {
   }
 
   const mapped = {
+    AUTH_REQUIRED: AI_ERROR_CODES.AUTH_REQUIRED,
     API_ERROR: status === 401 || status === 403 ? AI_ERROR_CODES.UPSTREAM_AUTH_ERROR : AI_ERROR_CODES.UPSTREAM_ERROR,
     CLIENT_RATE_LIMIT_EXCEEDED: AI_ERROR_CODES.CLIENT_RATE_LIMITED,
     NETWORK: AI_ERROR_CODES.NETWORK_ERROR,
@@ -227,8 +230,13 @@ async function fetchProxy(endpoint, init = {}, { timeoutMs = REQUEST_TIMEOUT_MS 
   const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
+    const authHeaders = getRequestAuthHeaders();
     const response = await fetch(endpoint, {
       ...init,
+      headers: {
+        ...(init.headers || {}),
+        ...authHeaders,
+      },
       signal: controller?.signal,
     });
     const responseText = await response.text().catch(() => '');
@@ -458,6 +466,9 @@ export function getAiErrorMessage(error, fallback = 'AI service is unavailable r
 
   if (normalized.code === AI_ERROR_CODES.CONFIG_MISSING) {
     return 'AI is not configured on the server. Pull Vercel envs with `npm run env:pull`, then restart `npm run dev:stack`.';
+  }
+  if (normalized.code === AI_ERROR_CODES.AUTH_REQUIRED) {
+    return 'Your session expired or you are signed out. Sign in again, then retry the AI action.';
   }
   if ([AI_ERROR_CODES.RATE_LIMITED, AI_ERROR_CODES.CLIENT_RATE_LIMITED].includes(normalized.code)) {
     return `The AI is busy right now. Wait ${normalized.retryAfter || 2}s and try again.`;

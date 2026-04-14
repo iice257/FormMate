@@ -159,8 +159,8 @@ export function captureScreen() {
           </div>
           <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">Import a sign-in required form</h1>
           <p class="text-slate-500 text-base leading-relaxed">
-            Some forms canâ€™t be scanned from a URL because they require sign-in or are rendered client-side.
-            Use this capture tool while youâ€™re already signed in on the form page.
+            Some forms can’t be scanned from a URL because they require sign-in or are rendered client-side.
+            Use this capture tool while you’re already signed in on the form page.
           </p>
         </div>
 
@@ -193,11 +193,11 @@ export function captureScreen() {
             <ol class="text-sm text-slate-500 leading-relaxed list-decimal list-inside space-y-2 mb-4">
               <li>Open the target form in a new tab (sign in if needed).</li>
               <li>Click the <strong>FormMate Capture</strong> bookmark.</li>
-              <li>Come back here â€” the fields will import automatically.</li>
+              <li>Come back here — the fields will import automatically.</li>
             </ol>
 
             <div class="rounded-2xl border border-dashed border-slate-300 p-4 bg-slate-50">
-              <div class="text-xs font-bold text-slate-700 mb-2">Waiting for captureâ€¦</div>
+              <div class="text-xs font-bold text-slate-700 mb-2">Waiting for capture…</div>
               <div id="capture-status" class="text-xs text-slate-500">No payload received yet.</div>
             </div>
           </section>
@@ -206,7 +206,7 @@ export function captureScreen() {
         <section class="mt-8 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <h2 class="text-lg font-bold text-slate-900 mb-2">Popup blocked? Paste payload instead</h2>
           <p class="text-sm text-slate-500 leading-relaxed mb-4">
-            If the bookmarklet couldnâ€™t open this page, it will show you a JSON payload. Paste it below.
+            If the bookmarklet couldn’t open this page, it will show you a JSON payload. Paste it below.
           </p>
           <textarea id="payload-input" class="w-full min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary p-4 text-xs font-mono text-slate-800 outline-none" placeholder='{"type":"FORMMATE_CAPTURE_V1", ...}'></textarea>
           <div class="flex items-center justify-end gap-3 mt-4">
@@ -232,7 +232,7 @@ export function captureScreen() {
         await navigator.clipboard.writeText(bookmarklet);
         toast.success('Bookmarklet copied');
       } catch {
-        toast.error('Copy failed â€” please drag the link to your bookmarks bar.');
+        toast.error('Copy failed — please drag the link to your bookmarks bar.');
       }
     });
 
@@ -245,11 +245,11 @@ export function captureScreen() {
       }
     }
 
-    function handleMessage(data, eventOrigin) {
+    function handleMessage(data, eventOrigin, allowOriginless = false) {
       if (!data || typeof data !== 'object') return;
       if (data.type !== 'FORMMATE_CAPTURE_V1') return;
       if (String(data.token || '').trim() !== token) return;
-      if (!isExpectedOrigin(eventOrigin, data.payload?.pageUrl)) return;
+      if (!allowOriginless && !isExpectedOrigin(eventOrigin, data.payload?.pageUrl)) return;
 
       const payload = data.payload;
       try {
@@ -263,7 +263,7 @@ export function captureScreen() {
           capturePayload: payload
         });
 
-        statusEl.textContent = `Received ${formData.questions.length} fields. Importingâ€¦`;
+        statusEl.textContent = `Received ${formData.questions.length} fields. Importing…`;
         toast.success('Capture received');
         navigateTo('analyzing');
       } catch (e) {
@@ -286,7 +286,7 @@ export function captureScreen() {
       } catch {
         return toast.error('Invalid JSON.');
       }
-      handleMessage(data);
+      handleMessage(data, window.location.origin, true);
     });
 
     return () => {
