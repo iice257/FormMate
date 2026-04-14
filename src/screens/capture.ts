@@ -112,7 +112,7 @@ function buildBookmarklet(appOrigin, token) {
     var tries=0;
     var timer=setInterval(function(){
       tries++;
-      try { w.postMessage(msg, '*'); } catch(e){ /* ignore */ }
+      try { w.postMessage(msg, APP_ORIGIN); } catch(e){ /* ignore */ }
       if(tries>30) clearInterval(timer);
     }, 300);
   } catch (e) {
@@ -236,10 +236,20 @@ export function captureScreen() {
       }
     });
 
-    function handleMessage(data) {
+    function isExpectedOrigin(eventOrigin, payloadPageUrl) {
+      if (!eventOrigin || typeof eventOrigin !== 'string' || !eventOrigin.startsWith('http')) return false;
+      try {
+        return new URL(String(payloadPageUrl || '')).origin === eventOrigin;
+      } catch {
+        return false;
+      }
+    }
+
+    function handleMessage(data, eventOrigin) {
       if (!data || typeof data !== 'object') return;
       if (data.type !== 'FORMMATE_CAPTURE_V1') return;
       if (String(data.token || '').trim() !== token) return;
+      if (!isExpectedOrigin(eventOrigin, data.payload?.pageUrl)) return;
 
       const payload = data.payload;
       try {
@@ -263,7 +273,7 @@ export function captureScreen() {
     }
 
     const onMsg = (event) => {
-      handleMessage(event?.data);
+      handleMessage(event?.data, event?.origin);
     };
     window.addEventListener('message', onMsg);
 

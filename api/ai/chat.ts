@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security';
+
 export const config = {
   maxDuration: 10,
 };
@@ -36,26 +38,8 @@ function rateLimit(req) {
 }
 
 function getAllowedOrigin(req) {
-  const origin = req.headers.origin;
-  if (!origin) return null;
-
-  const allow = new Set(
-    String(process.env.FORMMATE_ALLOWED_ORIGINS || '')
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean),
-  );
-
-  allow.add('http://localhost:5173');
-  allow.add('http://127.0.0.1:5173');
-  allow.add('http://localhost:5174');
-  allow.add('http://127.0.0.1:5174');
-
-  if (process.env.VERCEL_URL) {
-    allow.add(`https://${process.env.VERCEL_URL}`);
-  }
-
-  return allow.has(origin) ? origin : null;
+  const origin = getRequestOrigin(req);
+  return isAllowedOrigin(origin) ? origin : null;
 }
 
 function sendJson(res, status, payload) {
@@ -67,16 +51,19 @@ function sendError(res, status, { code, message, retryable, retryAfter, details 
     res.setHeader('Retry-After', String(retryAfter));
   }
 
-  return sendJson(res, status, {
-    error: {
-      code,
-      message,
-      retryable: typeof retryable === 'boolean' ? retryable : status >= 500 || status === 408 || status === 429,
-      status,
-      retryAfter: retryAfter || undefined,
-      details: details || undefined,
-    },
-  });
+  const error = {
+    code,
+    message,
+    retryable: typeof retryable === 'boolean' ? retryable : status >= 500 || status === 408 || status === 429,
+    status,
+    retryAfter: retryAfter || undefined,
+  };
+
+  if (details && Object.keys(details).length > 0) {
+    error.details = details;
+  }
+
+  return sendJson(res, status, { error });
 }
 
 function safeJsonParse(value) {
@@ -135,11 +122,11 @@ function mapUpstreamError(status, payload) {
 export default async function handler(req, res) {
   const allowedOrigin = getAllowedOrigin(req);
   if (allowedOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-    res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-FormMate-Session, X-FormMate-Dev-Auth');
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
@@ -155,6 +142,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!assertTrustedAppSignal(req, res, 'Access denied.')) {
+      return;
+    }
+
     const rl = rateLimit(req);
     if (!rl.allowed) {
       return sendError(res, 429, {
@@ -249,11 +240,6 @@ export default async function handler(req, res) {
       return sendError(res, groqRes.status, {
         ...upstream,
         retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
-        details: {
-          upstreamStatus: groqRes.status,
-          upstreamType: payload?.error?.type,
-          upstreamCode: payload?.error?.code,
-        },
       });
     }
 
@@ -266,7 +252,6 @@ export default async function handler(req, res) {
       code: isAbort ? 'TIMEOUT_ERROR' : 'PROXY_ERROR',
       message: isAbort ? 'The AI proxy timed out before the provider responded.' : 'The AI proxy failed before completing the request.',
       retryable: true,
-      details: { message },
     });
   }
 }

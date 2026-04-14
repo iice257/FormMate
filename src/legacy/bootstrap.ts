@@ -94,19 +94,14 @@ function renderFatalError(error: unknown) {
   const app = document.getElementById('app');
   if (!app) return;
 
-  const details =
-    error && typeof error === 'object' && 'stack' in error && error.stack
-      ? String(error.stack)
-      : String(error ?? 'Unknown error');
-
   app.innerHTML = `
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,sans-serif;background:#0b1220;color:#e5e7eb;">
       <div style="max-width:900px;width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:20px;">
         <div style="font-weight:900;font-size:18px;letter-spacing:-0.02em;">FormMate failed to start</div>
         <div style="margin-top:6px;color:rgba(229,231,235,0.85);font-size:13px;line-height:1.4;">
-          Open DevTools Console for more context. The error below is also printed to the console.
+          Open DevTools Console for more context. The startup error was logged to the console.
         </div>
-        <pre style="margin-top:14px;white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:12px;font-size:12px;line-height:1.35;overflow:auto;max-height:55vh;">${escapeHtml(details)}</pre>
+        <div style="margin-top:14px;color:rgba(229,231,235,0.9);font-size:12px;line-height:1.35;">An unexpected startup error occurred.</div>
       </div>
     </div>
   `;

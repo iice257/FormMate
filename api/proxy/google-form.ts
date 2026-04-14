@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security';
+
 export const config = {
   maxDuration: 10,
 };
@@ -28,26 +30,8 @@ function rateLimit(req) {
 }
 
 function getAllowedOrigin(req) {
-  const origin = req.headers.origin;
-  if (!origin) return null;
-
-  const allow = new Set(
-    String(process.env.FORMMATE_ALLOWED_ORIGINS || '')
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean),
-  );
-
-  allow.add('http://localhost:5173');
-  allow.add('http://127.0.0.1:5173');
-  allow.add('http://localhost:5174');
-  allow.add('http://127.0.0.1:5174');
-
-  if (process.env.VERCEL_URL) {
-    allow.add(`https://${process.env.VERCEL_URL}`);
-  }
-
-  return allow.has(origin) ? origin : null;
+  const origin = getRequestOrigin(req);
+  return isAllowedOrigin(origin) ? origin : null;
 }
 
 function cleanHtml(html) {
@@ -97,6 +81,7 @@ export default async function handler(req, res) {
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-FormMate-Session, X-FormMate-Dev-Auth');
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
@@ -104,20 +89,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!assertTrustedAppSignal(req, res, 'Access denied.')) {
+      return;
+    }
+
     const rl = rateLimit(req);
     if (!rl.allowed) {
       res.setHeader('Retry-After', String(rl.retryAfterSec || 2));
-      return res.status(429).json({ error: 'Rate limit exceeded', authRequired: false });
+      return res.status(429).json({ error: 'RATE_LIMITED', message: 'Rate limit exceeded.', authRequired: false });
     }
 
     if (req.headers.origin && !allowedOrigin) {
-      return res.status(403).json({ error: 'Origin not allowed', authRequired: false });
+      return res.status(403).json({ error: 'AUTH_REQUIRED', message: 'Access denied.', authRequired: false });
     }
 
     const rawUrl = typeof req.query.url === 'string' ? req.query.url : '';
     const formId = typeof req.query.formId === 'string' ? req.query.formId : '';
     if (!rawUrl && !formId) {
-      return res.status(400).json({ error: 'url or formId is required', authRequired: false });
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'url or formId is required.', authRequired: false });
     }
 
     const normalizedUrl = normalizeGoogleFormUrl(rawUrl, formId);
@@ -213,6 +202,6 @@ export default async function handler(req, res) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleForm] Error:', message);
-    res.status(500).json({ error: 'Failed to fetch Google Form or timed out', authRequired: false });
+    res.status(500).json({ error: 'PROXY_ERROR', message: 'Failed to fetch Google Form or timed out.', authRequired: false });
   }
 }
