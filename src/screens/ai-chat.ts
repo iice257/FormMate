@@ -6,6 +6,7 @@ import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
@@ -24,6 +25,32 @@ function saveSessions(sessions) {
   } catch {
     // Ignore storage failures and keep the current chat responsive.
   }
+}
+
+function buildChatAvatar(icon, background) {
+  const avatar = document.createElement('div');
+  avatar.style.cssText = `width: 28px; height: 28px; border-radius: 50%; background: ${background}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;`;
+
+  const iconEl = document.createElement('span');
+  iconEl.className = 'material-symbols-outlined';
+  iconEl.style.cssText = 'font-size: 16px; color: #fff;';
+  iconEl.textContent = icon;
+  avatar.appendChild(iconEl);
+  return avatar;
+}
+
+function buildTypingBubble() {
+  const container = document.createElement('div');
+  container.style.cssText = 'background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;';
+
+  for (let index = 0; index < 3; index += 1) {
+    const dot = document.createElement('div');
+    dot.className = 'typing-dot';
+    dot.style.cssText = 'width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;';
+    container.appendChild(dot);
+  }
+
+  return container;
 }
 
 export function aiChatScreen() {
@@ -166,14 +193,17 @@ export function aiChatScreen() {
       const bubble = document.createElement('div');
       bubble.className = 'animate-message-in';
       bubble.style.cssText = `display: flex; gap: 0.6rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''} margin-bottom: 0.75rem;`;
-      bubble.innerHTML = `
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">${isUser ? 'person' : 'smart_toy'}</span>
-        </div>
-        <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
-          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
-        </div>
-      `;
+      bubble.appendChild(buildChatAvatar(isUser ? 'person' : 'smart_toy', isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'));
+
+      const body = document.createElement('div');
+      body.style.cssText = `background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;`;
+      if (isUser) {
+        body.textContent = text;
+        body.style.whiteSpace = 'pre-wrap';
+      } else {
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+      }
+      bubble.appendChild(body);
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -188,14 +218,12 @@ export function aiChatScreen() {
       const bubble = document.createElement('div');
       bubble.className = 'animate-message-in';
       bubble.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
-      bubble.innerHTML = `
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: #ef4444; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">error</span>
-        </div>
-        <div style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
-          ${escapeHtml(text).replace(/\n/g, '<br>')}
-        </div>
-      `;
+      bubble.appendChild(buildChatAvatar('error', '#ef4444'));
+
+      const body = document.createElement('div');
+      body.style.cssText = 'background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%; white-space: pre-wrap;';
+      body.textContent = text;
+      bubble.appendChild(body);
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -215,7 +243,8 @@ export function aiChatScreen() {
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
-      typingEl.innerHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;"><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div></div>`;
+      typingEl.appendChild(buildChatAvatar('smart_toy', 'var(--fm-primary)'));
+      typingEl.appendChild(buildTypingBubble());
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -263,7 +292,7 @@ export function aiChatScreen() {
       chatHistory = [];
       sessionList = [];
       saveSessions(sessionList);
-      chatMessages.innerHTML = '';
+      chatMessages.replaceChildren();
       chatMessages.style.justifyContent = 'center';
       chatMessages.style.alignItems = 'center';
       chatMessages.appendChild(emptyState || document.createTextNode(''));

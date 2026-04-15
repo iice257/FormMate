@@ -5,6 +5,7 @@
 import { getState, setState } from '../state';
 import { getHomeScreenForUser, navigateTo } from '../router';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { executeAction, searchActions } from '../actions/action-index';
 
 // Global account modal state
@@ -557,17 +558,17 @@ export function initLayout(wrapper, options = {}) {
     if (searchClear) searchClear.hidden = !query.trim();
 
     if (!activeSearchResults.length) {
-      searchResultsList.innerHTML = `
+      replaceChildrenWithSafeHtml(searchResultsList, `
         <div class="layout-search-empty">
           <span class="material-symbols-outlined">search_off</span>
           <span>No matching actions found</span>
         </div>
-      `;
+      `);
       searchResults.hidden = false;
       return;
     }
 
-    searchResultsList.innerHTML = activeSearchResults.map((action, index) => `
+    replaceChildrenWithSafeHtml(searchResultsList, activeSearchResults.map((action, index) => `
       <button
         type="button"
         class="layout-search-result ${index === 0 ? 'is-active' : ''}"
@@ -579,7 +580,7 @@ export function initLayout(wrapper, options = {}) {
           <span class="layout-search-result-description">${escapeHtml(action.description || '')}</span>
         </span>
       </button>
-    `).join('');
+    `).join(''));
 
     searchResults.hidden = false;
   };

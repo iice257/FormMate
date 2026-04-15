@@ -4,6 +4,7 @@ import { signOut } from '../auth/auth-service';
 import { navigateTo } from '../router';
 import { toast } from './toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { logSettingsChanged } from '../storage/activity-logger';
 import { isZenModeEnabled, isZenModeSupported, updateZenMode } from './layout';
 import { applyTheme, normalizeTheme } from '../theme';
@@ -39,7 +40,7 @@ function renderModal() {
   const { userProfile } = getState();
   const avatarSrc = getAvatarSrc();
 
-  modalRoot.innerHTML = `
+  replaceChildrenWithSafeHtml(modalRoot, `
     <div class="account-modal-overlay" id="account-modal-overlay">
       <div class="account-modal-container">
         <button class="account-modal-close" id="account-modal-close" aria-label="Close">
@@ -95,7 +96,7 @@ function renderModal() {
         <section class="account-modal-content" id="account-modal-content" role="tabpanel" aria-live="polite" aria-labelledby="account-tab-${activeTab}"></section>
       </div>
     </div>
-  `;
+  `);
 
   renderActiveTab();
   syncActiveTabUi(modalRoot);
@@ -134,18 +135,18 @@ function renderActiveTab() {
   const avatarSrc = getAvatarSrc();
 
   if (activeTab === 'profile') {
-    content.innerHTML = renderProfileTab(userProfile, avatarSrc);
+    replaceChildrenWithSafeHtml(content, renderProfileTab(userProfile, avatarSrc));
     wireProfileEvents();
     return;
   }
 
   if (activeTab === 'settings') {
-    content.innerHTML = renderSettingsTab(settings);
+    replaceChildrenWithSafeHtml(content, renderSettingsTab(settings));
     wireSettingsEvents();
     return;
   }
 
-  content.innerHTML = renderHelpTab();
+  replaceChildrenWithSafeHtml(content, renderHelpTab());
   wireHelpEvents();
 }
 
@@ -566,6 +567,6 @@ function closeModal() {
     escapeHandler = null;
   }
   if (modalRoot) {
-    modalRoot.innerHTML = '';
+    modalRoot.replaceChildren();
   }
 }

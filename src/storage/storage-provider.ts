@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { loadProfile, saveProfile, loadSettings, saveSettings, loadVault, saveVault, loadFormHistory, save, load, getDefaultSettings } from './local-store';
+import { loadProfile, saveProfile, loadSettings, saveSettings, loadVault, saveVault, loadFormHistory, save, remove, getDefaultSettings } from './local-store';
 
 let _remoteProvider = null;
 let _remoteInitAttempted = false;
@@ -7,12 +7,21 @@ let _remoteInitAttempted = false;
 let _pendingByUser = new Map(); // userId -> patch
 let _flushTimer = null;
 
-function persistCachedUserData(data) {
+function persistCachedUserData(data, user) {
   if (!data) return;
-  if (data.profile !== undefined) saveProfile(data.profile);
+  if (data.profile !== undefined) {
+    if (shouldPersistLocalAccountCache(user)) saveProfile(data.profile);
+    else remove('user_profile');
+  }
   if (data.settings !== undefined) saveSettings(data.settings);
-  if (data.vault !== undefined) saveVault(data.vault);
-  if (data.formHistory !== undefined) save('form_history', data.formHistory);
+  if (data.vault !== undefined) {
+    if (shouldPersistLocalAccountCache(user)) saveVault(data.vault);
+    else remove('user_vault');
+  }
+  if (data.formHistory !== undefined) {
+    if (shouldPersistLocalAccountCache(user)) save('form_history', data.formHistory);
+    else remove('form_history');
+  }
 }
 
 function scheduleRemoteFlush(delayMs = 800) {
@@ -79,6 +88,10 @@ export function isSupabaseStorageConfigured() {
   return Boolean(String(getEnv('VITE_SUPABASE_URL') || '').trim() && String(getEnv('VITE_SUPABASE_ANON_KEY') || '').trim());
 }
 
+export function shouldPersistLocalAccountCache(user = null) {
+  return !(getStorageMode() === 'supabase' && user?.id);
+}
+
 export function getCachedUserData() {
   return {
     profile: loadProfile(),
@@ -109,7 +122,14 @@ export async function initRemoteProvider() {
       supabaseUrl,
       supabaseAnonKey,
       table,
-      getAccessToken: () => load('auth_session')?.access_token || null,
+      getAccessToken: async () => {
+        try {
+          const { getSession } = await import('../auth/auth-service');
+          return getSession()?.access_token || null;
+        } catch {
+          return null;
+        }
+      },
     });
     return _remoteProvider;
   } catch (e) {
@@ -157,7 +177,7 @@ export async function hydrateFromRemote(user, options = {}) {
   const provider = await initRemoteProvider();
   if (!provider) return null;
   const seedIfMissing = options.seedIfMissing !== false;
-  const session = options.session || load('auth_session') || null;
+  const session = options.session || null;
 
   try {
     const remote = await provider.getUserData(userId);
@@ -165,7 +185,7 @@ export async function hydrateFromRemote(user, options = {}) {
       if (!seedIfMissing) return null;
       const seeded = buildInitialRemoteData(session);
       await provider.upsertUserData(userId, seeded);
-      persistCachedUserData(seeded);
+      persistCachedUserData(seeded, user);
       return {
         userProfile: seeded.profile,
         settings: seeded.settings,
@@ -174,10 +194,19 @@ export async function hydrateFromRemote(user, options = {}) {
       };
     }
 
-    if (remote.profile !== null && remote.profile !== undefined) saveProfile(remote.profile);
+    if (remote.profile !== null && remote.profile !== undefined) {
+      if (shouldPersistLocalAccountCache(user)) saveProfile(remote.profile);
+      else remove('user_profile');
+    }
     if (remote.settings !== null && remote.settings !== undefined) saveSettings(remote.settings);
-    if (remote.vault !== null && remote.vault !== undefined) saveVault(remote.vault);
-    if (remote.formHistory !== null && remote.formHistory !== undefined) save('form_history', remote.formHistory);
+    if (remote.vault !== null && remote.vault !== undefined) {
+      if (shouldPersistLocalAccountCache(user)) saveVault(remote.vault);
+      else remove('user_vault');
+    }
+    if (remote.formHistory !== null && remote.formHistory !== undefined) {
+      if (shouldPersistLocalAccountCache(user)) save('form_history', remote.formHistory);
+      else remove('form_history');
+    }
 
     return {
       userProfile: remote.profile || loadProfile(),
@@ -207,7 +236,7 @@ export async function ensureAccountData(session, options = {}) {
 
     const seeded = buildInitialRemoteData(session);
     await provider.upsertUserData(userId, seeded);
-    persistCachedUserData(seeded);
+    persistCachedUserData(seeded, user);
     return seeded;
   } catch (error) {
     console.warn('[StorageProvider] Failed to ensure account data:', error);

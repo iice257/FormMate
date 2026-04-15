@@ -3,12 +3,8 @@ import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBa
 import { generateText, getAiErrorMessage } from '../ai/ai-service';
 import { toast } from '../components/toast';
 import { getState } from '../state';
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+import { escapeHtml } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
@@ -452,7 +448,7 @@ export function docsScreen() {
           </div>
           
           <div class="border-t border-slate-200 py-6 px-6 lg:px-12 flex justify-between items-center text-sm">
-             <div class="text-slate-500">© 2026 FormMate. All rights reserved.</div>
+             <div class="text-slate-500">(c) 2026 FormMate. All rights reserved.</div>
           </div>
         </main>
 
@@ -551,7 +547,7 @@ export function docsScreen() {
       ).slice(0, 3);
 
       if (results.length > 0) {
-        searchResultsList.innerHTML = results.map(item => `
+        replaceChildrenWithSafeHtml(searchResultsList, results.map(item => `
              <button type="button" class="docs-search-result w-full text-left p-2 hover:bg-slate-50 rounded-lg transition-colors group" data-doc-target="${item.id}">
                 <div class="flex items-center gap-2 mb-0.5">
                    <span class="material-symbols-outlined text-[14px] text-slate-400 group-hover:text-primary">${item.type === 'faq' ? 'quiz' : 'description'}</span>
@@ -559,14 +555,14 @@ export function docsScreen() {
                 </div>
                 <p class="text-[11px] text-slate-500 line-clamp-1">${item.text}</p>
              </button>
-          `).join('');
+          `).join(''));
         searchDropdown.classList.remove('hidden');
       } else {
-        searchResultsList.innerHTML = `
+        replaceChildrenWithSafeHtml(searchResultsList, `
              <div class="p-4 text-center">
                 <p class="text-xs text-slate-400 font-medium">No results found for "${escapeHtml(query)}"</p>
-             </div>
-          `;
+              </div>
+          `);
         searchDropdown.classList.remove('hidden');
       }
     });

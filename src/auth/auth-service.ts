@@ -106,11 +106,7 @@ function writeStoredSession(session) {
     }
   }
 
-  if (!session) {
-    remove(AUTH_KEY);
-  } else {
-    save(AUTH_KEY, session);
-  }
+  remove(AUTH_KEY);
 }
 
 export function isDevAuthEnabled() {

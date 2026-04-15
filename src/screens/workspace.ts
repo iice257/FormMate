@@ -11,6 +11,8 @@ import { categorizeField } from '../ai/field-classifier';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import { escapeHtml } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 
 let sortableModulePromise = null;
 
@@ -43,6 +45,32 @@ function formatFileMetadata(file) {
   return `${file.name} - ${size} - ${type}`;
 }
 
+function buildChatAvatar(icon, background) {
+  const avatar = document.createElement('div');
+  avatar.style.cssText = `width: 24px; height: 24px; border-radius: 50%; background: ${background}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;`;
+
+  const iconEl = document.createElement('span');
+  iconEl.className = 'material-symbols-outlined';
+  iconEl.style.cssText = 'font-size: 14px; color: #fff;';
+  iconEl.textContent = icon;
+  avatar.appendChild(iconEl);
+  return avatar;
+}
+
+function buildTypingIndicator() {
+  const indicator = document.createElement('div');
+  indicator.style.cssText = 'background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;';
+
+  for (let index = 0; index < 3; index += 1) {
+    const dot = document.createElement('div');
+    dot.className = 'typing-dot';
+    dot.style.cssText = `width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;${index > 0 ? ` animation-delay: ${index * 0.2}s;` : ''}`;
+    indicator.appendChild(dot);
+  }
+
+  return indicator;
+}
+
 export function workspaceScreen() {
   const { formData, answers, tier, aiDiagnostics } = getState();
 
@@ -64,7 +92,7 @@ export function workspaceScreen() {
     });
   }
 
-  const answeredCount = Object.keys(answers).filter(k => answers[k]?.text).length;
+  const answeredCount = getState().answeredCount;
   const totalQ = formData.questions.length;
 
   const questionsHtml = formData.questions.map((q, i) =>
@@ -587,13 +615,17 @@ export function workspaceScreen() {
       const isUser = role === 'user';
       const bubble = document.createElement('div');
       bubble.style.cssText = `display: flex; gap: 0.5rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''}`;
-      bubble.innerHTML = `
-        ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div>` : ''}
-        <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;">
-          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
-        </div>
-        ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">person</span></div>` : ''}
-      `;
+      bubble.appendChild(buildChatAvatar(isUser ? 'person' : 'smart_toy', isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'));
+
+      const body = document.createElement('div');
+      body.style.cssText = `background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;`;
+      if (isUser) {
+        body.textContent = text;
+        body.style.whiteSpace = 'pre-wrap';
+      } else {
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+      }
+      bubble.appendChild(body);
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     };
@@ -610,7 +642,8 @@ export function workspaceScreen() {
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start;';
-      typingEl.innerHTML = `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;"><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.2s;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.4s;"></div></div>`;
+      typingEl.appendChild(buildChatAvatar('smart_toy', 'var(--fm-primary)'));
+      typingEl.appendChild(buildTypingIndicator());
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -664,8 +697,8 @@ export function workspaceScreen() {
     wrapper.querySelector('#btn-actions-review')?.addEventListener('click', () => navigateTo('review'));
 
     function updateAnsweredCount() {
-       const count = Object.keys(getState().answers).filter(k => getState().answers[k]?.text).length;
-       wrapper.querySelectorAll('#answered-count').forEach(el => { el.textContent = count; });
+       const count = getState().answeredCount;
+       wrapper.querySelectorAll('#answered-count').forEach(el => { el.textContent = String(count); });
     }
 
     syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
@@ -678,12 +711,6 @@ export function workspaceScreen() {
   }
 
   return { html, init };
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function formatTime(date) {
