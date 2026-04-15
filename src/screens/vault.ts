@@ -56,8 +56,9 @@ export function vaultScreen() {
               <div class="space-y-5">
                 ${section.fields.map(field => `
                   <div class="space-y-1.5">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">${field.label}</label>
+                    <label for="vault-${field.key}" class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">${field.label}</label>
                     <input aria-label="${escapeAttr(field.label)}"
+                      id="vault-${field.key}"
                       type="text" 
                       data-vault-key="${field.key}" 
                       value="${escapeAttr(vault[field.key] || '')}" 
@@ -76,7 +77,7 @@ export function vaultScreen() {
              </div>
              <h3 class="text-lg font-bold text-slate-900 mb-2">Smart Auto-Detection</h3>
              <p class="text-xs text-slate-500 leading-relaxed max-w-xs">The vault learns as you fill forms. If you correct a field during review, we'll ask to save it here for next time.</p>
-             <button class="mt-6 text-[11px] font-black uppercase tracking-widest text-primary hover:underline transition-all">Enable Auto-Sync</button>
+             <button type="button" class="mt-6 text-[11px] font-black uppercase tracking-widest text-primary/70 cursor-default" aria-disabled="true" title="Auto-sync is not available in this release">Auto-Sync Coming Later</button>
           </div>
         </div>
       </div>

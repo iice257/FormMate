@@ -3,7 +3,7 @@ import { getState, setState, updateProfile, updateSettings } from '../state';
 import { signOut } from '../auth/auth-service';
 import { navigateTo } from '../router';
 import { toast } from './toast';
-import { escapeAttr, escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { logSettingsChanged } from '../storage/activity-logger';
 import { isZenModeEnabled, isZenModeSupported, updateZenMode } from './layout';
 import { applyTheme, normalizeTheme } from '../theme';
@@ -19,7 +19,7 @@ const ACCOUNT_MODAL_TABS = [
 
 function getAvatarSrc() {
   const { userProfile } = getState();
-  return userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  return safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 }
 
 export function initAccountModal() {
@@ -53,7 +53,7 @@ function renderModal() {
           </div>
 
           <div style="display:flex; align-items:center; gap:0.9rem; margin:0 1rem 1.35rem; padding:0.9rem 1rem; border:1px solid var(--fm-border-light); border-radius:1.15rem; background:rgba(255,255,255,0.78); overflow:hidden;">
-            <img src="${avatarSrc}" alt="Avatar" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--fm-border-light);" />
+            <img src="${escapeAttr(avatarSrc)}" alt="Avatar" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--fm-border-light);" />
             <div style="min-width:0;">
               <div style="font-size:0.9rem; font-weight:800; color:var(--fm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.name || 'User')}</div>
               <div style="font-size:0.73rem; color:#94a3b8; margin-top:0.12rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(userProfile?.email || 'Signed in account')}</div>
@@ -158,7 +158,7 @@ function renderProfileTab(userProfile, avatarSrc) {
       </div>
 
       <div style="display:flex; align-items:center; gap:1rem; padding:0.9rem 1rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:rgba(248,250,252,0.82);">
-        <img src="${avatarSrc}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.9);" alt="Avatar" />
+        <img src="${escapeAttr(avatarSrc)}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.9);" alt="Avatar" />
         <div>
           <div style="font-size:0.92rem; font-weight:700; color:var(--fm-text);">Account avatar</div>
           <p style="font-size:0.74rem; color:#94a3b8; margin-top:0.2rem;">Avatar changes follow your current account profile data.</p>
@@ -167,28 +167,28 @@ function renderProfileTab(userProfile, avatarSrc) {
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
-          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Full Name</label>
+          <label for="modal-prof-name" style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Full Name</label>
           <input id="modal-prof-name" type="text" value="${escapeAttr(userProfile?.name || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
         </div>
         <div>
-          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Email</label>
+          <label for="modal-prof-email" style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Email</label>
           <input id="modal-prof-email" type="email" value="${escapeAttr(userProfile?.email || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div>
-          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Phone Number</label>
+          <label for="modal-prof-phone" style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Phone Number</label>
           <input id="modal-prof-phone" type="tel" value="${escapeAttr(userProfile?.phone || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" placeholder="+1 (555) 123-4567" />
         </div>
         <div>
-          <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Occupation</label>
+          <label for="modal-prof-occupation" style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Occupation</label>
           <input id="modal-prof-occupation" type="text" value="${escapeAttr(userProfile?.occupation || '')}" style="width:100%; height:42px; padding:0 0.85rem; border:1px solid var(--fm-border); border-radius:0.85rem; font-size:0.85rem; color:var(--fm-text); background:#fff;" />
         </div>
       </div>
 
       <div>
-        <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Short Bio</label>
+        <label for="modal-prof-bio" style="display:block; font-size:0.75rem; font-weight:700; color:var(--fm-text-secondary); margin-bottom:0.45rem;">Short Bio</label>
         <textarea id="modal-prof-bio" style="width:100%; min-height:112px; padding:0.9rem; border:1px solid var(--fm-border); border-radius:1rem; font-size:0.85rem; color:var(--fm-text); background:#fff; resize:vertical; font-family:var(--fm-font-sans);" placeholder="Write a short introduction...">${escapeHtml(userProfile?.bio || '')}</textarea>
         <p style="text-align:right; font-size:0.7rem; color:#94a3b8; margin-top:0.3rem;"><span id="modal-bio-count">${(userProfile?.bio || '').length}</span>/150 characters</p>
       </div>
@@ -224,7 +224,7 @@ function renderSettingsTab(settings) {
         </div>
 
         <div>
-          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.75rem;">Creativity: <span id="modal-temp-val">${temp}</span></label>
+          <label for="modal-set-temperature" style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.75rem;">Creativity: <span id="modal-temp-val">${temp}</span></label>
           <input id="modal-set-temperature" type="range" min="0" max="1" step="0.1" value="${temp}" style="width:100%; accent-color:var(--fm-primary);" />
           <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#94a3b8; margin-top:0.35rem;">
             <span>Precise</span><span>Creative</span>
@@ -232,8 +232,8 @@ function renderSettingsTab(settings) {
         </div>
 
         <div>
-          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Verbosity</label>
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem;" id="modal-verbosity-group">
+          <label id="modal-verbosity-label" style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Verbosity</label>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem;" id="modal-verbosity-group" aria-labelledby="modal-verbosity-label">
             ${['concise', 'balanced', 'detailed'].map((value) => {
               const active = value === verbosity;
               const label = value.charAt(0).toUpperCase() + value.slice(1);
@@ -243,8 +243,8 @@ function renderSettingsTab(settings) {
         </div>
 
         <div>
-          <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Personality</label>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.5rem;" id="modal-personality-group">
+          <label id="modal-personality-label" style="display:block; font-size:0.8rem; font-weight:700; color:var(--fm-text); margin-bottom:0.6rem;">Personality</label>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.5rem;" id="modal-personality-group" aria-labelledby="modal-personality-label">
             ${[
               ['professional', 'Professional'],
               ['friendly', 'Friendly'],
@@ -263,7 +263,7 @@ function renderSettingsTab(settings) {
           <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">Theme</h3>
           <p style="font-size:0.77rem; color:#64748b;">Pick a single app theme. Light stays the default.</p>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group">
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group" aria-label="Theme selection">
           ${['light', 'dark'].map((value) => {
             const active = value === theme;
             const label = value.charAt(0).toUpperCase() + value.slice(1);

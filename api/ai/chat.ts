@@ -83,38 +83,38 @@ function getAbortSignal(timeoutMs) {
   return controller.signal;
 }
 
-function mapUpstreamError(status, payload) {
+function mapUpstreamError(status) {
   if (status === 429) {
     return {
       code: 'RATE_LIMITED',
-      message: payload?.error?.message || 'The AI provider rate-limited this request.',
+      message: 'The AI provider rate-limited this request.',
       retryable: true,
     };
   }
   if (status === 401 || status === 403) {
     return {
       code: 'UPSTREAM_AUTH_ERROR',
-      message: payload?.error?.message || 'The AI provider rejected the server credentials.',
+      message: 'The AI provider rejected the server credentials.',
       retryable: false,
     };
   }
   if (status === 408 || status === 504) {
     return {
       code: 'TIMEOUT_ERROR',
-      message: payload?.error?.message || 'The AI provider timed out.',
+      message: 'The AI provider timed out.',
       retryable: true,
     };
   }
   if (status >= 500) {
     return {
       code: 'UPSTREAM_ERROR',
-      message: payload?.error?.message || 'The AI provider is temporarily unavailable.',
+      message: 'The AI provider is temporarily unavailable.',
       retryable: true,
     };
   }
   return {
     code: 'BAD_REQUEST',
-    message: payload?.error?.message || 'The AI request was rejected.',
+    message: 'The AI request was rejected.',
     retryable: false,
   };
 }
@@ -168,7 +168,7 @@ export default async function handler(req, res) {
     if (!groqApiKey) {
       return sendError(res, 500, {
         code: 'CONFIG_MISSING',
-        message: 'Missing GROQ_API_KEY on the server. Pull Vercel envs locally or configure the deployment environment.',
+        message: 'The AI service is not configured on the server.',
         retryable: false,
       });
     }
@@ -236,7 +236,8 @@ export default async function handler(req, res) {
 
     if (!groqRes.ok) {
       const retryAfter = Number.parseInt(groqRes.headers.get('retry-after') || '', 10);
-      const upstream = mapUpstreamError(groqRes.status, payload);
+      console.error('[Proxy] Chat upstream error:', groqRes.status, payload?.error?.message || responseText.slice(0, 200));
+      const upstream = mapUpstreamError(groqRes.status);
       return sendError(res, groqRes.status, {
         ...upstream,
         retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,

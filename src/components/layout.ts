@@ -1,11 +1,10 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Shared Layout Component (Redesigned)
-// ═══════════════════════════════════════════
+// FormMate - Shared Layout Component
+
 
 import { getState, setState } from '../state';
 import { getHomeScreenForUser, navigateTo } from '../router';
-import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { executeAction, searchActions } from '../actions/action-index';
 
 // Global account modal state
@@ -444,7 +443,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
                 <div class="layout-sidebar-account-row">
                 <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
                   <div class="layout-sidebar-avatar-wrap">
-                    <img src="${avatarSrc}" alt="Avatar" />
+                    <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
                     ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
                   </div>
                   <div class="layout-sidebar-user-info">
@@ -491,12 +490,12 @@ export function initLayout(wrapper, options = {}) {
     });
   });
 
-  // Help Center → docs
+  // Help Center -> docs
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
     navigateTo('docs');
   });
 
-  // Logo → home
+  // Logo -> home
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
     navigateTo(getHomeScreenForUser());
   });
@@ -655,7 +654,7 @@ export function initLayout(wrapper, options = {}) {
 
   document.addEventListener('click', handleDocumentClick);
 
-  // Sidebar user card → account modal (profile tab)
+  // Sidebar user card -> account modal (profile tab)
   wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
     openAccountModal('profile');
   });

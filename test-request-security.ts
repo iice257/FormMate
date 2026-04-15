@@ -5,6 +5,10 @@ import {
   resolveSafeRedirect,
   validateSafeHttpUrl,
 } from './api/_shared/request-security';
+import {
+  resolveGoogleFormRedirect,
+  validateGoogleFormUrl,
+} from './api/proxy/google-form';
 
 function createResponse() {
   return {
@@ -47,11 +51,42 @@ async function run() {
       origin: 'http://127.0.0.1:5174',
       'x-formmate-dev-auth': '1',
     },
+    socket: {
+      remoteAddress: '127.0.0.1',
+    },
   };
   const devRes = createResponse();
+  const originalFlag = process.env.FORMMATE_ENABLE_DEV_AUTH;
+  process.env.FORMMATE_ENABLE_DEV_AUTH = '1';
   const allowed = await assertTrustedAppSignal(devReq, devRes as never, 'Access denied.');
   assert.equal(allowed, true);
   assert.equal(devRes.payload, null);
+  process.env.FORMMATE_ENABLE_DEV_AUTH = '0';
+
+  const blockedDevReq = {
+    headers: {
+      origin: 'https://example.com',
+      'x-formmate-dev-auth': '1',
+    },
+    socket: {
+      remoteAddress: '127.0.0.1',
+    },
+  };
+  const blockedDevRes = createResponse();
+  const blocked = await assertTrustedAppSignal(blockedDevReq, blockedDevRes as never, 'Access denied.');
+  assert.equal(blocked, false);
+  assert.equal(blockedDevRes.statusCode, 401);
+
+  if (originalFlag === undefined) {
+    delete process.env.FORMMATE_ENABLE_DEV_AUTH;
+  } else {
+    process.env.FORMMATE_ENABLE_DEV_AUTH = originalFlag;
+  }
+
+  assert.equal(validateGoogleFormUrl('https://docs.google.com/forms/d/e/example/viewform').ok, true);
+  assert.equal(validateGoogleFormUrl('https://forms.gle/abc123').ok, true);
+  assert.equal(validateGoogleFormUrl('https://example.com/forms/d/e/example/viewform').ok, false);
+  assert.equal(resolveGoogleFormRedirect('https://docs.google.com/forms/d/e/example/viewform', 'http://localhost/private').ok, false);
 
   console.log('request-security checks passed');
 }

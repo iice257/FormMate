@@ -5,7 +5,7 @@ import { getState, addChatMessage } from '../state';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
-import { escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
@@ -18,11 +18,19 @@ function loadSessions() {
   }
 }
 
+function saveSessions(sessions) {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    // Ignore storage failures and keep the current chat responsive.
+  }
+}
+
 export function aiChatScreen() {
   const { userProfile, formData } = getState();
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const sessions = loadSessions();
-  const avatarSrc = userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 
   const chatContent = `
     <div class="flex-1 flex overflow-hidden zen-chat-shell">
@@ -33,10 +41,10 @@ export function aiChatScreen() {
             <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
           </div>
           <div style="display: flex; gap: 0.35rem;">
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button type="button" aria-label="Search chats" title="Search chats" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
             </button>
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button type="button" aria-label="Share chat" title="Share chat" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>
             </button>
           </div>
@@ -64,16 +72,17 @@ export function aiChatScreen() {
 
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
             <div style="flex: 1; position: relative;">
-              <input type="text" id="chat-input" data-zen-focus-target placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
-              <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
+              <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
+              <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
+              <button id="btn-send" type="button" aria-label="Send message" title="Send message" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
             </div>
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button type="button" aria-label="Start voice input" title="Start voice input" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
@@ -83,7 +92,7 @@ export function aiChatScreen() {
 
       <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
-          <img src="${avatarSrc}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
+          <img src="${escapeAttr(avatarSrc)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${displayName}</div>
             <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 500;">Online</div>
@@ -128,7 +137,23 @@ export function aiChatScreen() {
     const emptyState = wrapper.querySelector('#chat-empty-state');
     let isChatPending = false;
     let chatHistory = [];
+    let sessionList = Array.isArray(sessions) ? [...sessions] : [];
     const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
+
+    function persistCurrentSession(latestPrompt) {
+      const baseTitle = String(latestPrompt || formData?.title || 'New chat').trim() || 'New chat';
+      const nextSession = {
+        id: sessionList[0]?.id || `session-${Date.now()}`,
+        title: baseTitle.length > 60 ? `${baseTitle.slice(0, 57)}...` : baseTitle,
+        updatedAt: new Date().toISOString(),
+      };
+
+      sessionList = [nextSession, ...sessionList.filter((session) => session.id !== nextSession.id)]
+        .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))
+        .slice(0, 8);
+
+      saveSessions(sessionList);
+    }
 
     function appendBubble(role, text) {
       if (emptyState && emptyState.parentElement === chatMessages) {
@@ -186,6 +211,7 @@ export function aiChatScreen() {
       appendBubble('user', trimmed);
       addChatMessage('user', trimmed);
       chatHistory.push({ role: 'user', content: trimmed });
+      persistCurrentSession(trimmed);
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
@@ -235,6 +261,8 @@ export function aiChatScreen() {
 
     wrapper.querySelector('#btn-new-chat')?.addEventListener('click', () => {
       chatHistory = [];
+      sessionList = [];
+      saveSessions(sessionList);
       chatMessages.innerHTML = '';
       chatMessages.style.justifyContent = 'center';
       chatMessages.style.alignItems = 'center';

@@ -153,15 +153,18 @@ export function successScreen() {
   `;
 
   function init(wrapper) {
+    let confettiInterval = null;
+    let disposed = false;
+
     void loadConfetti().then((confetti) => {
-      if (!confetti) return;
+      if (!confetti || disposed) return;
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, disableForReducedMotion: true };
 
-      const interval = setInterval(() => {
+      confettiInterval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
+        if (timeLeft <= 0) return clearInterval(confettiInterval);
         const particleCount = 50 * (timeLeft / duration);
         confetti(Object.assign({}, defaults, {
           particleCount,
@@ -191,6 +194,14 @@ export function successScreen() {
       });
       navigateTo(authed ? 'new' : 'landing');
     });
+
+    return () => {
+      disposed = true;
+      if (confettiInterval) {
+        clearInterval(confettiInterval);
+        confettiInterval = null;
+      }
+    };
   }
 
   return { html, init };

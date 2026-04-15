@@ -81,38 +81,38 @@ function getAbortSignal(timeoutMs) {
   return controller.signal;
 }
 
-function mapUpstreamError(status, payload) {
+function mapUpstreamError(status) {
   if (status === 429) {
     return {
       code: 'RATE_LIMITED',
-      message: payload?.error?.message || 'The AI provider rate-limited transcription.',
+      message: 'The AI provider rate-limited transcription.',
       retryable: true,
     };
   }
   if (status === 401 || status === 403) {
     return {
       code: 'UPSTREAM_AUTH_ERROR',
-      message: payload?.error?.message || 'The AI provider rejected the server credentials.',
+      message: 'The AI provider rejected the server credentials.',
       retryable: false,
     };
   }
   if (status === 408 || status === 504) {
     return {
       code: 'TIMEOUT_ERROR',
-      message: payload?.error?.message || 'The transcription request timed out.',
+      message: 'The transcription request timed out.',
       retryable: true,
     };
   }
   if (status >= 500) {
     return {
       code: 'UPSTREAM_ERROR',
-      message: payload?.error?.message || 'The transcription provider is temporarily unavailable.',
+      message: 'The transcription provider is temporarily unavailable.',
       retryable: true,
     };
   }
   return {
     code: 'BAD_REQUEST',
-    message: payload?.error?.message || 'The transcription request was rejected.',
+    message: 'The transcription request was rejected.',
     retryable: false,
   };
 }
@@ -188,7 +188,7 @@ export default async function handler(req, res) {
     if (!groqApiKey) {
       return sendError(res, 500, {
         code: 'CONFIG_MISSING',
-        message: 'Missing GROQ_API_KEY on the server. Pull Vercel envs locally or configure the deployment environment.',
+        message: 'The AI transcription service is not configured on the server.',
         retryable: false,
       });
     }
@@ -217,7 +217,8 @@ export default async function handler(req, res) {
 
     if (!groqRes.ok) {
       const retryAfter = Number.parseInt(groqRes.headers.get('retry-after') || '', 10);
-      const upstream = mapUpstreamError(groqRes.status, payload);
+      console.error('[Proxy] Transcribe upstream error:', groqRes.status, payload?.error?.message || responseText.slice(0, 200));
+      const upstream = mapUpstreamError(groqRes.status);
       return sendError(res, groqRes.status, {
         ...upstream,
         retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,

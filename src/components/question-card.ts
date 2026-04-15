@@ -80,16 +80,16 @@ export function renderQuestionCard(question, answer, index) {
       </div>
 
       <div class="question-card-actions">
-        <button class="btn-undo question-card-icon-btn" data-question-id="${id}" title="Undo">
+        <button type="button" class="btn-undo question-card-icon-btn" data-question-id="${id}" aria-label="Undo answer changes" title="Undo answer changes">
           <span class="material-symbols-outlined">undo</span>
         </button>
-        <button class="btn-redo question-card-icon-btn" data-question-id="${id}" title="Redo">
+        <button type="button" class="btn-redo question-card-icon-btn" data-question-id="${id}" aria-label="Redo answer changes" title="Redo answer changes">
           <span class="material-symbols-outlined">redo</span>
         </button>
         <div class="question-card-actions-spacer"></div>
         ${category !== 'manual_only'
           ? `
-            <button class="btn-regenerate question-card-regenerate" data-question-id="${id}">
+            <button type="button" class="btn-regenerate question-card-regenerate" data-question-id="${id}" aria-label="Regenerate answer">
               <span class="material-symbols-outlined">refresh</span>
               <span>Regenerate</span>
             </button>

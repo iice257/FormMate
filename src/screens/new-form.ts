@@ -7,7 +7,7 @@ import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { toast } from '../components/toast';
 import { initAurora } from './Aurora';
 import './Aurora.css';
-import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { isZenModeEnabled, updateZenMode, bindZenModeControls, openAccountModal, getZenModeToggleHtml } from '../components/layout';
 
 export function newFormScreen() {
@@ -20,7 +20,7 @@ export function newFormScreen() {
 
   const authButtonHtml = isAuthenticated
     ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <img src="${escapeAttr(avatarSrc)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
          <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;

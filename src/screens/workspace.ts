@@ -1,7 +1,6 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Main Workspace Screen (Redesigned)
-// ═══════════════════════════════════════════
+// FormMate - Main Workspace Screen
+
 
 import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo } from '../state';
 import { navigateTo } from '../router';
@@ -22,7 +21,6 @@ async function loadSortable() {
 
   return sortableModulePromise;
 }
-
 function syncWorkspaceZenPanel(enabled, wrapper) {
   const rightPanel = wrapper.querySelector('#right-panel');
   const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
@@ -42,7 +40,7 @@ function formatFileMetadata(file) {
     ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
     : `${Math.max(1, Math.round(file.size / 1024))} KB`;
   const type = file.type ? file.type : 'unknown type';
-  return `${file.name} • ${size} • ${type}`;
+  return `${file.name} - ${size} - ${type}`;
 }
 
 export function workspaceScreen() {
@@ -84,11 +82,11 @@ export function workspaceScreen() {
           <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
             <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
-              <span style="font-size: 0.65rem; color: #cbd5e1;">›</span>
+              <span style="font-size: 0.65rem; color: #cbd5e1;">&gt;</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
+              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
               <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
@@ -127,13 +125,13 @@ export function workspaceScreen() {
       <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
         
         <!-- Panel Toggle Tabs -->
-        <div class="workspace-zen-panel-tabs" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
-          <button id="toggle-ai-chat" class="panel-toggle-btn active" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
-          <button id="toggle-ai-actions" class="panel-toggle-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
+        <div class="workspace-zen-panel-tabs" role="tablist" aria-label="Workspace AI panels" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
+          <button id="toggle-ai-chat" type="button" class="panel-toggle-btn active" role="tab" aria-selected="true" aria-controls="ai-chat-panel" tabindex="0" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
+          <button id="toggle-ai-actions" type="button" class="panel-toggle-btn" role="tab" aria-selected="false" aria-controls="ai-actions-panel" tabindex="-1" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
         </div>
 
         <!-- AI Chat Panel -->
-        <div id="ai-chat-panel" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+        <div id="ai-chat-panel" role="tabpanel" aria-labelledby="toggle-ai-chat" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
           <div style="padding: 1rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center; gap: 0.5rem;">
             <img src="https://ui-avatars.com/api/?name=AI&background=14919b&color=fff&bold=true&size=32" style="width: 32px; height: 32px; border-radius: 50%;" alt="Copilot" />
             <div>
@@ -179,7 +177,7 @@ export function workspaceScreen() {
         </div>
 
         <!-- AI Actions Panel (hidden by default) -->
-        <div id="ai-actions-panel" class="no-scrollbar" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
+        <div id="ai-actions-panel" class="no-scrollbar" role="tabpanel" aria-labelledby="toggle-ai-actions" hidden style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
           <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text); margin-bottom: 0.15rem;">AI Actions</div>
           <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
           
@@ -268,25 +266,53 @@ export function workspaceScreen() {
     const aiActionsPanel = wrapper.querySelector('#ai-actions-panel');
     const toggleChat = wrapper.querySelector('#toggle-ai-chat');
     const toggleActions = wrapper.querySelector('#toggle-ai-actions');
+    const btnFabAi = wrapper.querySelector('#btn-fab-ai');
+
+    const workspaceTabs = [toggleChat, toggleActions].filter(Boolean);
+    const setWorkspacePanel = (panel) => {
+      const showChat = panel === 'chat';
+      aiChatPanel.style.display = showChat ? 'flex' : 'none';
+      aiChatPanel.hidden = !showChat;
+      aiActionsPanel.style.display = showChat ? 'none' : 'flex';
+      aiActionsPanel.hidden = showChat;
+
+      toggleChat.style.color = showChat ? 'var(--fm-primary)' : '#94a3b8';
+      toggleChat.style.borderBottomColor = showChat ? 'var(--fm-primary)' : 'transparent';
+      toggleChat.setAttribute('aria-selected', showChat ? 'true' : 'false');
+      toggleChat.tabIndex = showChat ? 0 : -1;
+
+      toggleActions.style.color = showChat ? '#94a3b8' : 'var(--fm-primary)';
+      toggleActions.style.borderBottomColor = showChat ? 'transparent' : 'var(--fm-primary)';
+      toggleActions.setAttribute('aria-selected', showChat ? 'false' : 'true');
+      toggleActions.tabIndex = showChat ? -1 : 0;
+
+      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+    };
 
     toggleChat?.addEventListener('click', () => {
-      aiChatPanel.style.display = 'flex';
-      aiActionsPanel.style.display = 'none';
-      toggleChat.style.color = 'var(--fm-primary)';
-      toggleChat.style.borderBottomColor = 'var(--fm-primary)';
-      toggleActions.style.color = '#94a3b8';
-      toggleActions.style.borderBottomColor = 'transparent';
-      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+      setWorkspacePanel('chat');
     });
 
     toggleActions?.addEventListener('click', () => {
-      aiChatPanel.style.display = 'none';
-      aiActionsPanel.style.display = 'flex';
-      toggleActions.style.color = 'var(--fm-primary)';
-      toggleActions.style.borderBottomColor = 'var(--fm-primary)';
-      toggleChat.style.color = '#94a3b8';
-      toggleChat.style.borderBottomColor = 'transparent';
-      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+      setWorkspacePanel('actions');
+    });
+
+    workspaceTabs.forEach((tab, index) => {
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let nextIndex = index;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = workspaceTabs.length - 1;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % workspaceTabs.length;
+        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + workspaceTabs.length) % workspaceTabs.length;
+        workspaceTabs[nextIndex]?.focus();
+        setWorkspacePanel(nextIndex === 0 ? 'chat' : 'actions');
+      });
+    });
+
+    btnFabAi?.addEventListener('click', () => {
+      navigateTo('ai-chat');
     });
 
     // Drag and Drop

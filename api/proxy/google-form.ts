@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security';
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveSafeRedirect, validateSafeHttpUrl } from '../_shared/request-security';
 
 export const config = {
   maxDuration: 10,
@@ -7,6 +7,7 @@ export const config = {
 
 const RATE_LIMIT = { max: 60, windowMs: 60_000 };
 const buckets = new Map();
+const GOOGLE_FORM_HOSTS = new Set(['docs.google.com', 'forms.gle']);
 
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -74,6 +75,98 @@ function normalizeGoogleFormUrl(rawUrl, formId) {
   return parsed.toString();
 }
 
+export function validateGoogleFormUrl(rawUrl) {
+  const checked = validateSafeHttpUrl(rawUrl);
+  if (!checked.ok) return checked;
+
+  try {
+    const parsed = new URL(checked.url);
+    const host = String(parsed.hostname || '').toLowerCase();
+    if (!GOOGLE_FORM_HOSTS.has(host)) {
+      return { ok: false, reason: 'Only Google Forms URLs are allowed.' };
+    }
+    if (host === 'docs.google.com' && !parsed.pathname.startsWith('/forms/')) {
+      return { ok: false, reason: 'Unsupported Google Forms path.' };
+    }
+    return { ok: true, url: parsed.toString(), host };
+  } catch {
+    return { ok: false, reason: 'Invalid Google Forms URL.' };
+  }
+}
+
+export function resolveGoogleFormRedirect(currentUrl, locationHeader) {
+  const nextTarget = resolveSafeRedirect(currentUrl, locationHeader);
+  if (!nextTarget.ok) return nextTarget;
+  return validateGoogleFormUrl(nextTarget.url);
+}
+
+async function fetchGoogleFormHtml(startUrl, fetchHeaders) {
+  let currentUrl = startUrl;
+  let response = null;
+
+  for (let hop = 0; hop < 5; hop += 1) {
+    response = await fetch(currentUrl, {
+      headers: fetchHeaders,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(8500),
+    });
+
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      const html = await response.text();
+      return { response, html, finalUrl: currentUrl };
+    }
+
+    const location = response.headers.get('location');
+    if (!location) {
+      return {
+        error: {
+          status: 400,
+          payload: {
+            error: 'BAD_REQUEST',
+            message: 'Redirect target is missing.',
+            authRequired: false,
+            normalizedUrl: startUrl,
+            finalUrl: currentUrl,
+            httpStatus: response.status,
+          }
+        }
+      };
+    }
+
+    const nextTarget = resolveGoogleFormRedirect(currentUrl, location);
+    if (!nextTarget.ok) {
+      return {
+        error: {
+          status: 400,
+          payload: {
+            error: 'BAD_REQUEST',
+            message: `Blocked redirect target: ${nextTarget.reason}`,
+            authRequired: false,
+            normalizedUrl: startUrl,
+            finalUrl: currentUrl,
+            httpStatus: response.status,
+          }
+        }
+      };
+    }
+
+    currentUrl = nextTarget.url;
+  }
+
+  return {
+    error: {
+      status: 400,
+      payload: {
+        error: 'BAD_REQUEST',
+        message: 'Too many redirects while fetching the Google Form.',
+        authRequired: false,
+        normalizedUrl: startUrl,
+        finalUrl: currentUrl,
+      }
+    }
+  };
+}
+
 export default async function handler(req, res) {
   const allowedOrigin = getAllowedOrigin(req);
   if (allowedOrigin) {
@@ -110,17 +203,15 @@ export default async function handler(req, res) {
     }
 
     const normalizedUrl = normalizeGoogleFormUrl(rawUrl, formId);
+    const checkedUrl = validateGoogleFormUrl(normalizedUrl);
+    if (!checkedUrl.ok) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: checkedUrl.reason, authRequired: false });
+    }
 
     const fetchHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
-    };
-
-    const fetchOpts = {
-      headers: fetchHeaders,
-      redirect: 'follow',
-      signal: AbortSignal.timeout(8500),
     };
 
     const authSignals = [
@@ -133,9 +224,14 @@ export default async function handler(req, res) {
     ];
     const isAuthWall = (html) => authSignals.some((signal) => String(html || '').includes(signal));
 
-    let response = await fetch(normalizedUrl, fetchOpts);
-    let html = await response.text();
-    let finalUrl = response.url || normalizedUrl;
+    let fetchResult = await fetchGoogleFormHtml(checkedUrl.url, fetchHeaders);
+    if (fetchResult.error) {
+      return res.status(fetchResult.error.status).json(fetchResult.error.payload);
+    }
+
+    let response = fetchResult.response;
+    let html = fetchResult.html;
+    let finalUrl = fetchResult.finalUrl || checkedUrl.url;
     const resolvedFormId = extractGoogleFormIdFromUrl(finalUrl) || extractGoogleFormIdFromUrl(normalizedUrl);
 
     if (response.ok && !isAuthWall(html)) {
@@ -155,9 +251,14 @@ export default async function handler(req, res) {
         ? `https://docs.google.com/forms/d/e/${resolvedFormId}/formResponse`
         : `https://docs.google.com/forms/d/${resolvedFormId}/formResponse`;
       try {
-        response = await fetch(formResponseUrl, fetchOpts);
-        html = await response.text();
-        finalUrl = response.url || formResponseUrl;
+        fetchResult = await fetchGoogleFormHtml(formResponseUrl, fetchHeaders);
+        if (fetchResult.error) {
+          return res.status(fetchResult.error.status).json(fetchResult.error.payload);
+        }
+
+        response = fetchResult.response;
+        html = fetchResult.html;
+        finalUrl = fetchResult.finalUrl || formResponseUrl;
 
         if (response.ok && !isAuthWall(html)) {
           return res.status(200).json({
@@ -174,20 +275,6 @@ export default async function handler(req, res) {
         const message = error instanceof Error ? error.message : String(error);
         console.log(`[GoogleForm] Strategy 2 setup fetch error: ${message}`);
       }
-    }
-
-    const fbDataMatch = String(html || '').match(/var\s+FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]*?);\s*<\/script>/);
-    if (fbDataMatch) {
-      return res.status(200).json({
-        fbPublicLoadData: fbDataMatch[1],
-        strategy: 'fb_public_load_data',
-        authRequired: isAuthWall(html),
-        html: cleanHtml(html),
-        normalizedUrl,
-        finalUrl,
-        httpStatus: response.status,
-        resolvedFormId,
-      });
     }
 
     return res.status(200).json({

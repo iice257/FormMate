@@ -140,7 +140,11 @@ export function examplesScreen() {
     const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'examples' } });
 
     const grid = wrapper.querySelector('#examples-grid');
-    if (!grid) return;
+    if (!grid) {
+      return () => {
+        cleanupLayout?.();
+      };
+    }
 
     const colorClasses = {
       blue: 'bg-blue-50 text-blue-600 border-blue-100',

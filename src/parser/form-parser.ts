@@ -50,60 +50,6 @@ export function isGoogleFormUrl(url) {
     || lower.includes('forms.gle/');
 }
 
-function parseFbPublicLoadData(dataString) {
-  try {
-    const data = JSON.parse(dataString);
-    const formInfo = data?.[1];
-    const title = formInfo?.[8] || formInfo?.[0] || 'Google Form';
-    const description = formInfo?.[1] || '';
-    const rawQuestions = formInfo?.[1];
-    if (!Array.isArray(rawQuestions)) return null;
-
-    const questions = [];
-    rawQuestions.forEach((q, index) => {
-      if (!Array.isArray(q)) return;
-
-      const text = q[1] || `Question ${index + 1}`;
-      const questionType = q[3];
-      const typeMap = {
-        0: 'short_text',
-        1: 'long_text',
-        2: 'radio',
-        3: 'dropdown',
-        4: 'checkbox',
-        5: 'linear_scale',
-        7: 'radio',
-        9: 'date',
-        10: 'short_text'
-      };
-
-      let options = [];
-      try {
-        const optionData = q[4]?.[0]?.[1];
-        if (Array.isArray(optionData)) {
-          options = optionData.map((opt) => opt[0]).filter(Boolean);
-        }
-      } catch (_) {
-        // no-op
-      }
-
-      questions.push({
-        id: String(index + 1),
-        text,
-        type: typeMap[questionType] || 'short_text',
-        required: q[4]?.[0]?.[2] === 1,
-        options
-      });
-    });
-
-    if (questions.length === 0) return null;
-    return { title, description, questions };
-  } catch (err) {
-    console.warn('[FormParser] FB_PUBLIC_LOAD_DATA_ parse failed:', err.message);
-    return null;
-  }
-}
-
 function createDiagnostics(url, platform) {
   return {
     inputUrl: url,
@@ -194,22 +140,6 @@ async function parseGoogleForm(url) {
     diagnostics.normalizedUrl = result.normalizedUrl || url;
     diagnostics.finalUrl = result.finalUrl || result.normalizedUrl || url;
     diagnostics.fetchStrategy = result.strategy || diagnostics.fetchStrategy;
-
-    if (result.fbPublicLoadData) {
-      const fbParsed = parseFbPublicLoadData(result.fbPublicLoadData);
-      if (fbParsed?.questions?.length) {
-        return finalizeFormResult(fbParsed, {
-          url,
-          source: 'Google Forms',
-          authRequired: false,
-          parseStrategy: 'fb_public_load_data',
-          diagnostics: {
-            ...diagnostics,
-            parseStrategy: 'fb_public_load_data',
-          }
-        });
-      }
-    }
 
     if (!result.html) {
       diagnostics.authSignal = Boolean(result.authRequired);

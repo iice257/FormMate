@@ -19,6 +19,9 @@ const PRIVATE_HOST_PATTERNS = [
   '.local',
   '.internal',
 ];
+const LOCAL_ORIGIN_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const SESSION_CACHE_TTL_MS = 60_000;
+const MAX_SESSION_CACHE_ENTRIES = 256;
 const sessionCache = new Map();
 
 function readHeader(req, name) {
@@ -27,6 +30,13 @@ function readHeader(req, name) {
 
 function getEnv(key) {
   return String(process.env[key] || '').trim();
+}
+
+function normalizeBool(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return null;
 }
 
 export function buildAllowedOrigins() {
@@ -76,12 +86,9 @@ function getBearerToken(req) {
 
 function hasSessionLikeHeader(req) {
   const sessionHeader = String(readHeader(req, 'x-formmate-session') || '').trim();
-  const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim();
   return Boolean(
     getBearerToken(req) ||
-      sessionHeader ||
-      devAuthHeader === '1' ||
-      devAuthHeader.toLowerCase() === 'true',
+      sessionHeader,
   );
 }
 
@@ -112,6 +119,7 @@ export function hasTrustedAppSignal(req) {
 async function validateSupabaseAccessToken(token) {
   if (!token) return false;
 
+  pruneSessionCache();
   const cached = sessionCache.get(token);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.valid;
@@ -134,7 +142,8 @@ async function validateSupabaseAccessToken(token) {
     });
 
     const valid = response.ok;
-    sessionCache.set(token, { valid, expiresAt: Date.now() + 60_000 });
+    sessionCache.set(token, { valid, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+    pruneSessionCache();
     return valid;
   } catch {
     return false;
@@ -144,7 +153,7 @@ async function validateSupabaseAccessToken(token) {
 export async function assertTrustedAppSignal(req, res, message = 'Access denied.') {
   const origin = getRequestOrigin(req);
   const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim().toLowerCase();
-  if (['1', 'true'].includes(devAuthHeader) && isAllowedOrigin(origin)) {
+  if (['1', 'true'].includes(devAuthHeader) && isLocalDevRequest(req, origin)) {
     return true;
   }
 
@@ -159,6 +168,62 @@ export async function assertTrustedAppSignal(req, res, message = 'Access denied.
   });
 
   return false;
+}
+
+function pruneSessionCache(now = Date.now()) {
+  for (const [token, entry] of sessionCache.entries()) {
+    if (!entry || entry.expiresAt <= now) {
+      sessionCache.delete(token);
+    }
+  }
+
+  while (sessionCache.size > MAX_SESSION_CACHE_ENTRIES) {
+    const oldestKey = sessionCache.keys().next().value;
+    if (!oldestKey) break;
+    sessionCache.delete(oldestKey);
+  }
+}
+
+function getClientIp(req) {
+  const xff = String(readHeader(req, 'x-forwarded-for') || '').trim();
+  if (xff) {
+    return xff.split(',')[0].trim();
+  }
+  return String(req?.socket?.remoteAddress || '').trim();
+}
+
+function isLoopbackAddress(rawIp) {
+  const normalized = String(rawIp || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === '::1' || normalized === '::ffff:127.0.0.1') return true;
+  if (normalized.startsWith('127.')) return true;
+  return false;
+}
+
+function getOriginHost(origin) {
+  if (!origin) return '';
+  try {
+    return String(new URL(origin).hostname || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function isLocalOrigin(origin) {
+  const host = getOriginHost(origin);
+  return LOCAL_ORIGIN_HOSTS.has(host);
+}
+
+function isDevAuthEnabled() {
+  const explicit = normalizeBool(getEnv('FORMMATE_ENABLE_DEV_AUTH'));
+  if (explicit !== null) return explicit;
+  return getEnv('NODE_ENV') !== 'production' && !getEnv('VERCEL_URL');
+}
+
+function isLocalDevRequest(req, origin) {
+  if (!isDevAuthEnabled()) return false;
+  if (!isLocalOrigin(origin)) return false;
+  return isLoopbackAddress(getClientIp(req));
 }
 
 export function isPrivateHost(host) {

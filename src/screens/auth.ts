@@ -5,6 +5,7 @@ import { getDashboardActionScreenForUser, navigateTo } from '../router';
 import { getDevTestUsers, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signUp } from '../auth/auth-service';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
+import { escapeHtml } from '../utils/escape';
 
 export function authScreen() {
   const devTestUsers = getDevTestUsers();
@@ -25,8 +26,8 @@ export function authScreen() {
                     data-dev-test-user="${user.id}"
                     style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);"
                   >
-                    <span class="block text-sm font-semibold">${user.name}</span>
-                    <span class="block text-xs mt-1" style="color: var(--fm-text-tertiary);">${user.email} · ${user.tier} plan</span>
+                    <span class="block text-sm font-semibold">${escapeHtml(user.name)}</span>
+                    <span class="block text-xs mt-1" style="color: var(--fm-text-tertiary);">${escapeHtml(user.email)} - ${escapeHtml(user.tier)} plan</span>
                   </button>
                 `).join('')}
               </div>
@@ -69,7 +70,7 @@ export function authScreen() {
               </div>
               <div>
                 <label for="login-password" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Password</label>
-                <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full h-12 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);" placeholder="••••••••" />
+                <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full h-12 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);" placeholder="Enter password" />
               </div>
 
               <div class="flex justify-end">

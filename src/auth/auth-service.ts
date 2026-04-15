@@ -149,7 +149,7 @@ export function getRequestAuthHeaders() {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  if (session?.devOnly) {
+  if (session?.devOnly && isDevAuthEnabled()) {
     headers['X-FormMate-Dev-Auth'] = '1';
   }
 
