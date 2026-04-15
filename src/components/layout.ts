@@ -394,7 +394,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
         
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
-          <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" />
+          <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" aria-label="Search pages, actions, or support" />
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
             <span class="material-symbols-outlined">close</span>
           </button>

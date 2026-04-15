@@ -90,7 +90,7 @@ export function vaultScreen() {
   });
 
   function init(wrapper) {
-    initLayout(wrapper, { zenMode: { screenId: 'vault' } });
+    const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'vault' } });
 
     wrapper.querySelectorAll('input[data-vault-key]').forEach(input => {
       input.addEventListener('change', (e) => {
@@ -100,6 +100,10 @@ export function vaultScreen() {
         toast.success('Vault updated');
       });
     });
+
+    return () => {
+      cleanupLayout?.();
+    };
   }
 
   return { html, init };

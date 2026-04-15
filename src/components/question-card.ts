@@ -221,9 +221,27 @@ function renderInput(question, answerText) {
 
     case 'file_upload':
       return `
-        <div class="question-card-upload" role="button" tabindex="0" aria-label="${escapeAttr(`Upload file for: ${text}`)}">
-          <span class="material-symbols-outlined">cloud_upload</span>
-          <p>Click to upload or drag and drop</p>
+        <div class="question-card-upload">
+          <button
+            type="button"
+            class="question-card-upload-button"
+            data-question-id="${id}"
+            aria-label="${escapeAttr(`Choose file for: ${text}`)}"
+          >
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span class="question-card-upload-text" data-upload-file-label>
+              ${answerText ? escapeHtml(answerText) : 'Click to choose a file'}
+            </span>
+            <span class="question-card-upload-hint">Browse files</span>
+          </button>
+          <input
+            type="file"
+            class="question-card-upload-input"
+            data-question-id="${id}"
+            hidden
+            aria-hidden="true"
+            tabindex="-1"
+          />
         </div>
       `;
 

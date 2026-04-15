@@ -242,7 +242,7 @@ export function dashboardScreen() {
   });
 
   function init(wrapper) {
-    initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
+    const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
 
     const openRecentForm = (formUrl) => {
       if (!formUrl) return;
@@ -293,6 +293,10 @@ export function dashboardScreen() {
         openRecentForm(row.dataset.formUrl);
       });
     });
+
+    return () => {
+      cleanupLayout?.();
+    };
   }
 
   return { html, init };

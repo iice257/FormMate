@@ -38,7 +38,7 @@ export function successScreen() {
             </div>
             <h2 class="text-slate-900 text-xl font-black tracking-tighter">Form<span class="text-primary">Mate</span></h2>
           </button>
-          <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" aria-label="Close success screen">
             <span class="material-symbols-outlined">close</span>
           </button>
         </header>

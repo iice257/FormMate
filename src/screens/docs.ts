@@ -36,7 +36,7 @@ export function docsScreen() {
           <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-               <input type="text" id="docs-search-input" placeholder="Search guides..." class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
+               <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
                <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors hidden">
                   <span class="material-symbols-outlined text-[16px]">close</span>
                </button>

@@ -36,6 +36,15 @@ function syncWorkspaceZenPanel(enabled, wrapper) {
   rightPanel.classList.toggle('zen-actions-active', enabled && activePanel === 'actions');
 }
 
+function formatFileMetadata(file) {
+  if (!file) return '';
+  const size = file.size >= 1024 * 1024
+    ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+  const type = file.type ? file.type : 'unknown type';
+  return `${file.name} • ${size} • ${type}`;
+}
+
 export function workspaceScreen() {
   const { formData, answers, tier, aiDiagnostics } = getState();
 
@@ -151,16 +160,16 @@ export function workspaceScreen() {
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
                 </button>
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button type="button" aria-label="Open files" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">folder</span>
                 </button>
               </div>
               <div style="flex: 1; position: relative;">
-                <input type="text" id="chat-input" placeholder="Ask Copilot anything..." style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
-                <button id="btn-send-chat" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <input type="text" id="chat-input" placeholder="Ask Copilot anything..." aria-label="Ask Copilot anything" style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
+                <button id="btn-send-chat" type="button" aria-label="Send chat message" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
                 </button>
               </div>
@@ -223,7 +232,7 @@ export function workspaceScreen() {
       </aside>
 
       <!-- FAB for AI Actions (mobile) -->
-      <button id="btn-fab-ai" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
+      <button id="btn-fab-ai" type="button" aria-label="Open AI actions" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
         <span class="material-symbols-outlined">auto_awesome</span>
       </button>
     </div>
@@ -479,14 +488,50 @@ export function workspaceScreen() {
           b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
         });
         updateAnsweredCount(); syncUndoRedoButtons();
+        return;
+      }
+
+      const uploadBtn = e.target.closest('.question-card-upload-button');
+      if (uploadBtn) {
+        const qId = uploadBtn.dataset.questionId;
+        const fileInput = wrapper.querySelector(`.question-card-upload-input[data-question-id="${qId}"]`);
+        if (fileInput) {
+          fileInput.value = '';
+          fileInput.click();
+        }
       }
     });
 
     questionsContainer.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      const opt = e.target.closest('.option-select, .scale-btn');
+      const opt = e.target.closest('.option-select, .scale-btn, .question-card-upload-button');
       if (!opt) return;
       e.preventDefault(); opt.click();
+    });
+
+    questionsContainer.addEventListener('change', (e) => {
+      const input = e.target.closest('.question-card-upload-input');
+      if (!input) return;
+
+      const questionId = input.dataset.questionId;
+      const file = input.files?.[0];
+      const card = wrapper.querySelector(`.question-card[data-card-id="${questionId}"]`);
+      const label = card?.querySelector('[data-upload-file-label]');
+
+      if (!file) {
+        updateAnswer(questionId, '', 'user');
+        if (label) label.textContent = 'Click to choose a file';
+        updateAnsweredCount();
+        syncUndoRedoButtons();
+        return;
+      }
+
+      const metadata = formatFileMetadata(file);
+      updateAnswer(questionId, metadata, 'user');
+      if (label) label.textContent = metadata;
+      updateAnsweredCount();
+      syncUndoRedoButtons();
+      toast.success('File selected');
     });
 
     // Filter pills
