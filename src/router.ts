@@ -1,39 +1,54 @@
-// @ts-nocheck
 import { getState, setState } from './state';
 import { getSession, isAuthenticated } from './auth/auth-service';
 import { isOnboardingComplete } from './storage/local-store';
+import { createSafeHtmlFragment } from './utils/safe-html';
 
-const routes = {};
-let currentCleanup = null;
-const historyStack = [];
-let navigationToken = 0;
+type ScreenRenderResult = {
+  html: string;
+  init?: (wrapper: HTMLElement) => void | (() => void) | null;
+};
+
+type ScreenRenderer = () => ScreenRenderResult;
+
+declare global {
+  interface Window {
+    __fmOpenAccountModalTab?: (tab?: 'profile' | 'settings' | 'help') => void;
+    __fmPreviousScreen?: string | null;
+  }
+}
+
+const routes: Record<string, ScreenRenderer> = {};
+let currentCleanup: null | (() => void) = null;
+const historyStack: string[] = [];
 
 const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
 
 export function getHomeScreenForUser() {
-  return 'landing';
+  if (!isAuthenticated()) return 'landing';
+  return isOnboardingComplete() ? 'dashboard' : 'onboarding';
 }
 
 export function getDashboardActionScreenForUser() {
-  return isAuthenticated() ? 'dashboard' : 'auth';
+  if (!isAuthenticated()) return 'auth';
+  return isOnboardingComplete() ? 'dashboard' : 'onboarding';
 }
 
 export function getFormsEntryScreenForUser() {
-  return isAuthenticated() ? 'new' : 'auth';
+  if (!isAuthenticated()) return 'auth';
+  return isOnboardingComplete() ? 'new' : 'onboarding';
 }
 
-export function registerScreen(name, renderFn) {
+export function registerScreen(name: string, renderFn: ScreenRenderer) {
   routes[name] = renderFn;
 }
 
-export function navigateTo(screen, replace = false, direction = replace ? 'back' : 'forward') {
-  void performNavigation(screen, replace, direction);
+export function navigateTo(screen: string, replace = false, direction = replace ? 'back' : 'forward') {
+  void direction;
+  performNavigation(screen, replace);
 }
 
-async function performNavigation(screen, replace = false, direction = replace ? 'back' : 'forward') {
+function performNavigation(screen: string, replace = false) {
   const app = document.getElementById('app');
-  const animationsEnabled = getState().settings?.ui?.animationsEnabled !== false;
-  const navToken = ++navigationToken;
   const modalTab = screen === 'accounts'
     ? 'profile'
     : screen === 'settings'
@@ -123,8 +138,7 @@ async function performNavigation(screen, replace = false, direction = replace ? 
   const { html, init } = routes[screen]();
   if (!html && !init) return;
 
-  const mountScreen = (wrapper) => {
-    if (navToken !== navigationToken) return;
+  const mountScreen = (wrapper: HTMLElement) => {
     if (currentCleanup) {
       currentCleanup();
       currentCleanup = null;
@@ -135,41 +149,21 @@ async function performNavigation(screen, replace = false, direction = replace ? 
     }
   };
 
-  const currentWrapper = app.firstElementChild;
   const nextWrapper = document.createElement('div');
-  nextWrapper.className = animationsEnabled ? `screen-shell screen-enter-${direction}` : 'screen-shell';
-  nextWrapper.innerHTML = html;
-
-  if (animationsEnabled && currentWrapper) {
-    currentWrapper.classList.remove('screen-enter-forward', 'screen-enter-backward');
-    currentWrapper.classList.add('screen-shell', 'screen-overlay-old', `screen-exit-${direction}`);
-    nextWrapper.classList.add('screen-overlay-new');
-    app.appendChild(nextWrapper);
-
-    mountScreen(nextWrapper);
-    await new Promise((resolve) => window.setTimeout(resolve, 170));
-    if (navToken !== navigationToken) {
-      nextWrapper.remove();
-      return;
-    }
-
-    currentWrapper.remove();
-    nextWrapper.classList.remove('screen-overlay-new');
-    return;
-  }
-
-  app.innerHTML = '';
-  app.appendChild(nextWrapper);
+  nextWrapper.appendChild(createSafeHtmlFragment(html));
+  app.replaceChildren(nextWrapper);
   mountScreen(nextWrapper);
 }
 
 export function initRouter() {
-  window.addEventListener('popstate', (e) => {
-    if (e.state && e.state.screen) {
-      navigateTo(e.state.screen, true, 'back');
+  window.addEventListener('popstate', (e: PopStateEvent) => {
+    const nextState = e.state as { screen?: string } | null;
+    if (nextState?.screen) {
+      navigateTo(nextState.screen, true, 'back');
     } else {
-      navigateTo('landing', true, 'back');
-      window.history.pushState({ screen: 'landing' }, '', '/');
+      const homeScreen = getHomeScreenForUser();
+      navigateTo(homeScreen, true, 'back');
+      window.history.pushState({ screen: homeScreen }, '', homeScreen === 'landing' ? '/' : `/${homeScreen}`);
     }
   });
 
@@ -201,13 +195,13 @@ export function initRouter() {
   if (!authenticated) {
     navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', true);
   } else if (!onboarded) {
-    navigateTo('onboarding', true);
-  } else if (initialScreen === 'landing') {
-    navigateTo('landing', true);
+    navigateTo(initialScreen === 'capture' ? 'capture' : 'onboarding', true);
+  } else if (initialScreen === 'landing' || initialScreen === 'auth') {
+    navigateTo('dashboard', true);
   } else if (routes[initialScreen]) {
     navigateTo(initialScreen, true);
   } else {
-    navigateTo('landing', true);
+    navigateTo('dashboard', true);
   }
 }
 

@@ -80,16 +80,16 @@ export function renderQuestionCard(question, answer, index) {
       </div>
 
       <div class="question-card-actions">
-        <button class="btn-undo question-card-icon-btn" data-question-id="${id}" title="Undo">
+        <button type="button" class="btn-undo question-card-icon-btn" data-question-id="${id}" aria-label="Undo answer changes" title="Undo answer changes">
           <span class="material-symbols-outlined">undo</span>
         </button>
-        <button class="btn-redo question-card-icon-btn" data-question-id="${id}" title="Redo">
+        <button type="button" class="btn-redo question-card-icon-btn" data-question-id="${id}" aria-label="Redo answer changes" title="Redo answer changes">
           <span class="material-symbols-outlined">redo</span>
         </button>
         <div class="question-card-actions-spacer"></div>
         ${category !== 'manual_only'
           ? `
-            <button class="btn-regenerate question-card-regenerate" data-question-id="${id}">
+            <button type="button" class="btn-regenerate question-card-regenerate" data-question-id="${id}" aria-label="Regenerate answer">
               <span class="material-symbols-outlined">refresh</span>
               <span>Regenerate</span>
             </button>
@@ -221,9 +221,27 @@ function renderInput(question, answerText) {
 
     case 'file_upload':
       return `
-        <div class="question-card-upload" role="button" tabindex="0" aria-label="${escapeAttr(`Upload file for: ${text}`)}">
-          <span class="material-symbols-outlined">cloud_upload</span>
-          <p>Click to upload or drag and drop</p>
+        <div class="question-card-upload">
+          <button
+            type="button"
+            class="question-card-upload-button"
+            data-question-id="${id}"
+            aria-label="${escapeAttr(`Choose file for: ${text}`)}"
+          >
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span class="question-card-upload-text" data-upload-file-label>
+              ${answerText ? escapeHtml(answerText) : 'Click to choose a file'}
+            </span>
+            <span class="question-card-upload-hint">Browse files</span>
+          </button>
+          <input
+            type="file"
+            class="question-card-upload-input"
+            data-question-id="${id}"
+            hidden
+            aria-hidden="true"
+            tabindex="-1"
+          />
         </div>
       `;
 

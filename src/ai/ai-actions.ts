@@ -7,7 +7,7 @@
 // prompts using user profile, vault, and settings.
 // ═══════════════════════════════════════════
 
-import { generateText, generateJson, getAiErrorMessage, isRetryableAiError } from './ai-service';
+import { generateText, generateJson, getAiErrorMessage, isRetryableAiError, normalizeAiError } from './ai-service';
 import { getState } from '../state';
 import { categorizeField } from './field-classifier';
 import { buildSystemPrompt } from './system-prompts';
@@ -78,9 +78,16 @@ Extraction Rules:
     return parsed;
   } catch (err) {
     console.error('[AI Actions] Form parsing failed:', err);
-    const error = new Error(getAiErrorMessage(err, 'Failed to parse the form structure. Please try again.'));
-    error.code = err?.code || 'FORM_PARSING_FAILED';
-    error.retryable = isRetryableAiError(err);
+    const normalized = normalizeAiError(err, {
+      code: 'FORM_PARSING_FAILED',
+      message: 'Failed to parse the form structure. Please try again.',
+    });
+    const error = new Error(getAiErrorMessage(normalized, 'Failed to parse the form structure. Please try again.'));
+    error.code = normalized.code || 'FORM_PARSING_FAILED';
+    error.retryable = isRetryableAiError(normalized);
+    error.status = normalized.status;
+    error.retryAfter = normalized.retryAfter;
+    error.details = normalized.details;
     throw error;
   }
 }
@@ -108,6 +115,15 @@ export async function generateAnswers(formData, onProgress) {
   const { settings, userProfile, personality } = getState();
   const fieldAnalysis = await analyzeFormFields(formData);
   const answers = {};
+  const diagnostics = {
+    status: 'ok',
+    summary: '',
+    totalQuestions: Array.isArray(formData?.questions) ? formData.questions.length : 0,
+    aiEligible: 0,
+    generated: 0,
+    failed: 0,
+    failures: [],
+  };
 
   const { questions } = formData;
 
@@ -139,6 +155,7 @@ User Profile Context:
     }
 
     // Only 'generatable' fields reach here
+    diagnostics.aiEligible += 1;
     const messages = [
       {
         role: 'system',
@@ -166,15 +183,42 @@ Options: ${q.options && q.options.length ? q.options.join(', ') : 'None'}`
       });
 
       answers[q.id] = { text: responseText.trim(), source: 'ai', confidence: 0.9 };
+      diagnostics.generated += 1;
     } catch (err) {
       console.warn('[AI Actions] Answer generation failed for field', q.id, err);
+      const normalized = normalizeAiError(err, {
+        code: 'ANSWER_GENERATION_FAILED',
+        message: 'Failed to generate this answer.',
+      });
       answers[q.id] = { text: '', source: 'ai', confidence: 0 };
+      diagnostics.failed += 1;
+      diagnostics.failures.push({
+        questionId: String(q.id),
+        questionText: q.text,
+        code: normalized.code || 'ANSWER_GENERATION_FAILED',
+        message: getAiErrorMessage(normalized, 'Failed to generate this answer.'),
+        retryable: isRetryableAiError(normalized),
+        status: normalized.status,
+        retryAfter: normalized.retryAfter,
+      });
     }
 
     if (onProgress) onProgress(i + 1, questions.length);
   }
 
-  return answers;
+  if (diagnostics.failed > 0) {
+    diagnostics.status = diagnostics.generated > 0 ? 'partial' : 'failed';
+    const leadFailure = diagnostics.failures[0];
+    diagnostics.summary = diagnostics.generated > 0
+      ? `${diagnostics.failed} AI suggestion${diagnostics.failed === 1 ? '' : 's'} could not be generated. You can keep editing manually and retry later.`
+      : leadFailure?.message || 'AI suggestions are unavailable right now.';
+  } else {
+    diagnostics.summary = diagnostics.aiEligible > 0
+      ? `Generated ${diagnostics.generated} AI suggestion${diagnostics.generated === 1 ? '' : 's'} successfully.`
+      : 'No AI-generated fields were needed for this form.';
+  }
+
+  return { answers, diagnostics };
 }
 
 // ─── Custom Rewrite (Quick Edit) ─────────────
@@ -205,9 +249,16 @@ export async function quickEditAnswer(question, currentAnswer, instruction) {
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'edited', confidence: 1.0 };
   } catch (err) {
     console.error(err);
-    const error = new Error(getAiErrorMessage(err, 'Failed to edit the answer. Please try again.'));
-    error.code = err?.code || 'QUICK_EDIT_FAILED';
-    error.retryable = isRetryableAiError(err);
+    const normalized = normalizeAiError(err, {
+      code: 'QUICK_EDIT_FAILED',
+      message: 'Failed to edit the answer. Please try again.',
+    });
+    const error = new Error(getAiErrorMessage(normalized, 'Failed to edit the answer. Please try again.'));
+    error.code = normalized.code || 'QUICK_EDIT_FAILED';
+    error.retryable = isRetryableAiError(normalized);
+    error.status = normalized.status;
+    error.retryAfter = normalized.retryAfter;
+    error.details = normalized.details;
     throw error;
   }
 }
@@ -240,9 +291,16 @@ export async function regenerateAnswer(question, currentAnswer) {
     return { text: text.trim().replace(/^["']|["']$/g, ''), source: 'ai', confidence: 0.85 };
   } catch (err) {
     console.error(err);
-    const error = new Error(getAiErrorMessage(err, 'Failed to regenerate the answer. Please try again.'));
-    error.code = err?.code || 'REGENERATION_FAILED';
-    error.retryable = isRetryableAiError(err);
+    const normalized = normalizeAiError(err, {
+      code: 'REGENERATION_FAILED',
+      message: 'Failed to regenerate the answer. Please try again.',
+    });
+    const error = new Error(getAiErrorMessage(normalized, 'Failed to regenerate the answer. Please try again.'));
+    error.code = normalized.code || 'REGENERATION_FAILED';
+    error.retryable = isRetryableAiError(normalized);
+    error.status = normalized.status;
+    error.retryAfter = normalized.retryAfter;
+    error.details = normalized.details;
     throw error;
   }
 }
@@ -307,9 +365,16 @@ Be helpful, provide concrete suggestions, and answer questions clearly, adapting
 
     return responseText;
   } catch (err) {
-    const error = new Error(getAiErrorMessage(err, 'Chat generation failed. Please try again.'));
-    error.code = err?.code || 'CHAT_GENERATION_FAILED';
-    error.retryable = isRetryableAiError(err);
+    const normalized = normalizeAiError(err, {
+      code: 'CHAT_GENERATION_FAILED',
+      message: 'Chat generation failed. Please try again.',
+    });
+    const error = new Error(getAiErrorMessage(normalized, 'Chat generation failed. Please try again.'));
+    error.code = normalized.code || 'CHAT_GENERATION_FAILED';
+    error.retryable = isRetryableAiError(normalized);
+    error.status = normalized.status;
+    error.retryAfter = normalized.retryAfter;
+    error.details = normalized.details;
     throw error;
   }
 }

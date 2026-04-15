@@ -1,21 +1,7 @@
 // @ts-nocheck
 // FormMate AI Service Layer (Multi-Model Router)
-//
-// Central router for all AI operations.
-// Routes through the backend proxy (/api/ai/*) to keep
-// the API key server-side. Includes fallback chains,
-// caching, rate limiting, and input validation.
-//
-// Model Assignment (Groq vendor-prefixed IDs):
-//   openai/gpt-oss-120b   -> heavy reasoning
-//   openai/gpt-oss-20b    -> standard generation
-//   qwen/qwen3-32b        -> conversational copilot
-//   llama-3.1-8b-instant  -> fast lightweight
-//   whisper-large-v3      -> speech-to-text
+import { getRequestAuthHeaders } from '../auth/auth-service';
 
-// Model registry (vendor-prefixed for Groq)
-
-// Model Assignment
 export const MODELS = {
   HEAVY: 'llama-3.3-70b-versatile',
   STANDARD: 'llama-3.1-8b-instant',
@@ -24,54 +10,168 @@ export const MODELS = {
   WHISPER: 'whisper-large-v3',
 };
 
-// Task -> model routing table
-
 export const TASK_ROUTES = {
-  'form_parsing': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  'question_intent': { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  'answer_generation': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
-  'regeneration': { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
-  'copilot_chat': { model: MODELS.COPILOT, fallback: [MODELS.FAST, MODELS.STANDARD] },
-  'quick_edit': { model: MODELS.FAST, fallback: [MODELS.COPILOT] },
-  'docs_chat': { model: MODELS.FAST, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  'voice_transcription': { model: MODELS.WHISPER, fallback: [] },
+  form_parsing: { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
+  question_intent: { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
+  answer_generation: { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
+  regeneration: { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
+  copilot_chat: { model: MODELS.COPILOT, fallback: [MODELS.FAST, MODELS.STANDARD] },
+  quick_edit: { model: MODELS.FAST, fallback: [MODELS.COPILOT] },
+  docs_chat: { model: MODELS.FAST, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
+  voice_transcription: { model: MODELS.WHISPER, fallback: [] },
 };
 
-// Client-side rate limiter
+export const AI_ERROR_CODES = {
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  BAD_REQUEST: 'BAD_REQUEST',
+  CLIENT_RATE_LIMITED: 'CLIENT_RATE_LIMITED',
+  CONFIG_MISSING: 'CONFIG_MISSING',
+  EMPTY_RESPONSE: 'EMPTY_RESPONSE',
+  INPUT_TOO_LONG: 'INPUT_TOO_LONG',
+  INVALID_JSON: 'INVALID_JSON',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  RATE_LIMITED: 'RATE_LIMITED',
+  TIMEOUT_ERROR: 'TIMEOUT_ERROR',
+  TRANSCRIPTION_FAILED: 'TRANSCRIPTION_FAILED',
+  UNKNOWN_AI_ERROR: 'UNKNOWN_AI_ERROR',
+  UPSTREAM_AUTH_ERROR: 'UPSTREAM_AUTH_ERROR',
+  UPSTREAM_ERROR: 'UPSTREAM_ERROR',
+};
+
+const NON_FALLBACK_ERROR_CODES = new Set([
+  AI_ERROR_CODES.BAD_REQUEST,
+  AI_ERROR_CODES.CONFIG_MISSING,
+  AI_ERROR_CODES.INPUT_TOO_LONG,
+  AI_ERROR_CODES.UPSTREAM_AUTH_ERROR,
+]);
 
 const RATE_LIMIT = { maxRequests: 20, windowMs: 60_000 };
-const requestTimestamps = [];
 const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_INPUT_LENGTH = 15_000;
+const CACHE_MAX = 100;
+
+const requestTimestamps = [];
+const cache = new Map();
+
+function createAiError({
+  code,
+  message,
+  retryable = false,
+  status,
+  retryAfter,
+  details,
+  cause,
+}) {
+  const error = new Error(message);
+  error.name = 'AIError';
+  error.code = code || AI_ERROR_CODES.UNKNOWN_AI_ERROR;
+  error.retryable = Boolean(retryable);
+  if (typeof status === 'number') error.status = status;
+  if (typeof retryAfter === 'number' && Number.isFinite(retryAfter)) error.retryAfter = retryAfter;
+  if (details !== undefined) error.details = details;
+  if (cause) error.cause = cause;
+  return error;
+}
+
+function parseRetryAfter(value, fallback = 2) {
+  const numeric = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function inferRetryable(code, status) {
+  if ([AI_ERROR_CODES.RATE_LIMITED, AI_ERROR_CODES.CLIENT_RATE_LIMITED, AI_ERROR_CODES.NETWORK_ERROR, AI_ERROR_CODES.TIMEOUT_ERROR, AI_ERROR_CODES.INVALID_JSON, AI_ERROR_CODES.EMPTY_RESPONSE].includes(code)) {
+    return true;
+  }
+  if (typeof status === 'number') {
+    return status >= 500 || status === 408 || status === 429;
+  }
+  return false;
+}
+
+function mapLegacyCode(code, status) {
+  const value = String(code || '').toUpperCase();
+  if (!value) {
+    if (status === 429) return AI_ERROR_CODES.RATE_LIMITED;
+    if (status === 408 || status === 504) return AI_ERROR_CODES.TIMEOUT_ERROR;
+    if (status === 401 || status === 403) return AI_ERROR_CODES.UPSTREAM_AUTH_ERROR;
+    if (typeof status === 'number' && status >= 500) return AI_ERROR_CODES.UPSTREAM_ERROR;
+    if (typeof status === 'number' && status >= 400) return AI_ERROR_CODES.BAD_REQUEST;
+    return AI_ERROR_CODES.UNKNOWN_AI_ERROR;
+  }
+
+  const mapped = {
+    AUTH_REQUIRED: AI_ERROR_CODES.AUTH_REQUIRED,
+    API_ERROR: status === 401 || status === 403 ? AI_ERROR_CODES.UPSTREAM_AUTH_ERROR : AI_ERROR_CODES.UPSTREAM_ERROR,
+    CLIENT_RATE_LIMIT_EXCEEDED: AI_ERROR_CODES.CLIENT_RATE_LIMITED,
+    NETWORK: AI_ERROR_CODES.NETWORK_ERROR,
+    NETWORK_ERROR: AI_ERROR_CODES.NETWORK_ERROR,
+    RATE_LIMIT: AI_ERROR_CODES.RATE_LIMITED,
+    RATE_LIMITED: AI_ERROR_CODES.RATE_LIMITED,
+    TIMEOUT: AI_ERROR_CODES.TIMEOUT_ERROR,
+    TIMEOUT_ERROR: AI_ERROR_CODES.TIMEOUT_ERROR,
+  };
+
+  return mapped[value] || value;
+}
+
+export function normalizeAiError(error, fallback = {}) {
+  if (error?.name === 'AIError' && error?.code) {
+    return error;
+  }
+
+  const status = typeof error?.status === 'number' ? error.status : fallback.status;
+  const code = mapLegacyCode(error?.code || error?.type || fallback.code, status);
+  const retryAfter = typeof error?.retryAfter === 'number'
+    ? error.retryAfter
+    : typeof fallback.retryAfter === 'number'
+      ? fallback.retryAfter
+      : undefined;
+
+  return createAiError({
+    code,
+    status,
+    retryAfter,
+    retryable: typeof error?.retryable === 'boolean' ? error.retryable : inferRetryable(code, status),
+    message: error?.message || fallback.message || 'AI service is unavailable right now.',
+    details: error?.details ?? fallback.details,
+    cause: error,
+  });
+}
 
 function checkRateLimit() {
   const now = Date.now();
   while (requestTimestamps.length && requestTimestamps[0] < now - RATE_LIMIT.windowMs) {
     requestTimestamps.shift();
   }
+
   if (requestTimestamps.length >= RATE_LIMIT.maxRequests) {
-    throw new Error('[AIService] Client rate limit exceeded - please wait a moment');
+    const retryAfterMs = Math.max(1000, (requestTimestamps[0] + RATE_LIMIT.windowMs) - now);
+    throw createAiError({
+      code: AI_ERROR_CODES.CLIENT_RATE_LIMITED,
+      message: 'Too many AI requests were sent from this browser. Please wait a moment and retry.',
+      retryAfter: Math.ceil(retryAfterMs / 1000),
+      retryable: true,
+      status: 429,
+    });
   }
+
   requestTimestamps.push(now);
 }
 
-// Input validation
-
-const MAX_INPUT_LENGTH = 15_000;
-
 function validateInput(messages) {
-  const totalLength = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
+  const totalLength = messages.reduce((sum, message) => sum + (message?.content?.length || 0), 0);
   if (totalLength > MAX_INPUT_LENGTH) {
-    throw new Error(`[AIService] Input too long (${totalLength} chars, max ${MAX_INPUT_LENGTH})`);
+    throw createAiError({
+      code: AI_ERROR_CODES.INPUT_TOO_LONG,
+      message: `This AI request is too large (${totalLength} chars, max ${MAX_INPUT_LENGTH}). Shorten it and try again.`,
+      status: 400,
+      retryable: false,
+      details: { totalLength, maxLength: MAX_INPUT_LENGTH },
+    });
   }
 }
 
-// Response cache (LRU)
-
-const CACHE_MAX = 100;
-const cache = new Map();
-
 function getCacheKey(task, prompt) {
-  // Use a simple hash or the full string to avoid collisions on long system prompts
   return `${task}::${prompt}`;
 }
 
@@ -95,58 +195,104 @@ function setCache(key, data) {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-// Core API request (via proxy)
+function tryParseJson(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function extractProxyError(response, parsedBody, responseText) {
+  const payloadError = typeof parsedBody?.error === 'object'
+    ? parsedBody.error
+    : null;
+  const message = payloadError?.message
+    || (typeof parsedBody?.error === 'string' ? parsedBody.error : '')
+    || parsedBody?.message
+    || `AI request failed with status ${response.status}.`;
+  const code = mapLegacyCode(payloadError?.code, response.status);
+  const retryAfter = payloadError?.retryAfter ?? parseRetryAfter(response.headers.get('retry-after'), undefined);
+
+  return createAiError({
+    code,
+    message,
+    status: payloadError?.status || response.status,
+    retryAfter,
+    retryable: typeof payloadError?.retryable === 'boolean' ? payloadError.retryable : inferRetryable(code, response.status),
+    details: payloadError?.details ?? { responseText: String(responseText || '').slice(0, 1000) },
+  });
+}
+
+async function fetchProxy(endpoint, init = {}, { timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  try {
+    const authHeaders = getRequestAuthHeaders();
+    const response = await fetch(endpoint, {
+      ...init,
+      headers: {
+        ...(init.headers || {}),
+        ...authHeaders,
+      },
+      signal: controller?.signal,
+    });
+    const responseText = await response.text().catch(() => '');
+    const parsedBody = tryParseJson(responseText);
+
+    if (!response.ok) {
+      throw extractProxyError(response, parsedBody, responseText);
+    }
+
+    return { response, responseText, parsedBody };
+  } catch (error) {
+    if (error?.name === 'AIError') {
+      throw error;
+    }
+    if (error?.name === 'AbortError') {
+      throw createAiError({
+        code: AI_ERROR_CODES.TIMEOUT_ERROR,
+        message: 'The AI service took too long to respond.',
+        retryable: true,
+        status: 504,
+      });
+    }
+    throw createAiError({
+      code: AI_ERROR_CODES.NETWORK_ERROR,
+      message: 'Unable to reach the AI API. Run `npm run dev:stack` so Vite can proxy `/api/*` to `vercel dev`.',
+      retryable: true,
+      details: { originalMessage: error?.message || 'Unknown network error' },
+      cause: error,
+    });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 1024, jsonMode = false }) {
-  const body = { model, messages, temperature, max_tokens: maxTokens };
+  const body = {
+    model,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+  };
 
   if (jsonMode) {
     body.response_format = { type: 'json_object' };
   }
 
-  let response;
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS) : null;
-  try {
-    response = await fetch(`/api/ai/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body),
-      signal: controller?.signal,
-    });
-  } catch (error) {
-    if (timeoutId) clearTimeout(timeoutId);
-    if (error?.name === 'AbortError') {
-      throw { type: 'TIMEOUT_ERROR', message: 'Request timed out' };
-    }
-    throw { type: 'NETWORK_ERROR', message: error?.message || 'Network request failed' };
-  }
-  if (timeoutId) clearTimeout(timeoutId);
+  const { parsedBody, responseText } = await fetchProxy('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
-  const responseText = await response.text().catch(() => '');
-  const parsedBody = tryParseJson(responseText);
-
-  if (response.status === 429) {
-    const retryAfter = parseInt(response.headers.get('retry-after') || '2', 10);
-    throw { type: 'RATE_LIMITED', retryAfter, status: 429 };
-  }
-
-  if (!response.ok) {
-    throw {
-      type: 'API_ERROR',
-      status: response.status,
-      body: responseText,
-      message: parsedBody?.error || parsedBody?.message || `Request failed with status ${response.status}`
-    };
-  }
-
-  // Best-effort usage tracking (local). Avoid failing the request on storage errors.
   try {
     const { incrementUsage } = await import('../storage/local-store');
     incrementUsage('aiCalls');
-  } catch (_) { /* no-op */ }
+  } catch (_) {}
 
   const content = parsedBody?.choices?.[0]?.message?.content
     ?? parsedBody?.text
@@ -154,13 +300,15 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
     ?? responseText;
 
   if (!String(content || '').trim()) {
-    throw { type: 'EMPTY_RESPONSE', message: 'The model returned an empty response' };
+    throw createAiError({
+      code: AI_ERROR_CODES.EMPTY_RESPONSE,
+      message: 'The AI returned an empty response.',
+      retryable: true,
+    });
   }
 
   return String(content);
 }
-
-// Public API: generate()
 
 export async function generate({
   task,
@@ -171,18 +319,23 @@ export async function generate({
   useCache = true,
 }) {
   const route = TASK_ROUTES[task];
-  if (!route) throw new Error(`[AIService] Unknown task: "${task}"`);
+  if (!route) {
+    throw createAiError({
+      code: AI_ERROR_CODES.BAD_REQUEST,
+      message: `Unknown AI task: "${task}".`,
+      status: 400,
+    });
+  }
 
   checkRateLimit();
   validateInput(messages);
 
-  const promptKey = messages.map(m => m.content).join('|');
+  const promptKey = messages.map((message) => message.content).join('|');
   const cacheKey = getCacheKey(task, promptKey);
 
   if (useCache) {
     const cached = getCached(cacheKey);
     if (cached) {
-      console.log(`[AIService] Cache hit for ${task}`);
       return cached;
     }
   }
@@ -192,77 +345,35 @@ export async function generate({
 
   for (const model of modelChain) {
     try {
-      console.log(`[AIService] ${task} -> ${model}`);
       const result = await proxyRequest({ model, messages, temperature, maxTokens, jsonMode });
       if (useCache) setCache(cacheKey, result);
       return result;
-    } catch (err) {
-      lastError = err;
-      if (err.type === 'RATE_LIMITED') {
-        console.warn(`[AIService] Rate limited on ${model}, waiting ${err.retryAfter}s...`);
-        await delay(err.retryAfter * 1000);
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      lastError = normalized;
+
+      if (normalized.code === AI_ERROR_CODES.RATE_LIMITED && (normalized.retryAfter || 0) <= 5) {
+        await delay((normalized.retryAfter || 2) * 1000);
         try {
           const retryResult = await proxyRequest({ model, messages, temperature, maxTokens, jsonMode });
           if (useCache) setCache(cacheKey, retryResult);
           return retryResult;
-        } catch (retryErr) {
-          lastError = retryErr;
+        } catch (retryError) {
+          lastError = normalizeAiError(retryError);
         }
-      } else {
-        console.warn(`[AIService] ${model} failed:`, err.body || err.message || err);
+      }
+
+      if (NON_FALLBACK_ERROR_CODES.has(lastError.code)) {
+        break;
       }
     }
   }
 
-  if (isDevAiFallbackEnabled()) {
-    const fallbackResult = getDevFallbackResponse(task, messages, jsonMode);
-    if (fallbackResult !== null) {
-      console.warn(`[AIService] Falling back to dev mock response for ${task}`);
-      return fallbackResult;
-    }
-  }
-
-  if (lastError?.type === 'RATE_LIMITED') {
-    const e = new Error(`[AIService] Rate limited. Try again in ${lastError.retryAfter || 2}s.`);
-    e.code = 'RATE_LIMITED';
-    e.retryAfter = lastError.retryAfter || 2;
-    throw e;
-  }
-
-  if (lastError?.type === 'API_ERROR') {
-    const e = new Error(`[AIService] Upstream error (${lastError.status}). Please retry.`);
-    e.code = 'UPSTREAM_ERROR';
-    e.status = lastError.status;
-    e.body = lastError.body;
-    e.retryable = lastError.status >= 500 || lastError.status === 408;
-    throw e;
-  }
-
-  if (lastError?.type === 'NETWORK_ERROR') {
-    const e = new Error('[AIService] Unable to reach the AI service. Start the API server or try again.');
-    e.code = 'NETWORK_ERROR';
-    e.retryable = true;
-    throw e;
-  }
-
-  if (lastError?.type === 'TIMEOUT_ERROR') {
-    const e = new Error('[AIService] The AI service took too long to respond. Please try again.');
-    e.code = 'TIMEOUT_ERROR';
-    e.retryable = true;
-    throw e;
-  }
-
-  if (lastError?.type === 'EMPTY_RESPONSE') {
-    const e = new Error('[AIService] The AI returned an empty response. Please try again.');
-    e.code = 'EMPTY_RESPONSE';
-    e.retryable = true;
-    throw e;
-  }
-
-  throw new Error(`[AIService] All models failed for task "${task}". Last error: ${lastError?.body || lastError?.message || 'Unknown'}`);
+  throw normalizeAiError(lastError, {
+    code: AI_ERROR_CODES.UNKNOWN_AI_ERROR,
+    message: 'The AI request failed across all available models.',
+  });
 }
-
-// JSON response parser
 
 export function parseJsonResponse(text) {
   let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -271,34 +382,50 @@ export function parseJsonResponse(text) {
   return JSON.parse(cleaned);
 }
 
-// Task-safe wrappers
-
 export async function generateText(options) {
-  const text = await generate({ ...options, jsonMode: false });
-  const normalized = String(text || '').trim();
-  if (!normalized) {
-    const err = new Error('[AIService] The AI returned an empty response. Please try again.');
-    err.code = 'EMPTY_RESPONSE';
-    err.retryable = true;
-    throw err;
+  try {
+    const text = await generate({ ...options, jsonMode: false });
+    const normalized = String(text || '').trim();
+    if (!normalized) {
+      throw createAiError({
+        code: AI_ERROR_CODES.EMPTY_RESPONSE,
+        message: 'The AI returned an empty response.',
+        retryable: true,
+      });
+    }
+    return normalized;
+  } catch (error) {
+    throw normalizeAiError(error);
   }
-  return normalized;
 }
 
 export async function generateJson(options) {
-  const raw = await generate({ ...options, jsonMode: true });
   try {
+    const raw = await generate({ ...options, jsonMode: true });
     return parseJsonResponse(String(raw || ''));
-  } catch (e) {
-    const err = new Error('[AIService] Model returned invalid JSON.');
-    err.code = 'INVALID_JSON';
-    err.cause = e;
-    err.raw = String(raw || '').slice(0, 5000);
-    throw err;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw createAiError({
+        code: AI_ERROR_CODES.INVALID_JSON,
+        message: 'The AI returned unreadable JSON.',
+        retryable: true,
+        cause: error,
+      });
+    }
+    if (error?.code === AI_ERROR_CODES.INVALID_JSON) {
+      throw error;
+    }
+    if (error?.message?.includes?.('JSON')) {
+      throw createAiError({
+        code: AI_ERROR_CODES.INVALID_JSON,
+        message: 'The AI returned unreadable JSON.',
+        retryable: true,
+        cause: error,
+      });
+    }
+    throw normalizeAiError(error);
   }
 }
-
-// Voice transcription (via proxy)
 
 export async function transcribeAudio(audioBlob) {
   checkRateLimit();
@@ -308,92 +435,68 @@ export async function transcribeAudio(audioBlob) {
   formData.append('model', MODELS.WHISPER);
   formData.append('response_format', 'json');
 
-  const response = await fetch(`/api/ai/transcribe`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) throw new Error(`Whisper API error: ${response.status}`);
-  const data = await response.json();
-  return data.text || '';
-}
-
-// Utilities
-
-function isDevAiFallbackEnabled() {
-  const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  return Boolean(import.meta.env.DEV) || host === 'localhost' || host === '127.0.0.1';
-}
-
-function getDevFallbackResponse(task, messages, jsonMode) {
-  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
-
-  if (jsonMode && task === 'form_parsing') {
-    return JSON.stringify({
-      title: 'Dev Parsed Form',
-      description: 'Fallback response generated in local development.',
-      questions: [
-        { id: '1', text: 'Full name', type: 'short_text', options: [], required: true },
-        { id: '2', text: 'Why are you interested?', type: 'long_text', options: [], required: false }
-      ]
-    });
-  }
-
-  const taskResponses = {
-    answer_generation: 'Drafted a concise, professional answer based on your saved profile.',
-    regeneration: 'Here is a fresh alternative with a slightly different emphasis and tone.',
-    quick_edit: 'Updated the answer to better match your instruction while keeping the same meaning.',
-    copilot_chat: `Dev Copilot fallback: I could not reach the live AI service, but I understood your request: "${truncate(lastUserMessage, 120)}".`,
-    docs_chat: 'Dev Docs fallback: the live AI service is unavailable, but the Accounts, Vault, and Workspace guides cover the main flows.'
-  };
-
-  return taskResponses[task] || (jsonMode ? null : 'Dev fallback response');
-}
-
-function truncate(value, maxLength) {
-  if (!value || value.length <= maxLength) return value;
-  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
-}
-
-function tryParseJson(text) {
-  if (!text) return null;
   try {
-    return JSON.parse(text);
-  } catch {
-    return null;
+    const { parsedBody, responseText } = await fetchProxy('/api/ai/transcribe', {
+      method: 'POST',
+      body: formData,
+    });
+    const text = parsedBody?.text || parsedBody?.message || responseText;
+    if (!String(text || '').trim()) {
+      throw createAiError({
+        code: AI_ERROR_CODES.TRANSCRIPTION_FAILED,
+        message: 'Audio transcription returned no text.',
+        retryable: true,
+      });
+    }
+    return String(text).trim();
+  } catch (error) {
+    throw normalizeAiError(error, {
+      code: AI_ERROR_CODES.TRANSCRIPTION_FAILED,
+      message: 'Audio transcription failed.',
+    });
   }
 }
 
 export function isRetryableAiError(error) {
-  return Boolean(
-    error?.retryable ||
-    ['RATE_LIMITED', 'NETWORK_ERROR', 'TIMEOUT_ERROR', 'UPSTREAM_ERROR', 'INVALID_JSON', 'EMPTY_RESPONSE'].includes(error?.code)
-  );
+  return Boolean(normalizeAiError(error).retryable);
 }
 
 export function getAiErrorMessage(error, fallback = 'AI service is unavailable right now.') {
-  if (!error) return fallback;
-  if (error.code === 'RATE_LIMITED') {
-    return `The AI is busy right now. Please wait ${error.retryAfter || 2}s and try again.`;
+  const normalized = normalizeAiError(error, { message: fallback });
+
+  if (normalized.code === AI_ERROR_CODES.CONFIG_MISSING) {
+    return 'AI is not configured on the server. Pull Vercel envs with `npm run env:pull`, then restart `npm run dev:stack`.';
   }
-  if (error.code === 'NETWORK_ERROR') {
-    return 'Unable to reach the AI service right now. Please check your connection and try again.';
+  if (normalized.code === AI_ERROR_CODES.AUTH_REQUIRED) {
+    return 'Your session expired or you are signed out. Sign in again, then retry the AI action.';
   }
-  if (error.code === 'TIMEOUT_ERROR') {
-    return 'The AI took too long to respond. Please try again.';
+  if ([AI_ERROR_CODES.RATE_LIMITED, AI_ERROR_CODES.CLIENT_RATE_LIMITED].includes(normalized.code)) {
+    return `The AI is busy right now. Wait ${normalized.retryAfter || 2}s and try again.`;
   }
-  if (error.code === 'UPSTREAM_ERROR') {
-    return 'The AI service is temporarily unavailable. Please try again shortly.';
+  if (normalized.code === AI_ERROR_CODES.NETWORK_ERROR) {
+    return 'Unable to reach the AI API. Start the full local stack with `npm run dev:stack` and try again.';
   }
-  if (error.code === 'INVALID_JSON') {
+  if (normalized.code === AI_ERROR_CODES.TIMEOUT_ERROR) {
+    return 'The AI service timed out. Please try again.';
+  }
+  if (normalized.code === AI_ERROR_CODES.UPSTREAM_AUTH_ERROR) {
+    return 'The server-side AI credentials were rejected. Update `GROQ_API_KEY` in Vercel and re-pull envs locally.';
+  }
+  if (normalized.code === AI_ERROR_CODES.UPSTREAM_ERROR) {
+    return 'The AI provider is temporarily unavailable. Please retry shortly.';
+  }
+  if (normalized.code === AI_ERROR_CODES.INPUT_TOO_LONG) {
+    return normalized.message;
+  }
+  if (normalized.code === AI_ERROR_CODES.INVALID_JSON) {
     return 'The AI returned an unreadable response. Please try again.';
   }
-  if (error.code === 'EMPTY_RESPONSE') {
+  if (normalized.code === AI_ERROR_CODES.EMPTY_RESPONSE) {
     return 'The AI returned an empty response. Please try again.';
   }
-  return error.message || fallback;
+  return normalized.message || fallback;
 }
 
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

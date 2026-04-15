@@ -6,7 +6,7 @@ import { initLayout, withLayout } from '../components/layout';
 
 export function examplesScreen() {
   const examplesContent = `
-    <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter">
+    <div class="app-page-scroll no-scrollbar scroll-smooth">
       <main class="w-full max-w-6xl mx-auto px-6 py-12 md:py-20">
         <div class="mb-12 text-center max-w-2xl mx-auto space-y-4">
           <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-widest rounded-full border border-primary/20">
@@ -137,10 +137,14 @@ export function examplesScreen() {
   });
 
   function init(wrapper) {
-    initLayout(wrapper, { zenMode: { screenId: 'examples' } });
+    const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'examples' } });
 
     const grid = wrapper.querySelector('#examples-grid');
-    if (!grid) return;
+    if (!grid) {
+      return () => {
+        cleanupLayout?.();
+      };
+    }
 
     const colorClasses = {
       blue: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -155,7 +159,7 @@ export function examplesScreen() {
     };
 
     grid.innerHTML = demos.map((demo) => `
-      <div class="demo-card bg-white border border-slate-200 rounded-2xl p-6 cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col" data-url="${demo.url}" role="button" tabindex="0" aria-label="Use demo: ${demo.title}">
+      <button type="button" class="demo-card bg-white border border-slate-200 rounded-2xl p-6 cursor-pointer group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col text-left" data-url="${demo.url}" aria-label="Use demo: ${demo.title}">
         <div class="flex items-start justify-between mb-4">
           <div class="flex items-center justify-center size-12 rounded-xl border ${colorClasses[demo.color]} shadow-sm scale-100 group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-2xl">${demo.icon}</span>
@@ -177,20 +181,19 @@ export function examplesScreen() {
         <div class="px-3 py-2 bg-slate-50 rounded-lg text-xs font-mono text-slate-500 truncate border border-slate-100">
           ${demo.url.startsWith('demo://') ? demo.url : demo.url.replace('https://', '')}
         </div>
-      </div>
+      </button>
     `).join('');
 
     wrapper.querySelectorAll('.demo-card').forEach((card) => {
       card.addEventListener('click', () => {
-        setState({ formUrl: card.dataset.url });
+        setState({ formUrl: card.dataset.url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       });
-      card.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        card.click();
-      });
     });
+
+    return () => {
+      cleanupLayout?.();
+    };
   }
 
   return { html, init };

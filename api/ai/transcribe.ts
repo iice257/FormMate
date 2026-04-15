@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security';
+
 export const config = {
   maxDuration: 10,
   api: {
@@ -9,6 +11,8 @@ export const config = {
 const RATE_LIMIT = { max: 10, windowMs: 60_000 };
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const buckets = new Map();
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const REQUEST_TIMEOUT_MS = 9000;
 
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -32,36 +36,117 @@ function rateLimit(req) {
 }
 
 function getAllowedOrigin(req) {
-  const origin = req.headers.origin;
-  if (!origin) return null;
+  const origin = getRequestOrigin(req);
+  return isAllowedOrigin(origin) ? origin : null;
+}
 
-  const allow = new Set(
-    String(process.env.FORMMATE_ALLOWED_ORIGINS || '')
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean),
-  );
+function sendJson(res, status, payload) {
+  return res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
+}
 
-  allow.add('http://localhost:5173');
-  allow.add('http://127.0.0.1:5173');
-  allow.add('http://localhost:5174');
-  allow.add('http://127.0.0.1:5174');
-
-  if (process.env.VERCEL_URL) {
-    allow.add(`https://${process.env.VERCEL_URL}`);
+function sendError(res, status, { code, message, retryable, retryAfter, details }) {
+  if (retryAfter) {
+    res.setHeader('Retry-After', String(retryAfter));
   }
 
-  return allow.has(origin) ? origin : null;
+  const error = {
+    code,
+    message,
+    retryable: typeof retryable === 'boolean' ? retryable : status >= 500 || status === 408 || status === 429,
+    status,
+    retryAfter: retryAfter || undefined,
+  };
+
+  if (details && Object.keys(details).length > 0) {
+    error.details = details;
+  }
+
+  return sendJson(res, status, { error });
+}
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function getAbortSignal(timeoutMs) {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
+function mapUpstreamError(status) {
+  if (status === 429) {
+    return {
+      code: 'RATE_LIMITED',
+      message: 'The AI provider rate-limited transcription.',
+      retryable: true,
+    };
+  }
+  if (status === 401 || status === 403) {
+    return {
+      code: 'UPSTREAM_AUTH_ERROR',
+      message: 'The AI provider rejected the server credentials.',
+      retryable: false,
+    };
+  }
+  if (status === 408 || status === 504) {
+    return {
+      code: 'TIMEOUT_ERROR',
+      message: 'The transcription request timed out.',
+      retryable: true,
+    };
+  }
+  if (status >= 500) {
+    return {
+      code: 'UPSTREAM_ERROR',
+      message: 'The transcription provider is temporarily unavailable.',
+      retryable: true,
+    };
+  }
+  return {
+    code: 'BAD_REQUEST',
+    message: 'The transcription request was rejected.',
+    retryable: false,
+  };
+}
+
+async function readRequestBuffer(req, maxBytes) {
+  return await new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > maxBytes) {
+        reject(Object.assign(new Error('Upload too large'), { code: 'UPLOAD_TOO_LARGE' }));
+        try {
+          req.destroy();
+        } catch {}
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
 }
 
 export default async function handler(req, res) {
   const allowedOrigin = getAllowedOrigin(req);
   if (allowedOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-    res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-FormMate-Session, X-FormMate-Dev-Auth');
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
@@ -69,82 +154,93 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return sendError(res, 405, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Method not allowed.',
+      retryable: false,
+    });
   }
 
   try {
+    if (!(await assertTrustedAppSignal(req, res, 'Access denied.'))) {
+      return;
+    }
+
     const rl = rateLimit(req);
     if (!rl.allowed) {
-      res.setHeader('Retry-After', String(rl.retryAfterSec || 2));
-      return res.status(429).json({ error: 'Rate limit exceeded' });
+      return sendError(res, 429, {
+        code: 'RATE_LIMITED',
+        message: 'Too many transcription requests. Please wait and retry.',
+        retryAfter: rl.retryAfterSec || 2,
+        retryable: true,
+      });
     }
 
     if (req.headers.origin && !allowedOrigin) {
-      return res.status(403).json({ error: 'Origin not allowed' });
+      return sendError(res, 403, {
+        code: 'ORIGIN_NOT_ALLOWED',
+        message: 'Origin not allowed.',
+        retryable: false,
+      });
     }
 
     const groqApiKey = process.env.GROQ_API_KEY;
-    const groqBase = 'https://api.groq.com/openai/v1';
-
     if (!groqApiKey) {
-      return res.status(500).json({ error: 'Missing API Key configuration' });
+      return sendError(res, 500, {
+        code: 'CONFIG_MISSING',
+        message: 'The AI transcription service is not configured on the server.',
+        retryable: false,
+      });
     }
 
-    const chunks: Buffer[] = [];
-    let total = 0;
-    let abortedForSize = false;
+    if (!req.headers['content-type']) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: 'Missing content-type.',
+        retryable: false,
+      });
+    }
 
-    req.on('data', (chunk) => {
-      total += chunk.length;
-      if (total > MAX_UPLOAD_BYTES) {
-        if (!res.headersSent) res.status(413).json({ error: 'Upload too large' });
-        abortedForSize = true;
-        try {
-          req.destroy();
-        } catch {
-          // noop
-        }
-        return;
-      }
-      chunks.push(chunk);
+    const buffer = await readRequestBuffer(req, MAX_UPLOAD_BYTES);
+    const groqRes = await fetch(`${GROQ_BASE_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${groqApiKey}`,
+        'Content-Type': req.headers['content-type'],
+      },
+      body: buffer,
+      signal: getAbortSignal(REQUEST_TIMEOUT_MS),
     });
 
-    req.on('end', async () => {
-      try {
-        if (abortedForSize || res.headersSent) return;
-        if (total > MAX_UPLOAD_BYTES) return;
-        if (!req.headers['content-type']) {
-          return res.status(400).json({ error: 'Missing content-type' });
-        }
+    const responseText = await groqRes.text();
+    const payload = safeJsonParse(responseText);
 
-        const buffer = Buffer.concat(chunks);
+    if (!groqRes.ok) {
+      const retryAfter = Number.parseInt(groqRes.headers.get('retry-after') || '', 10);
+      console.error('[Proxy] Transcribe upstream error:', groqRes.status, payload?.error?.message || responseText.slice(0, 200));
+      const upstream = mapUpstreamError(groqRes.status);
+      return sendError(res, groqRes.status, {
+        ...upstream,
+        retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+      });
+    }
 
-        const groqRes = await fetch(`${groqBase}/audio/transcriptions`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${groqApiKey}`,
-            'Content-Type': req.headers['content-type'],
-          },
-          body: buffer,
-          signal: AbortSignal.timeout(9000),
-        });
-
-        const data = await groqRes.text();
-        res.status(groqRes.status).setHeader('Content-Type', 'application/json').send(data);
-      } catch (innerError) {
-        const message = innerError instanceof Error ? innerError.message : String(innerError);
-        console.error('[Proxy] Transcribe fetch error:', message);
-        res.status(500).json({ error: 'Proxy fetch error or Timeout' });
-      }
-    });
-
-    req.on('error', (error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('[Proxy] Transcribe stream error:', message);
-    });
+    return sendJson(res, groqRes.status, payload || { message: responseText });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[Proxy] Transcribe error:', message);
-    res.status(500).json({ error: 'Proxy handler error' });
+    if (error?.code === 'UPLOAD_TOO_LARGE') {
+      return sendError(res, 413, {
+        code: 'BAD_REQUEST',
+        message: 'Upload too large.',
+        retryable: false,
+      });
+    }
+    const isAbort = error?.name === 'AbortError' || String(message).toLowerCase().includes('aborted');
+    return sendError(res, isAbort ? 504 : 500, {
+      code: isAbort ? 'TIMEOUT_ERROR' : 'PROXY_ERROR',
+      message: isAbort ? 'The transcription proxy timed out before the provider responded.' : 'The transcription proxy failed before completing the request.',
+      retryable: true,
+    });
   }
 }

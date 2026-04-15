@@ -10,6 +10,7 @@ import { signOut, deleteAccount } from '../auth/auth-service';
 import { toast } from '../components/toast';
 import { renderTabs, initTabs, renderEmptyState, renderToggle } from '../components/ui-components';
 import { logSettingsChanged } from '../storage/activity-logger';
+import { safeHttpUrl } from '../utils/escape';
 
 export function accountsScreen() {
   const { userProfile, vault, settings, tier = 'free' } = getState();
@@ -63,8 +64,8 @@ export function accountsScreen() {
           </div>
           <div class="flex-1 flex justify-end">
             <button id="btn-user-badge" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-              <img src="${userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-              <span class="truncate max-w-[100px]">${userProfile?.name?.split(' ')[0] || 'User'}</span>
+              <img src="${escapeAttr(safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+              <span class="truncate max-w-[100px]">${escapeHtml(userProfile?.name?.split(' ')[0] || 'User')}</span>
               <span class="w-px h-4 bg-slate-300"></span>
               <span class="text-xs font-bold ${tier === 'free' ? 'text-slate-400' : 'text-primary'} uppercase tracking-tight">${tier === 'free' ? 'Free' : 'Pro'}</span>
             </button>
@@ -75,7 +76,7 @@ export function accountsScreen() {
           <!-- Profile Header -->
           <div class="flex items-center gap-6 p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
             <div class="size-20 rounded-[var(--fm-card-radius)] flex items-center justify-center text-3xl font-bold" style="background: var(--fm-gradient-primary); color: white;">
-              ${(userProfile.name || 'U').charAt(0).toUpperCase()}
+              ${escapeHtml((userProfile.name || 'U').charAt(0).toUpperCase())}
             </div>
             <div class="flex-1">
             <h3 class="text-xl font-bold" style="color: var(--fm-text);">${escapeHtml(userProfile.name || 'User')}</h3>
@@ -100,26 +101,26 @@ export function accountsScreen() {
               <div class="p-6 rounded-xl space-y-5" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Full Name</label>
+                    <label for="prof-name" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Full Name</label>
                     <input id="prof-name" type="text" value="${escapeAttr(userProfile.name)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
                   </div>
                   <div>
-                    <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Email</label>
+                    <label for="prof-email" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Email</label>
                     <input id="prof-email" type="email" value="${escapeAttr(userProfile.email)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
                   </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Phone</label>
+                    <label for="prof-phone" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Phone</label>
                     <input id="prof-phone" type="tel" value="${escapeAttr(userProfile.phone)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
                   </div>
                   <div>
-                    <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Occupation</label>
+                    <label for="prof-occupation" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Occupation</label>
                     <input id="prof-occupation" type="text" value="${escapeAttr(userProfile.occupation)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
                   </div>
                 </div>
                 <div>
-                  <label class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Bio</label>
+                  <label for="prof-bio" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Bio</label>
                   <textarea id="prof-bio" class="w-full min-h-[80px] px-4 py-3 rounded-xl text-sm resize-none" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);">${escapeHtml(userProfile.bio || '')}</textarea>
                 </div>
                 <button id="btn-save-profile" class="h-10 px-6 rounded-xl text-sm font-bold text-white btn-press" style="background: var(--fm-gradient-primary);">Save Changes</button>
@@ -146,7 +147,7 @@ export function accountsScreen() {
                         <p class="text-xs font-semibold" style="color: var(--fm-text-secondary);">${escapeHtml(key)}</p>
                         <p class="text-sm truncate" style="color: var(--fm-text);">${escapeHtml(String(value))}</p>
                       </div>
-                      <button class="vault-delete p-1 rounded hover:bg-red-50" data-key="${escapeAttr(key)}" style="color: var(--fm-text-tertiary);">
+                      <button class="vault-delete p-1 rounded hover:bg-red-50" data-key="${escapeAttr(key)}" aria-label="Delete ${escapeAttr(key)} from vault" title="Delete ${escapeAttr(key)} from vault" style="color: var(--fm-text-tertiary);">
                         <span class="material-symbols-outlined text-sm">delete</span>
                       </button>
                     </div>
@@ -250,7 +251,6 @@ export function accountsScreen() {
                   </div>
                   <div class="p-5 rounded-xl space-y-4" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
                     ${renderToggle('set-compact', { label: 'Compact Mode', description: 'Reduce spacing for denser layouts', checked: settings?.ui?.compactMode })}
-                    ${renderToggle('set-animations', { label: 'Animations', description: 'Enable smooth transitions and effects', checked: settings?.ui?.animationsEnabled })}
                     ${renderToggle('set-sidebar', { label: 'Show Sidebar by Default', checked: settings?.ui?.sidebarDefault })}
                     ${renderToggle('set-chat-panel', { label: 'Show Chat Panel by Default', checked: settings?.ui?.chatPanelDefault })}
                   </div>
@@ -455,7 +455,6 @@ export function accountsScreen() {
 
     const toggleMap = {
       'set-compact': 'ui.compactMode',
-      'set-animations': 'ui.animationsEnabled',
       'set-sidebar': 'ui.sidebarDefault',
       'set-chat-panel': 'ui.chatPanelDefault'
     };

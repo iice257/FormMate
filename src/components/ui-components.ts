@@ -121,10 +121,14 @@ export function renderToggle(id, { label = '', checked = false, description = ''
  */
 export function renderTabs(tabs, { activeTab = 0, id = 'tabs' } = {}) {
   return `
-    <div id="${id}" class="flex gap-1 p-1 rounded-xl" style="background: var(--fm-bg-sunken);">
+    <div id="${id}" class="flex gap-1 p-1 rounded-xl" style="background: var(--fm-bg-sunken);" role="tablist" aria-label="Tabs">
       ${tabs.map((tab, i) => `
-        <button class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${i === activeTab ? 'bg-white shadow-sm' : 'hover:bg-white/50'}"
+        <button type="button" class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${i === activeTab ? 'bg-white shadow-sm' : 'hover:bg-white/50'}"
                 data-tab-index="${i}" data-tab-group="${id}"
+                id="${id}-tab-${i}"
+                role="tab"
+                aria-selected="${i === activeTab ? 'true' : 'false'}"
+                tabindex="${i === activeTab ? '0' : '-1'}"
                 style="color: ${i === activeTab ? 'var(--fm-text)' : 'var(--fm-text-tertiary)'};">
           ${tab.icon ? `<span class="material-symbols-outlined text-sm mr-1.5">${tab.icon}</span>` : ''}${tab.label}
         </button>
@@ -137,23 +141,48 @@ export function renderTabs(tabs, { activeTab = 0, id = 'tabs' } = {}) {
  * Init tab switching behavior.
  */
 export function initTabs(wrapper, id, onChange) {
-  wrapper.querySelectorAll(`[data-tab-group="${id}"]`).forEach(btn => {
+  const tabs = Array.from(wrapper.querySelectorAll(`[data-tab-group="${id}"]`));
+  if (!tabs.length) return;
+
+  const setActiveTab = (activeIndex) => {
+    tabs.forEach((tab, index) => {
+      const isActive = index === activeIndex;
+      tab.classList.toggle('bg-white', isActive);
+      tab.classList.toggle('shadow-sm', isActive);
+      tab.classList.toggle('hover:bg-white/50', !isActive);
+      tab.style.color = isActive ? 'var(--fm-text)' : 'var(--fm-text-tertiary)';
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+  };
+
+  tabs.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const index = parseInt(btn.dataset.tabIndex);
-
-      // Update active state
-      wrapper.querySelectorAll(`[data-tab-group="${id}"]`).forEach(b => {
-        b.classList.remove('bg-white', 'shadow-sm');
-        b.classList.add('hover:bg-white/50');
-        b.style.color = 'var(--fm-text-tertiary)';
-      });
-      btn.classList.add('bg-white', 'shadow-sm');
-      btn.classList.remove('hover:bg-white/50');
-      btn.style.color = 'var(--fm-text)';
-
+      const index = parseInt(btn.dataset.tabIndex, 10);
+      setActiveTab(index);
       if (onChange) onChange(index);
     });
+
+    btn.addEventListener('keydown', (event) => {
+      const currentIndex = parseInt(btn.dataset.tabIndex, 10);
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        tabs[nextIndex]?.focus();
+        setActiveTab(nextIndex);
+        if (onChange) onChange(nextIndex);
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        tabs[prevIndex]?.focus();
+        setActiveTab(prevIndex);
+        if (onChange) onChange(prevIndex);
+      }
+    });
   });
+
+  const initialActiveIndex = Math.max(0, tabs.findIndex((tab) => tab.getAttribute('aria-selected') === 'true'));
+  setActiveTab(initialActiveIndex);
 }
 
 /**

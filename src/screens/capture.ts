@@ -1,11 +1,23 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
 import { toast } from '../components/toast';
 import { capturedPayloadToFormData } from '../parser/capture-parser';
 
+const MAX_SCREENSHOTS = 6;
+const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+
 function randomToken() {
   return `cap_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function buildBookmarklet(appOrigin, token) {
@@ -112,7 +124,7 @@ function buildBookmarklet(appOrigin, token) {
     var tries=0;
     var timer=setInterval(function(){
       tries++;
-      try { w.postMessage(msg, '*'); } catch(e){ /* ignore */ }
+      try { w.postMessage(msg, APP_ORIGIN); } catch(e){ /* ignore */ }
       if(tries>30) clearInterval(timer);
     }, 300);
   } catch (e) {
@@ -151,7 +163,7 @@ export function captureScreen() {
         </button>
       </header>
 
-      <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-12 md:py-16 animate-screen-enter">
+      <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-12 md:py-16">
         <div class="mb-10 text-center max-w-2xl mx-auto space-y-4">
           <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-widest rounded-full border border-primary/20">
             <span class="material-symbols-outlined text-[14px]">bookmark</span>
@@ -204,11 +216,23 @@ export function captureScreen() {
         </div>
 
         <section class="mt-8 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <h2 class="text-lg font-bold text-slate-900 mb-2">3) Screenshot fallback (no bookmarklet needed)</h2>
+          <p class="text-sm text-slate-500 leading-relaxed mb-4">
+            Upload screenshots when the form can only be read visually. We&apos;ll extract visible fields and continue analysis.
+          </p>
+          <input id="screenshot-input" type="file" accept="image/*" multiple class="block w-full rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800" />
+          <div id="screenshot-status" class="mt-3 text-xs text-slate-500">No screenshots selected yet.</div>
+          <div class="flex items-center justify-end gap-3 mt-4">
+            <button id="btn-import-screenshots" class="px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-sm btn-press">Analyze screenshots</button>
+          </div>
+        </section>
+
+        <section class="mt-8 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
           <h2 class="text-lg font-bold text-slate-900 mb-2">Popup blocked? Paste payload instead</h2>
           <p class="text-sm text-slate-500 leading-relaxed mb-4">
             If the bookmarklet couldn’t open this page, it will show you a JSON payload. Paste it below.
           </p>
-          <textarea id="payload-input" class="w-full min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary p-4 text-xs font-mono text-slate-800 outline-none" placeholder='{"type":"FORMMATE_CAPTURE_V1", ...}'></textarea>
+          <textarea id="payload-input" aria-label="Paste FormMate capture payload JSON" class="w-full min-h-[140px] rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary p-4 text-xs font-mono text-slate-800 outline-none" placeholder='{"type":"FORMMATE_CAPTURE_V1", ...}'></textarea>
           <div class="flex items-center justify-end gap-3 mt-4">
             <button id="btn-import-payload" class="px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-sm btn-press">Import</button>
           </div>
@@ -223,6 +247,10 @@ export function captureScreen() {
     const btnCopy = wrapper.querySelector('#btn-copy-bookmarklet');
     const payloadInput = wrapper.querySelector('#payload-input');
     const btnImport = wrapper.querySelector('#btn-import-payload');
+    const screenshotInput = wrapper.querySelector('#screenshot-input');
+    const screenshotStatus = wrapper.querySelector('#screenshot-status');
+    const btnImportScreenshots = wrapper.querySelector('#btn-import-screenshots');
+    let screenshotArtifacts = [];
 
     wrapper.querySelector('#btn-back')?.addEventListener('click', () => history.back());
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo(authed ? 'dashboard' : 'landing'));
@@ -236,10 +264,20 @@ export function captureScreen() {
       }
     });
 
-    function handleMessage(data) {
+    function isExpectedOrigin(eventOrigin, payloadPageUrl) {
+      if (!eventOrigin || typeof eventOrigin !== 'string' || !eventOrigin.startsWith('http')) return false;
+      try {
+        return new URL(String(payloadPageUrl || '')).origin === eventOrigin;
+      } catch {
+        return false;
+      }
+    }
+
+    function handleMessage(data, eventOrigin, allowOriginless = false) {
       if (!data || typeof data !== 'object') return;
       if (data.type !== 'FORMMATE_CAPTURE_V1') return;
       if (String(data.token || '').trim() !== token) return;
+      if (!allowOriginless && !isExpectedOrigin(eventOrigin, data.payload?.pageUrl)) return;
 
       const payload = data.payload;
       try {
@@ -250,7 +288,8 @@ export function captureScreen() {
 
         setState({
           formUrl: formData.url || payload?.pageUrl || '',
-          capturePayload: payload
+          capturePayload: payload,
+          imageArtifacts: null,
         });
 
         statusEl.textContent = `Received ${formData.questions.length} fields. Importing…`;
@@ -263,7 +302,7 @@ export function captureScreen() {
     }
 
     const onMsg = (event) => {
-      handleMessage(event?.data);
+      handleMessage(event?.data, event?.origin);
     };
     window.addEventListener('message', onMsg);
 
@@ -276,7 +315,62 @@ export function captureScreen() {
       } catch {
         return toast.error('Invalid JSON.');
       }
-      handleMessage(data);
+      handleMessage(data, window.location.origin, true);
+    });
+
+    screenshotInput?.addEventListener('change', async () => {
+      const files = Array.from(screenshotInput.files || []);
+      if (!files.length) {
+        screenshotArtifacts = [];
+        if (screenshotStatus) screenshotStatus.textContent = 'No screenshots selected yet.';
+        return;
+      }
+
+      const selected = files.slice(0, MAX_SCREENSHOTS);
+      const oversized = selected.filter((file) => file.size > MAX_SCREENSHOT_BYTES);
+      if (oversized.length > 0) {
+        toast.error(`Some screenshots are too large. Max size is ${Math.floor(MAX_SCREENSHOT_BYTES / (1024 * 1024))}MB per image.`);
+      }
+
+      const valid = selected.filter((file) =>
+        String(file.type || '').startsWith('image/') && file.size <= MAX_SCREENSHOT_BYTES
+      );
+      if (!valid.length) {
+        screenshotArtifacts = [];
+        if (screenshotStatus) screenshotStatus.textContent = 'No valid screenshots selected. Use image files only.';
+        return;
+      }
+
+      if (screenshotStatus) screenshotStatus.textContent = 'Preparing screenshots...';
+      try {
+        const artifacts = [];
+        for (const file of valid) {
+          artifacts.push(await fileToDataUrl(file));
+        }
+        screenshotArtifacts = artifacts.filter(Boolean);
+        if (screenshotStatus) {
+          screenshotStatus.textContent = `${screenshotArtifacts.length} screenshot(s) ready for analysis.`;
+        }
+      } catch (error) {
+        screenshotArtifacts = [];
+        if (screenshotStatus) screenshotStatus.textContent = 'Could not prepare screenshots.';
+        toast.error(error?.message || 'Screenshot processing failed.');
+      }
+    });
+
+    btnImportScreenshots?.addEventListener('click', () => {
+      if (!screenshotArtifacts.length) {
+        toast.error('Select at least one screenshot first.');
+        return;
+      }
+
+      setState({
+        capturePayload: null,
+        imageArtifacts: screenshotArtifacts,
+      });
+
+      toast.success(`Queued ${screenshotArtifacts.length} screenshot(s) for parsing.`);
+      navigateTo('analyzing');
     });
 
     return () => {
@@ -286,3 +380,4 @@ export function captureScreen() {
 
   return { html, init };
 }
+

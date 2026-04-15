@@ -1,21 +1,29 @@
 // @ts-nocheck
-import { save, load, remove } from '../storage/local-store';
+import { save, load, remove, saveProfile, saveSettings, saveVault, getDefaultSettings } from '../storage/local-store';
 import { ensureAccountData, deleteRemoteUserData, hydrateFromRemote, isSupabaseStorageConfigured } from '../storage/storage-provider';
 import { getAuthRedirectUrl, getSupabaseClient, isSupabaseConfigured } from './supabase-client';
 
 const AUTH_KEY = 'auth_session';
-const DEV_TEST_PASSWORD = 'password';
+const DEV_TEST_USERS = [
+  {
+    id: 'dev-admin',
+    email: 'dev@formmate.test',
+    password: 'password',
+    name: 'Dev Admin',
+    tier: 'monthly',
+  },
+];
 const DEV_SESSION = {
   user: {
     id: 'dev_user_admin',
-    email: 'dev@formmate.ai',
-    name: 'Dev Admin',
+    email: DEV_TEST_USERS[0].email,
+    name: DEV_TEST_USERS[0].name,
     provider: 'email',
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent('Dev Admin')}&background=2298da&color=fff&bold=true`,
-    tier: 'monthly',
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(DEV_TEST_USERS[0].name)}&background=2298da&color=fff&bold=true`,
+    tier: DEV_TEST_USERS[0].tier,
   },
   isAuthenticated: true,
-  tier: 'monthly',
+  tier: DEV_TEST_USERS[0].tier,
   provider: 'email',
   access_token: 'dev-access-token',
   refresh_token: 'dev-refresh-token',
@@ -28,9 +36,77 @@ const DEV_SESSION = {
 
 const authListeners = new Set();
 let authBootstrapStarted = false;
+let inMemorySession = null;
 
 function isBrowser() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+function getSessionStorage() {
+  if (!isBrowser() || typeof window.sessionStorage === 'undefined') return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readStoredSession() {
+  if (!isBrowser()) return inMemorySession;
+
+  const sessionStorageRef = getSessionStorage();
+  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+
+  if (sessionStorageRef) {
+    try {
+      const raw = sessionStorageRef.getItem(sessionStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        inMemorySession = parsed?.value ?? parsed ?? null;
+        return inMemorySession;
+      }
+    } catch (error) {
+      console.warn('[Auth] Failed to parse session storage cache:', error);
+      sessionStorageRef.removeItem(sessionStorageKey);
+    }
+  }
+
+  const legacySession = load(AUTH_KEY);
+  if (legacySession) {
+    writeStoredSession(legacySession);
+    remove(AUTH_KEY);
+    return legacySession;
+  }
+
+  return inMemorySession;
+}
+
+function writeStoredSession(session) {
+  inMemorySession = session || null;
+
+  if (!isBrowser()) return;
+
+  const sessionStorageRef = getSessionStorage();
+  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+
+  if (sessionStorageRef) {
+    try {
+      if (!session) {
+        sessionStorageRef.removeItem(sessionStorageKey);
+      } else {
+        sessionStorageRef.setItem(sessionStorageKey, JSON.stringify({
+          value: session,
+          timestamp: Date.now(),
+          ttl: null,
+        }));
+      }
+      return;
+    } catch (error) {
+      console.warn('[Auth] Failed to write session storage cache:', error);
+    }
+  }
+
+  remove(AUTH_KEY);
 }
 
 export function isDevAuthEnabled() {
@@ -40,14 +116,16 @@ export function isDevAuthEnabled() {
 
 export function getDevTestUsers() {
   if (!isDevAuthEnabled()) return [];
-  return [
-    { email: 'dev', name: 'Dev Admin', tier: 'monthly' }
-  ];
+  return DEV_TEST_USERS.map(({ id, email, name, tier }) => ({
+    id,
+    email,
+    name,
+    tier,
+  }));
 }
 
 export function getSession() {
-  if (!isBrowser()) return null;
-  return load(AUTH_KEY);
+  return readStoredSession();
 }
 
 export function isAuthenticated() {
@@ -59,6 +137,21 @@ export function getCurrentUser() {
   return getSession()?.user || null;
 }
 
+export function getRequestAuthHeaders() {
+  const session = getSession();
+  const headers = {};
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  if (session?.devOnly && isDevAuthEnabled()) {
+    headers['X-FormMate-Dev-Auth'] = '1';
+  }
+
+  return headers;
+}
+
 export function onAuthStateChange(fn) {
   authListeners.add(fn);
   fn(getSession());
@@ -67,6 +160,23 @@ export function onAuthStateChange(fn) {
 
 function notifyListeners(session) {
   authListeners.forEach((fn) => fn(session));
+}
+
+function clearLocalAccountCache() {
+  saveProfile({
+    name: '',
+    email: '',
+    phone: '',
+    occupation: '',
+    bio: '',
+    experience: '',
+    avatar: '',
+    preferredTone: 'professional',
+    commonInfo: {},
+  });
+  saveSettings(getDefaultSettings());
+  saveVault({});
+  save('form_history', []);
 }
 
 function normalizeSession(session) {
@@ -124,15 +234,14 @@ async function hydrateAccountData(session, { seedIfMissing = true } = {}) {
 }
 
 function storeSession(session) {
-  if (!isBrowser()) return session;
   if (!session) {
-    remove(AUTH_KEY);
+    writeStoredSession(null);
     notifyListeners(null);
     return null;
   }
 
   const normalized = normalizeSession(session);
-  save(AUTH_KEY, normalized);
+  writeStoredSession(normalized);
   notifyListeners(normalized);
   return normalized;
 }
@@ -275,11 +384,9 @@ export async function signIn(email, password) {
 
   await delay(200);
 
-  if (isDevAuthEnabled() && email === 'dev' && password === 'dev') {
-    const session = { ...DEV_SESSION, createdAt: Date.now() };
-    storeSession(session);
-    await hydrateAccountData(session, { seedIfMissing: true });
-    return session;
+  const devUser = resolveDevTestUser(email, password);
+  if (devUser) {
+    return signInWithDevTestUser(devUser.id);
   }
 
   const client = getClientOrThrow();
@@ -313,13 +420,44 @@ export async function signInWithGoogle() {
   return new Promise(() => {});
 }
 
+export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id) {
+  if (!isDevAuthEnabled()) {
+    throw authError('Dev test access is only available in local development.', 'DEV_AUTH_DISABLED');
+  }
+
+  const devUser = DEV_TEST_USERS.find((user) => user.id === userId);
+  if (!devUser) {
+    throw authError('The selected dev test user is unavailable.', 'DEV_TEST_USER_MISSING');
+  }
+
+  await delay(150);
+
+  const session = normalizeSession({
+    ...DEV_SESSION,
+    createdAt: Date.now(),
+    tier: devUser.tier,
+    user: {
+      ...DEV_SESSION.user,
+      email: devUser.email,
+      name: devUser.name,
+      tier: devUser.tier,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(devUser.name)}&background=2298da&color=fff&bold=true`,
+    },
+  });
+
+  storeSession(session);
+  await hydrateAccountData(session, { seedIfMissing: true });
+  return session;
+}
+
 export async function signInWithApple() {
   throw authError('Apple sign-in is not supported in this release.', 'APPLE_UNSUPPORTED');
 }
 
 export async function signOut() {
   const session = getSession();
-  remove(AUTH_KEY);
+  writeStoredSession(null);
+  clearLocalAccountCache();
   notifyListeners(null);
 
   const client = getSupabaseClient();
@@ -383,6 +521,7 @@ export async function deleteAccount() {
   }
 
   remove(AUTH_KEY);
+  clearLocalAccountCache();
   notifyListeners(null);
 }
 
@@ -414,4 +553,12 @@ export async function ensureSignedInAccountData() {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function resolveDevTestUser(email, password) {
+  if (!isDevAuthEnabled()) return null;
+
+  return DEV_TEST_USERS.find((user) => {
+    return user.email.toLowerCase() === String(email || '').trim().toLowerCase() && user.password === password;
+  }) || null;
 }

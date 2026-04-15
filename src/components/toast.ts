@@ -19,6 +19,10 @@ function ensureContainer() {
 
   toastContainer = document.createElement('div');
   toastContainer.id = 'fm-toast-container';
+  toastContainer.setAttribute('role', 'region');
+  toastContainer.setAttribute('aria-label', 'Notifications');
+  toastContainer.setAttribute('aria-live', 'polite');
+  toastContainer.setAttribute('aria-atomic', 'true');
   toastContainer.style.cssText = `
     position: fixed;
     top: var(--fm-space-6, 1.5rem);
@@ -61,6 +65,9 @@ export function showToast(message, type = 'info', duration = 3500) {
   const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
 
   const toast = document.createElement('div');
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.setAttribute('aria-atomic', 'true');
   toast.style.cssText = `
     display: flex;
     align-items: center;
@@ -74,7 +81,7 @@ export function showToast(message, type = 'info', duration = 3500) {
     pointer-events: auto;
     transform: translateX(120%);
     opacity: 0;
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     font-family: var(--fm-font-sans);
     max-width: 100%;
   `;
@@ -83,7 +90,7 @@ export function showToast(message, type = 'info', duration = 3500) {
   toast.innerHTML = `
     <span class="material-symbols-outlined" style="color: ${colors.text}; font-size: 1.25rem; flex-shrink: 0;">${icon}</span>
     <span style="color: var(--fm-text, #0f172a); font-size: 0.8125rem; font-weight: 500; line-height: 1.4; flex: 1;">${safeMessage}</span>
-    <button style="color: var(--fm-text-tertiary); cursor: pointer; background: none; border: none; padding: 0.25rem; flex-shrink: 0; display: flex; border-radius: 0.375rem;" class="toast-close">
+    <button type="button" aria-label="Dismiss notification" style="color: var(--fm-text-tertiary); cursor: pointer; background: none; border: none; padding: 0.25rem; flex-shrink: 0; display: flex; border-radius: 0.375rem;" class="toast-close">
       <span class="material-symbols-outlined" style="font-size: 1rem;">close</span>
     </button>
   `;

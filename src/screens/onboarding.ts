@@ -174,9 +174,9 @@ export function onboardingScreen() {
       });
 
       // Update vault with common info
-      if (name) updateVault('Full Name', name);
-      if (email) updateVault('Email Address', email);
-      if (phone) updateVault('Phone Number', phone);
+      if (name) updateVault('fullName', name);
+      if (email) updateVault('email', email);
+      if (phone) updateVault('phone', phone);
 
       // Update settings
       const settings = { ...getState().settings };

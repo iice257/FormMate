@@ -13,15 +13,26 @@ import {
   loadVault, saveVault,
   loadFormHistory,
   isOnboardingComplete,
-  load, save
+  load, save, remove
 } from './storage/local-store';
 
-import { queueRemoteSync } from './storage/storage-provider';
+import { queueRemoteSync, shouldPersistLocalAccountCache } from './storage/storage-provider';
 
 // ─── Event Bus ───────────────────────────
 
 const listeners = new Set();
 const eventListeners = new Map(); // event-name → Set<fn>
+let answerPersistTimer = null;
+
+function hasAnswerText(answer) {
+  return Boolean(String(answer?.text ?? '').trim());
+}
+
+function countAnsweredEntries(answers) {
+  return Object.values(answers || {}).reduce((count, answer) => count + (hasAnswerText(answer) ? 1 : 0), 0);
+}
+
+const initialAnswers = load('answers_state') || {};
 
 // ─── State ───────────────────────────────
 
@@ -31,12 +42,15 @@ const state = {
 
   // Assisted Capture payload (bookmarklet import)
   capturePayload: null,
+  imageArtifacts: null,
 
   // Form data from parser
+  parseResult: load('parse_result_state') || null,
   formData: load('form_data_state') || null,
 
   // AI-generated answers: { [questionId]: { text, source, confidence } }
-  answers: load('answers_state') || {},
+  answers: initialAnswers,
+  answeredCount: countAnsweredEntries(initialAnswers),
 
   // Answer history for undo/redo: { [questionId]: [{ text, source, confidence }] }
   answerHistory: load('answer_history') || {},
@@ -100,7 +114,8 @@ export function setState(updates) {
 
   // Auto-persist certain keys
   if (updates.userProfile) {
-    saveProfile(updates.userProfile);
+    if (shouldPersistLocalAccountCache(state.authUser)) saveProfile(updates.userProfile);
+    else remove('user_profile');
     queueRemoteSync(state.authUser, { profile: updates.userProfile });
   }
   if (updates.settings) {
@@ -108,22 +123,54 @@ export function setState(updates) {
     queueRemoteSync(state.authUser, { settings: updates.settings });
   }
   if (updates.vault) {
-    saveVault(updates.vault);
+    if (shouldPersistLocalAccountCache(state.authUser)) saveVault(updates.vault);
+    else remove('user_vault');
     queueRemoteSync(state.authUser, { vault: updates.vault });
   }
   if (updates.formHistory) {
-    save('form_history', updates.formHistory);
+    if (shouldPersistLocalAccountCache(state.authUser)) save('form_history', updates.formHistory);
+    else remove('form_history');
     queueRemoteSync(state.authUser, { form_history: updates.formHistory });
   }
-  if (updates.formData) save('form_data_state', updates.formData);
+  if (Object.prototype.hasOwnProperty.call(updates, 'parseResult')) {
+    if (updates.parseResult == null) remove('parse_result_state');
+    else save('parse_result_state', updates.parseResult);
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'formData')) {
+    if (updates.formData == null) remove('form_data_state');
+    else save('form_data_state', updates.formData);
+  }
+  if (updates.answers && !Object.prototype.hasOwnProperty.call(updates, 'answeredCount')) {
+    state.answeredCount = countAnsweredEntries(updates.answers);
+  }
 
   listeners.forEach(fn => fn(state));
+}
+
+function persistAnswerState() {
+  save('answers_state', state.answers);
+  save('answer_history', state.answerHistory);
+  save('answer_history_index', state.answerHistoryIndex);
+}
+
+function scheduleAnswerPersistence() {
+  if (answerPersistTimer) {
+    clearTimeout(answerPersistTimer);
+  }
+
+  answerPersistTimer = setTimeout(() => {
+    answerPersistTimer = null;
+    persistAnswerState();
+  }, 180);
 }
 
 // ─── Answer Management ──────────────────
 
 export function updateAnswer(questionId, text, source = 'user') {
   const answer = { text, source, confidence: source === 'ai' ? 0.9 : 1 };
+  const previousAnswer = state.answers[questionId];
+  const wasAnswered = hasAnswerText(previousAnswer);
+  const isAnsweredNow = hasAnswerText(answer);
 
   // Push to history for undo
   if (!state.answerHistory[questionId]) {
@@ -151,10 +198,11 @@ export function updateAnswer(questionId, text, source = 'user') {
     ...state.answers,
     [questionId]: answer,
   };
+  if (wasAnswered !== isAnsweredNow) {
+    state.answeredCount += isAnsweredNow ? 1 : -1;
+  }
 
-  save('answers_state', state.answers);
-  save('answer_history', state.answerHistory);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
 }
@@ -164,12 +212,17 @@ export function undoAnswer(questionId) {
   const idx = state.answerHistoryIndex[questionId];
   if (!history || idx <= 0) return null;
 
+  const previousAnswer = state.answers[questionId];
   state.answerHistoryIndex[questionId] = idx - 1;
   const prev = history[idx - 1];
   state.answers = { ...state.answers, [questionId]: { ...prev } };
+  const wasAnswered = hasAnswerText(previousAnswer);
+  const isAnsweredNow = hasAnswerText(prev);
+  if (wasAnswered !== isAnsweredNow) {
+    state.answeredCount += isAnsweredNow ? 1 : -1;
+  }
 
-  save('answers_state', state.answers);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
   return prev;
@@ -180,12 +233,17 @@ export function redoAnswer(questionId) {
   const idx = state.answerHistoryIndex[questionId];
   if (!history || idx >= history.length - 1) return null;
 
+  const previousAnswer = state.answers[questionId];
   state.answerHistoryIndex[questionId] = idx + 1;
   const next = history[idx + 1];
   state.answers = { ...state.answers, [questionId]: { ...next } };
+  const wasAnswered = hasAnswerText(previousAnswer);
+  const isAnsweredNow = hasAnswerText(next);
+  if (wasAnswered !== isAnsweredNow) {
+    state.answeredCount += isAnsweredNow ? 1 : -1;
+  }
 
-  save('answers_state', state.answers);
-  save('answer_history_index', state.answerHistoryIndex);
+  scheduleAnswerPersistence();
 
   listeners.forEach(fn => fn(state));
   return next;

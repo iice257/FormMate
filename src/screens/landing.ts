@@ -1,11 +1,10 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Landing Screen
-// ═══════════════════════════════════════════
+// FormMate - Landing Screen
+
 
 import { setState, getState } from '../state';
 import { getDashboardActionScreenForUser, getFormsEntryScreenForUser, navigateTo } from '../router';
-import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { openAccountModal } from '../components/layout';
 
@@ -20,7 +19,7 @@ export function landingScreen() {
 
   const authButtonHtml = isAuthenticated
     ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <img src="${escapeAttr(avatarSrc)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
          <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
@@ -54,7 +53,7 @@ export function landingScreen() {
 
         <main class="flex-1 flex flex-col items-center px-6 pt-24 pb-16 md:pt-40 z-10">
           <!-- Hero Section -->
-          <div class="max-w-[800px] w-full text-center space-y-6 animate-screen-enter">
+          <div class="max-w-[800px] w-full text-center space-y-6">
             <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
               <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
               Form Copilot
@@ -200,7 +199,7 @@ export function landingScreen() {
             </div>
           </div>
 
-          <!-- ═══ Section: Why is paperwork still so hard? ═══ -->
+          <!-- Section: Why is paperwork still so hard? -->
           <section class="max-w-[960px] w-full mt-28 text-center">
             <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Why is paperwork still so hard?</h2>
             <p class="text-slate-400 text-sm max-w-lg mx-auto mb-12">We've spent thousands of hours analyzing the friction of data entry. Here is what we're fixing.</p>
@@ -230,7 +229,7 @@ export function landingScreen() {
             </div>
           </section>
 
-          <!-- ═══ Section: One click, zero typing ═══ -->
+          <!-- Section: One click, zero typing -->
           <section class="max-w-[960px] w-full mt-28">
             <div class="flex flex-col md:flex-row gap-12 items-center">
               <!-- Left: Steps -->
@@ -256,7 +255,7 @@ export function landingScreen() {
                     <div class="size-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
                     <div>
                       <h4 class="font-bold text-slate-900 text-sm">Answers Appear</h4>
-                      <p class="text-slate-500 text-sm leading-relaxed">Fields populate instantly — just review and submit.</p>
+                      <p class="text-slate-500 text-sm leading-relaxed">Fields populate instantly - just review and submit.</p>
                     </div>
                   </div>
                 </div>
@@ -304,7 +303,7 @@ export function landingScreen() {
             </div>
           </section>
 
-          <!-- ═══ Section: Feature Showpieces ═══ -->
+          <!-- Section: Feature Showpieces -->
           <section class="max-w-[960px] w-full mt-28">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Contextual AI Answer Gen -->
@@ -356,7 +355,7 @@ export function landingScreen() {
             </div>
           </section>
 
-          <!-- ═══ Section: Built for every application ═══ -->
+          <!-- Section: Built for every application -->
           <section class="max-w-[960px] w-full mt-28 text-center">
             <div class="mb-12">
               <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Built for every application</h2>
@@ -391,7 +390,7 @@ export function landingScreen() {
             </div>
           </section>
 
-          <!-- ═══ Section: Testimonials ═══ -->
+          <!-- Section: Testimonials -->
           <section class="max-w-[1000px] w-full mt-28 mx-auto text-center flex flex-col items-center">
             <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-4">Loved by <span class="text-primary font-cursive">thousands</span></h2>
             <p class="text-slate-500 text-lg mb-12">What people are saying</p>
@@ -409,7 +408,7 @@ export function landingScreen() {
             </button>
           </section>
 
-          <!-- ═══ Section: CTA Banner ═══ -->
+          <!-- Section: CTA Banner -->
           <section class="max-w-[960px] w-full mt-20 mb-16">
             <div class="bg-slate-900 rounded-3xl p-12 md:p-16 text-center">
               <h2 class="text-white text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-3">
@@ -446,7 +445,7 @@ export function landingScreen() {
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0" id="btn-footer-help">Help Center</button>
             </div>
             
-            <div class="text-xs text-slate-400 shrink-0">© 2026 FormMate</div>
+            <div class="text-xs text-slate-400 shrink-0">(c) 2026 FormMate</div>
           </div>
         </footer>
 
@@ -476,7 +475,7 @@ export function landingScreen() {
       try {
         const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
         urlInput.value = url;
-        setState({ formUrl: url });
+        setState({ formUrl: url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       } catch (e) {
         triggerError(e?.message || 'Invalid URL format');
@@ -511,7 +510,7 @@ export function landingScreen() {
           'scholarship': 'demo://scholarship'
         };
         urlInput.value = urls[demoType] || urls['customer-feedback'];
-        setState({ formUrl: urlInput.value });
+        setState({ formUrl: urlInput.value, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       });
     });
@@ -555,13 +554,13 @@ export function landingScreen() {
     const testimonialsList = [
       { quote: "I applied to 14 product design roles in one weekend using FormMate. Each cover letter was tailored to the company's specific stack. My callback rate went from 12% to nearly 40%.", author: "James Peterson", role: "Procurement Analyst, Deloitte" },
       { quote: "The AI correctly auto-filled my 6 years of Python and Go experience across three different ATS formats without me editing a single line. That alone justified the subscription.", author: "Aisha Patel", role: "Software Engineer, Stripe" },
-      { quote: "I process about 30 new patient intake forms per week. FormMate helps my admin staff pre-populate medical histories so patients only need to verify — saves roughly 2 hours daily.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
-      { quote: "Our team used FormMate to fill out Michigan's annual compliance renewal — 47 fields across 5 pages. It pulled our EIN, DUNS number, and officer details from the vault perfectly.", author: "Sarah Jenkins", role: "Operations Lead, Acme Corp" },
+      { quote: "I process about 30 new patient intake forms per week. FormMate helps my admin staff pre-populate medical histories so patients only need to verify - saves roughly 2 hours daily.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
+      { quote: "Our team used FormMate to fill out Michigan's annual compliance renewal - 47 fields across 5 pages. It pulled our EIN, DUNS number, and officer details from the vault perfectly.", author: "Sarah Jenkins", role: "Operations Lead, Acme Corp" },
       { quote: "I was skeptical because every autofill tool I've tried breaks on Workday's custom iframes. FormMate actually parsed the nested fields and suggested accurate answers for each one.", author: "David Reyes", role: "B2B Sales Executive, HubSpot" },
       { quote: "As a solo consultant, I answer the same 20 vendor security questionnaire items for every new client. FormMate stores my SOC 2 responses and adapts them per client's specific language.", author: "Chloe O'Brian", role: "Independent Security Consultant" },
       { quote: "I used the voice input feature to dictate answers to a Schengen visa application while cooking dinner. It transcribed and formatted everything, including my travel itinerary dates.", author: "Rafael Dominguez", role: "Freelance Photographer" },
       { quote: "Our HR team rolled this out for the entire recruiting department. We process 200+ Greenhouse applications a month, and FormMate cut our average time-per-form from 18 minutes to under 4.", author: "Nina Kowalski", role: "Head of Talent Acquisition, Figma" },
-      { quote: "I'm a grad student applying to 8 PhD programs simultaneously. FormMate adapted my research statement for each university's specific word count and prompt requirements. Lifesaver.", author: "Tomás Herrera", role: "PhD Candidate, MIT" },
+      { quote: "I'm a grad student applying to 8 PhD programs simultaneously. FormMate adapted my research statement for each university's specific word count and prompt requirements. Lifesaver.", author: "Tomas Herrera", role: "PhD Candidate, MIT" },
       { quote: "The Copilot suggested I reframe my teaching experience as 'curriculum design and stakeholder engagement' on a product manager application. I got the interview.", author: "Priya Chandrasekar", role: "Career Switcher, Ex-Teacher" },
       { quote: "We handle insurance claims that require 60+ fields of vehicle and driver data. FormMate's vault remembered all of it after the first claim. Now renewals take 90 seconds.", author: "Greg Halloran", role: "Claims Adjuster, State Farm" },
       { quote: "I run a small nonprofit and we fill out about a dozen grant applications per quarter. FormMate keeps our mission statement, budget summaries, and board details perfectly organized.", author: "Amara Osei", role: "Executive Director, Bright Futures Foundation" }

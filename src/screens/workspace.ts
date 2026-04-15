@@ -1,7 +1,6 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Main Workspace Screen (Redesigned)
-// ═══════════════════════════════════════════
+// FormMate - Main Workspace Screen
+
 
 import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo } from '../state';
 import { navigateTo } from '../router';
@@ -12,7 +11,18 @@ import { categorizeField } from '../ai/field-classifier';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import { escapeHtml } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 
+let sortableModulePromise = null;
+
+async function loadSortable() {
+  if (!sortableModulePromise) {
+    sortableModulePromise = import('sortablejs').then((module) => module.default || module);
+  }
+
+  return sortableModulePromise;
+}
 function syncWorkspaceZenPanel(enabled, wrapper) {
   const rightPanel = wrapper.querySelector('#right-panel');
   const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
@@ -26,8 +36,43 @@ function syncWorkspaceZenPanel(enabled, wrapper) {
   rightPanel.classList.toggle('zen-actions-active', enabled && activePanel === 'actions');
 }
 
+function formatFileMetadata(file) {
+  if (!file) return '';
+  const size = file.size >= 1024 * 1024
+    ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+  const type = file.type ? file.type : 'unknown type';
+  return `${file.name} - ${size} - ${type}`;
+}
+
+function buildChatAvatar(icon, background) {
+  const avatar = document.createElement('div');
+  avatar.style.cssText = `width: 24px; height: 24px; border-radius: 50%; background: ${background}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;`;
+
+  const iconEl = document.createElement('span');
+  iconEl.className = 'material-symbols-outlined';
+  iconEl.style.cssText = 'font-size: 14px; color: #fff;';
+  iconEl.textContent = icon;
+  avatar.appendChild(iconEl);
+  return avatar;
+}
+
+function buildTypingIndicator() {
+  const indicator = document.createElement('div');
+  indicator.style.cssText = 'background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;';
+
+  for (let index = 0; index < 3; index += 1) {
+    const dot = document.createElement('div');
+    dot.className = 'typing-dot';
+    dot.style.cssText = `width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;${index > 0 ? ` animation-delay: ${index * 0.2}s;` : ''}`;
+    indicator.appendChild(dot);
+  }
+
+  return indicator;
+}
+
 export function workspaceScreen() {
-  const { formData, answers, tier } = getState();
+  const { formData, answers, tier, aiDiagnostics } = getState();
 
   if (!formData) {
     navigateTo('landing');
@@ -47,31 +92,34 @@ export function workspaceScreen() {
     });
   }
 
-  const answeredCount = Object.keys(answers).filter(k => answers[k]?.text).length;
+  const answeredCount = getState().answeredCount;
   const totalQ = formData.questions.length;
 
   const questionsHtml = formData.questions.map((q, i) =>
     renderQuestionCard(q, answers[q.id], i)
   ).join('');
+  const aiDiagnosticsBanner = renderAiDiagnosticsBanner(aiDiagnostics);
 
   const workspaceContent = `
     <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
       <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll">
-        <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
+          <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
           
           <!-- Breadcrumb & Actions Bar -->
           <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
             <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
-              <span style="font-size: 0.65rem; color: #cbd5e1;">›</span>
+              <span style="font-size: 0.65rem; color: #cbd5e1;">&gt;</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">● <span id="answered-count">${answeredCount}</span> / ${totalQ} answered</span>
+              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
               <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
             </div>
           </div>
+
+          ${aiDiagnosticsBanner}
 
           <h1 class="workspace-title" style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
 
@@ -105,13 +153,13 @@ export function workspaceScreen() {
       <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
         
         <!-- Panel Toggle Tabs -->
-        <div class="workspace-zen-panel-tabs" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
-          <button id="toggle-ai-chat" class="panel-toggle-btn active" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
-          <button id="toggle-ai-actions" class="panel-toggle-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
+        <div class="workspace-zen-panel-tabs" role="tablist" aria-label="Workspace AI panels" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
+          <button id="toggle-ai-chat" type="button" class="panel-toggle-btn active" role="tab" aria-selected="true" aria-controls="ai-chat-panel" tabindex="0" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: var(--fm-primary); border-bottom: 2px solid var(--fm-primary);">AI Chat</button>
+          <button id="toggle-ai-actions" type="button" class="panel-toggle-btn" role="tab" aria-selected="false" aria-controls="ai-actions-panel" tabindex="-1" style="flex: 1; padding: 0.75rem; border: none; background: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent;">AI Actions</button>
         </div>
 
         <!-- AI Chat Panel -->
-        <div id="ai-chat-panel" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+        <div id="ai-chat-panel" role="tabpanel" aria-labelledby="toggle-ai-chat" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
           <div style="padding: 1rem; border-bottom: 1px solid var(--fm-border-light); display: flex; align-items: center; gap: 0.5rem;">
             <img src="https://ui-avatars.com/api/?name=AI&background=14919b&color=fff&bold=true&size=32" style="width: 32px; height: 32px; border-radius: 50%;" alt="Copilot" />
             <div>
@@ -138,16 +186,16 @@ export function workspaceScreen() {
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
                 </button>
-                <button style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button type="button" aria-label="Open files" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">folder</span>
                 </button>
               </div>
               <div style="flex: 1; position: relative;">
-                <input type="text" id="chat-input" placeholder="Ask Copilot anything..." style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
-                <button id="btn-send-chat" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <input type="text" id="chat-input" placeholder="Ask Copilot anything..." aria-label="Ask Copilot anything" style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
+                <button id="btn-send-chat" type="button" aria-label="Send chat message" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
                 </button>
               </div>
@@ -157,7 +205,7 @@ export function workspaceScreen() {
         </div>
 
         <!-- AI Actions Panel (hidden by default) -->
-        <div id="ai-actions-panel" class="no-scrollbar" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
+        <div id="ai-actions-panel" class="no-scrollbar" role="tabpanel" aria-labelledby="toggle-ai-actions" hidden style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem;">
           <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-text); margin-bottom: 0.15rem;">AI Actions</div>
           <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Fast-track your application workflow.</div>
           
@@ -210,7 +258,7 @@ export function workspaceScreen() {
       </aside>
 
       <!-- FAB for AI Actions (mobile) -->
-      <button id="btn-fab-ai" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
+      <button id="btn-fab-ai" type="button" aria-label="Open AI actions" style="position: absolute; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px; border-radius: 50%; background: var(--fm-primary-dark); color: #fff; border: none; cursor: pointer; box-shadow: var(--fm-shadow-primary-lg); display: flex; align-items: center; justify-content: center; z-index: 10;" class="md:hidden btn-press">
         <span class="material-symbols-outlined">auto_awesome</span>
       </button>
     </div>
@@ -237,6 +285,7 @@ export function workspaceScreen() {
     const btnSend = wrapper.querySelector('#btn-send-chat');
     const chatMessages = wrapper.querySelector('#chat-messages');
     const questionsContainer = wrapper.querySelector('#questions-container');
+    let sortableInstance = null;
     let isChatPending = false;
     const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
 
@@ -245,51 +294,92 @@ export function workspaceScreen() {
     const aiActionsPanel = wrapper.querySelector('#ai-actions-panel');
     const toggleChat = wrapper.querySelector('#toggle-ai-chat');
     const toggleActions = wrapper.querySelector('#toggle-ai-actions');
+    const btnFabAi = wrapper.querySelector('#btn-fab-ai');
+
+    const workspaceTabs = [toggleChat, toggleActions].filter(Boolean);
+    const setWorkspacePanel = (panel) => {
+      const showChat = panel === 'chat';
+      aiChatPanel.style.display = showChat ? 'flex' : 'none';
+      aiChatPanel.hidden = !showChat;
+      aiActionsPanel.style.display = showChat ? 'none' : 'flex';
+      aiActionsPanel.hidden = showChat;
+
+      toggleChat.style.color = showChat ? 'var(--fm-primary)' : '#94a3b8';
+      toggleChat.style.borderBottomColor = showChat ? 'var(--fm-primary)' : 'transparent';
+      toggleChat.setAttribute('aria-selected', showChat ? 'true' : 'false');
+      toggleChat.tabIndex = showChat ? 0 : -1;
+
+      toggleActions.style.color = showChat ? '#94a3b8' : 'var(--fm-primary)';
+      toggleActions.style.borderBottomColor = showChat ? 'transparent' : 'var(--fm-primary)';
+      toggleActions.setAttribute('aria-selected', showChat ? 'false' : 'true');
+      toggleActions.tabIndex = showChat ? -1 : 0;
+
+      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+    };
 
     toggleChat?.addEventListener('click', () => {
-      aiChatPanel.style.display = 'flex';
-      aiActionsPanel.style.display = 'none';
-      toggleChat.style.color = 'var(--fm-primary)';
-      toggleChat.style.borderBottomColor = 'var(--fm-primary)';
-      toggleActions.style.color = '#94a3b8';
-      toggleActions.style.borderBottomColor = 'transparent';
-      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+      setWorkspacePanel('chat');
     });
 
     toggleActions?.addEventListener('click', () => {
-      aiChatPanel.style.display = 'none';
-      aiActionsPanel.style.display = 'flex';
-      toggleActions.style.color = 'var(--fm-primary)';
-      toggleActions.style.borderBottomColor = 'var(--fm-primary)';
-      toggleChat.style.color = '#94a3b8';
-      toggleChat.style.borderBottomColor = 'transparent';
-      syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
+      setWorkspacePanel('actions');
+    });
+
+    workspaceTabs.forEach((tab, index) => {
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let nextIndex = index;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = workspaceTabs.length - 1;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % workspaceTabs.length;
+        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + workspaceTabs.length) % workspaceTabs.length;
+        workspaceTabs[nextIndex]?.focus();
+        setWorkspacePanel(nextIndex === 0 ? 'chat' : 'actions');
+      });
+    });
+
+    btnFabAi?.addEventListener('click', () => {
+      navigateTo('ai-chat');
     });
 
     // Drag and Drop
-    if (!window.Sortable) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
-      script.onload = () => initSortable();
-      document.body.appendChild(script);
-    } else {
-      initSortable();
-    }
+    void initSortable();
 
-    function initSortable() {
-       if (questionsContainer && window.Sortable) {
-          window.Sortable.create(questionsContainer, {
-            animation: 250,
-            handle: '.drag-handle',
-            ghostClass: 'opacity-40',
-            onEnd: function (evt) {
-              const { formData } = getState();
-              const movedItem = formData.questions.splice(evt.oldIndex, 1)[0];
-              formData.questions.splice(evt.newIndex, 0, movedItem);
-              setState({ formData });
-            }
-          });
-        }
+    async function initSortable() {
+      if (!questionsContainer) return;
+
+      try {
+        const Sortable = await loadSortable();
+        sortableInstance?.destroy?.();
+        sortableInstance = Sortable.create(questionsContainer, {
+          animation: 250,
+          handle: '.drag-handle',
+          ghostClass: 'opacity-40',
+          onEnd: function (evt) {
+            const currentFormData = getState().formData;
+            const nextQuestions = Array.isArray(currentFormData?.questions)
+              ? [...currentFormData.questions]
+              : [];
+
+            if (!nextQuestions.length || evt.oldIndex === evt.newIndex) return;
+
+            const [movedItem] = nextQuestions.splice(evt.oldIndex, 1);
+            if (!movedItem) return;
+
+            nextQuestions.splice(evt.newIndex, 0, movedItem);
+            setState({
+              formData: {
+                ...currentFormData,
+                questions: nextQuestions,
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error('[Workspace] Failed to initialize drag-and-drop:', error);
+        toast.error('Question reordering is unavailable right now.');
+      }
     }
 
     // Question card interactions
@@ -393,6 +483,7 @@ export function workspaceScreen() {
       if (e.target.matches('.answer-textarea')) {
         updateAnswer(e.target.dataset.questionId, e.target.value, 'user');
         updateAnsweredCount();
+        syncUndoRedoButtons();
       }
     });
 
@@ -451,14 +542,50 @@ export function workspaceScreen() {
           b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
         });
         updateAnsweredCount(); syncUndoRedoButtons();
+        return;
+      }
+
+      const uploadBtn = e.target.closest('.question-card-upload-button');
+      if (uploadBtn) {
+        const qId = uploadBtn.dataset.questionId;
+        const fileInput = wrapper.querySelector(`.question-card-upload-input[data-question-id="${qId}"]`);
+        if (fileInput) {
+          fileInput.value = '';
+          fileInput.click();
+        }
       }
     });
 
     questionsContainer.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      const opt = e.target.closest('.option-select, .scale-btn');
+      const opt = e.target.closest('.option-select, .scale-btn, .question-card-upload-button');
       if (!opt) return;
       e.preventDefault(); opt.click();
+    });
+
+    questionsContainer.addEventListener('change', (e) => {
+      const input = e.target.closest('.question-card-upload-input');
+      if (!input) return;
+
+      const questionId = input.dataset.questionId;
+      const file = input.files?.[0];
+      const card = wrapper.querySelector(`.question-card[data-card-id="${questionId}"]`);
+      const label = card?.querySelector('[data-upload-file-label]');
+
+      if (!file) {
+        updateAnswer(questionId, '', 'user');
+        if (label) label.textContent = 'Click to choose a file';
+        updateAnsweredCount();
+        syncUndoRedoButtons();
+        return;
+      }
+
+      const metadata = formatFileMetadata(file);
+      updateAnswer(questionId, metadata, 'user');
+      if (label) label.textContent = metadata;
+      updateAnsweredCount();
+      syncUndoRedoButtons();
+      toast.success('File selected');
     });
 
     // Filter pills
@@ -488,13 +615,17 @@ export function workspaceScreen() {
       const isUser = role === 'user';
       const bubble = document.createElement('div');
       bubble.style.cssText = `display: flex; gap: 0.5rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''}`;
-      bubble.innerHTML = `
-        ${!isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div>` : ''}
-        <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;">
-          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
-        </div>
-        ${isUser ? `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary-dark); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">person</span></div>` : ''}
-      `;
+      bubble.appendChild(buildChatAvatar(isUser ? 'person' : 'smart_toy', isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'));
+
+      const body = document.createElement('div');
+      body.style.cssText = `background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.75rem; font-size: 0.8rem; line-height: 1.5; max-width: 85%;`;
+      if (isUser) {
+        body.textContent = text;
+        body.style.whiteSpace = 'pre-wrap';
+      } else {
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+      }
+      bubble.appendChild(body);
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     };
@@ -511,7 +642,8 @@ export function workspaceScreen() {
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start;';
-      typingEl.innerHTML = `<div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 14px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.75rem; display: flex; gap: 4px;"><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.2s;"></div><div class="typing-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation-delay: 0.4s;"></div></div>`;
+      typingEl.appendChild(buildChatAvatar('smart_toy', 'var(--fm-primary)'));
+      typingEl.appendChild(buildTypingIndicator());
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -565,13 +697,14 @@ export function workspaceScreen() {
     wrapper.querySelector('#btn-actions-review')?.addEventListener('click', () => navigateTo('review'));
 
     function updateAnsweredCount() {
-       const count = Object.keys(getState().answers).filter(k => getState().answers[k]?.text).length;
-       wrapper.querySelectorAll('#answered-count').forEach(el => { el.textContent = count; });
+       const count = getState().answeredCount;
+       wrapper.querySelectorAll('#answered-count').forEach(el => { el.textContent = String(count); });
     }
 
     syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
 
     return () => {
+      sortableInstance?.destroy?.();
       cleanupRichActions?.();
       cleanupLayout?.();
     };
@@ -580,12 +713,28 @@ export function workspaceScreen() {
   return { html, init };
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function formatTime(date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderAiDiagnosticsBanner(aiDiagnostics) {
+  if (!aiDiagnostics || aiDiagnostics.status === 'ok') return '';
+
+  const isFailed = aiDiagnostics.status === 'failed';
+  const icon = isFailed ? 'error' : 'warning';
+  const bg = isFailed ? 'rgba(254, 242, 242, 0.98)' : 'rgba(255, 251, 235, 0.98)';
+  const border = isFailed ? 'rgba(248, 113, 113, 0.2)' : 'rgba(245, 158, 11, 0.25)';
+  const text = isFailed ? '#991b1b' : '#92400e';
+  const title = isFailed ? 'AI suggestions unavailable' : 'Some AI suggestions need a retry';
+  const summary = aiDiagnostics.summary || 'AI output was only partially available for this form.';
+
+  return `
+    <div style="display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem; padding: 0.9rem 1rem; border-radius: var(--fm-radius-xl); border: 1px solid ${border}; background: ${bg}; color: ${text};">
+      <span class="material-symbols-outlined" style="font-size: 18px; margin-top: 1px;">${icon}</span>
+      <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+        <div style="font-size: 0.78rem; font-weight: 800;">${title}</div>
+        <div style="font-size: 0.8rem; line-height: 1.45;">${escapeHtml(summary)}</div>
+      </div>
+    </div>
+  `;
 }

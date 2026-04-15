@@ -1,20 +1,23 @@
 // @ts-nocheck
 import { MOCK_FORMS } from './mock-forms';
-import { parseDOM } from './dom-parser';
 import { parseFormHtml } from '../ai/ai-actions';
-
-const RENDER_REQUIRED_PLATFORMS = new Set([
-  'Typeform',
-  'JotForm',
-  'SurveyMonkey',
-  'Workday',
-  'Qualtrics',
-  'Airtable Forms',
-  'Tally',
-  'Feathery'
-]);
-
-const MIN_CONFIDENT_FIELDS = 2;
+import { getRequestAuthHeaders } from '../auth/auth-service';
+import { legacyFormDataToCanonical, toLegacyFormData } from './compat';
+import { createBaseParseEnvelope, createParserMessage } from './status';
+import {
+  BLOCKED_REASON,
+  COMPLETENESS_STATUS,
+  NEXT_ACTION,
+  PARSE_STATUS,
+  PROVIDER_TYPE,
+  SOURCE_TYPE,
+  UNSUPPORTED_REASON,
+  getProviderLabel,
+} from './schema';
+import { runPlainHtmlAdapter } from './adapters/plain-html';
+import { runCaptureAdapter } from './adapters/capture';
+import { chooseProvider, detectProviderFromDomSignature, detectProviderFromUrl } from './adapters/provider-detection';
+import { applyProviderAdapterOverrides } from './adapters/provider-guard';
 
 function createParseError(code, message, details = {}) {
   const err = new Error(message);
@@ -43,10 +46,7 @@ export function extractGoogleFormId(url) {
 }
 
 export function isGoogleFormUrl(url) {
-  const lower = String(url || '').toLowerCase();
-  return lower.includes('docs.google.com/forms')
-    || lower.includes('google.com/forms')
-    || lower.includes('forms.gle/');
+  return detectProviderFromUrl(url) === PROVIDER_TYPE.GOOGLE_FORMS;
 }
 
 function parseFbPublicLoadData(dataString) {
@@ -61,7 +61,6 @@ function parseFbPublicLoadData(dataString) {
     const questions = [];
     rawQuestions.forEach((q, index) => {
       if (!Array.isArray(q)) return;
-
       const text = q[1] || `Question ${index + 1}`;
       const questionType = q[3];
       const typeMap = {
@@ -73,7 +72,7 @@ function parseFbPublicLoadData(dataString) {
         5: 'linear_scale',
         7: 'radio',
         9: 'date',
-        10: 'short_text'
+        10: 'short_text',
       };
 
       let options = [];
@@ -82,8 +81,8 @@ function parseFbPublicLoadData(dataString) {
         if (Array.isArray(optionData)) {
           options = optionData.map((opt) => opt[0]).filter(Boolean);
         }
-      } catch (_) {
-        // no-op
+      } catch {
+        options = [];
       }
 
       questions.push({
@@ -91,81 +90,470 @@ function parseFbPublicLoadData(dataString) {
         text,
         type: typeMap[questionType] || 'short_text',
         required: q[4]?.[0]?.[2] === 1,
-        options
+        options,
       });
     });
 
     if (questions.length === 0) return null;
     return { title, description, questions };
-  } catch (err) {
-    console.warn('[FormParser] FB_PUBLIC_LOAD_DATA_ parse failed:', err.message);
+  } catch {
     return null;
   }
 }
 
-function createDiagnostics(url, platform) {
+function attachLegacyMetadata(legacyFormData, { sourceUrl, provider, parseStrategy, outcome, diagnostics }) {
+  if (!legacyFormData) return null;
   return {
-    inputUrl: url,
-    normalizedUrl: url,
-    platform,
-    fetchStrategy: null,
-    parseStrategy: null,
-    httpStatus: null,
-    finalUrl: null,
-    authSignal: false,
-    renderSignal: false,
-    aiFallbackUsed: false,
-    questionCount: 0,
+    ...legacyFormData,
+    url: legacyFormData.url || sourceUrl,
+    source: legacyFormData.source || getProviderLabel(provider),
+    parseStrategy: parseStrategy || legacyFormData.parseStrategy || diagnostics?.parseStrategy || 'unknown',
+    supportState: legacyFormData.supportState || (
+      outcome?.status === PARSE_STATUS.SUCCESS
+        ? 'supported'
+        : outcome?.status === PARSE_STATUS.PARTIAL
+          ? 'partial'
+          : outcome?.status === PARSE_STATUS.BLOCKED
+            ? 'blocked'
+            : outcome?.status === PARSE_STATUS.UNSUPPORTED
+              ? 'unsupported'
+              : outcome?.status === PARSE_STATUS.NO_FORM
+                ? 'no_form'
+                : 'error'
+    ),
+    authRequired: legacyFormData.authRequired || outcome?.blockedReason === BLOCKED_REASON.AUTH_REQUIRED,
+    diagnostics: {
+      ...(legacyFormData.diagnostics || {}),
+      ...(diagnostics || {}),
+      parseStatus: outcome?.status,
+    },
   };
 }
 
-function finalizeFormResult(formData, metadata) {
-  const questions = Array.isArray(formData?.questions) ? formData.questions : [];
-  return {
-    ...formData,
-    url: metadata.url,
-    source: metadata.source,
-    authRequired: Boolean(metadata.authRequired),
-    parseStrategy: metadata.parseStrategy,
-    supportState: metadata.supportState || 'supported',
+function buildEnvelopeFromAdapter({
+  sourceUrl,
+  normalizedUrl,
+  finalUrl,
+  provider,
+  adapterKey,
+  sourceType = SOURCE_TYPE.HTML,
+  fetchStrategy = '',
+  httpStatus,
+  domSignatureProvider = '',
+  parseStrategy = '',
+  adapterResult,
+}) {
+  const canonicalForm = adapterResult?.canonicalForm || null;
+  const fallbackLegacy = adapterResult?.legacyFormData || (canonicalForm ? toLegacyFormData({ form: canonicalForm }) : null);
+
+  const parseEnvelope = createBaseParseEnvelope({
+    sourceType,
+    sourceUrl,
+    normalizedUrl,
+    finalUrl,
+    provider,
+    adapterKey,
+    fetchStrategy,
+    parseStatus: adapterResult?.parseStatus || PARSE_STATUS.ERROR,
+    completeness: adapterResult?.completeness || COMPLETENESS_STATUS.EMPTY,
+    blockedReason: adapterResult?.blockedReason,
+    unsupportedReasons: adapterResult?.unsupportedReasons || [],
+    warnings: adapterResult?.warnings || [],
+    nextAction: adapterResult?.nextAction || NEXT_ACTION.RETRY,
+    nextStepRequired: Boolean(adapterResult?.nextStepRequired),
+    nextStepHint: adapterResult?.nextStepHint || '',
+    confidence: adapterResult?.confidence || {},
     diagnostics: {
-      ...(metadata.diagnostics || {}),
-      parseStrategy: metadata.parseStrategy,
-      questionCount: questions.length,
-      authSignal: Boolean(metadata.diagnostics?.authSignal),
-      renderSignal: Boolean(metadata.diagnostics?.renderSignal),
-      aiFallbackUsed: Boolean(metadata.diagnostics?.aiFallbackUsed),
+      ...(adapterResult?.diagnostics || {}),
+      httpStatus,
+      parseStrategy: parseStrategy || adapterResult?.parseStrategy || '',
+      domSignatureProvider: domSignatureProvider || undefined,
+    },
+    form: canonicalForm,
+    compatibility: attachLegacyMetadata(fallbackLegacy, {
+      sourceUrl,
+      provider,
+      parseStrategy: parseStrategy || adapterResult?.parseStrategy,
+      outcome: {
+        status: adapterResult?.parseStatus,
+        blockedReason: adapterResult?.blockedReason,
+      },
+      diagnostics: {
+        ...(adapterResult?.diagnostics || {}),
+        httpStatus,
+      },
+    }),
+  });
+
+  if (!parseEnvelope.form && parseEnvelope.compatibility?.questions?.length) {
+    parseEnvelope.form = legacyFormDataToCanonical(parseEnvelope.compatibility, {
+      provider,
+    });
+  }
+
+  return parseEnvelope;
+}
+
+function buildFallbackErrorEnvelope(url, provider, err, parseStrategy = 'error') {
+  return createBaseParseEnvelope({
+    sourceType: SOURCE_TYPE.HTML,
+    sourceUrl: url,
+    normalizedUrl: url,
+    finalUrl: url,
+    provider,
+    adapterKey: 'error',
+    fetchStrategy: 'error',
+    parseStatus: PARSE_STATUS.ERROR,
+    completeness: COMPLETENESS_STATUS.EMPTY,
+    unsupportedReasons: [UNSUPPORTED_REASON.UNKNOWN],
+    warnings: [
+      createParserMessage(
+        err?.code || 'PARSER_ERROR',
+        'error',
+        err?.message || 'Unknown parser failure.'
+      ),
+    ],
+    nextAction: NEXT_ACTION.RETRY,
+    nextStepRequired: false,
+    confidence: {
+      overall: 0.05,
+      fieldDetection: 0.05,
+      uiClassification: 0.05,
+      semanticClassification: 0.05,
+      fillPolicy: 0.05,
+      completeness: 0.05,
+    },
+    diagnostics: {
+      authSignal: false,
+      renderSignal: false,
+      aiFallbackUsed: false,
+      extractionWarnings: [err?.message || 'Unknown parser failure.'],
+      parseStrategy,
+    },
+  });
+}
+
+async function parseGoogleForm(url) {
+  const authHeaders = getRequestAuthHeaders();
+  const provider = PROVIDER_TYPE.GOOGLE_FORMS;
+
+  try {
+    const response = await fetch(`/api/proxy/google-form?url=${encodeURIComponent(url)}`, {
+      headers: authHeaders,
+    });
+
+    if (!response.ok) {
+      throw createParseError('NETWORK', `Google Form fetch failed: ${response.statusText}`, { platform: provider, url });
     }
+
+    const result = await response.json();
+    const httpStatus = result.httpStatus || response.status;
+    const normalizedUrl = result.normalizedUrl || url;
+    const finalUrl = result.finalUrl || normalizedUrl || url;
+
+    if (result.fbPublicLoadData) {
+      const fbParsed = parseFbPublicLoadData(result.fbPublicLoadData);
+      if (fbParsed?.questions?.length) {
+        const legacyFormData = {
+          ...fbParsed,
+          url,
+          source: getProviderLabel(provider),
+          parseStrategy: 'fb_public_load_data',
+          authRequired: false,
+          supportState: 'supported',
+          diagnostics: {
+            parseStrategy: 'fb_public_load_data',
+            httpStatus,
+            authSignal: false,
+            renderSignal: false,
+            aiFallbackUsed: false,
+          },
+        };
+
+        const canonical = legacyFormDataToCanonical(legacyFormData, { provider });
+        return buildEnvelopeFromAdapter({
+          sourceUrl: url,
+          normalizedUrl,
+          finalUrl,
+          provider,
+          adapterKey: 'google-forms',
+          fetchStrategy: result.strategy || 'google_proxy',
+          httpStatus,
+          parseStrategy: 'fb_public_load_data',
+          adapterResult: {
+            parseStatus: PARSE_STATUS.SUCCESS,
+            completeness: COMPLETENESS_STATUS.COMPLETE,
+            warnings: [],
+            nextAction: NEXT_ACTION.NONE,
+            nextStepRequired: false,
+            nextStepHint: '',
+            unsupportedReasons: [],
+            legacyFormData,
+            canonicalForm: canonical,
+            diagnostics: {
+              authSignal: false,
+              renderSignal: false,
+              aiFallbackUsed: false,
+              extractionWarnings: [],
+            },
+            confidence: {
+              fieldDetection: 0.92,
+              uiClassification: 0.9,
+              semanticClassification: 0.78,
+              fillPolicy: 0.8,
+              completeness: 0.92,
+            },
+            parseStrategy: 'fb_public_load_data',
+          },
+        });
+      }
+    }
+
+    if (!result.html) {
+      return buildEnvelopeFromAdapter({
+        sourceUrl: url,
+        normalizedUrl,
+        finalUrl,
+        provider,
+        adapterKey: 'google-forms',
+        fetchStrategy: result.strategy || 'google_proxy',
+        httpStatus,
+        parseStrategy: 'google_proxy_blocked',
+        adapterResult: {
+          parseStatus: PARSE_STATUS.BLOCKED,
+          completeness: COMPLETENESS_STATUS.BLOCKED_BEFORE_FORM,
+          blockedReason: result.authRequired ? BLOCKED_REASON.AUTH_REQUIRED : BLOCKED_REASON.UNKNOWN,
+          unsupportedReasons: [],
+          nextAction: result.authRequired ? NEXT_ACTION.USE_CAPTURE : NEXT_ACTION.MANUAL_REVIEW,
+          nextStepRequired: false,
+          nextStepHint: result.authRequired
+            ? 'Google Form requires sign-in or permission.'
+            : 'Google Form content was unavailable.',
+          warnings: [
+            createParserMessage(
+              result.authRequired ? 'AUTH_REQUIRED' : 'GOOGLE_HTML_MISSING',
+              'warning',
+              result.authRequired
+                ? 'This Google Form requires sign-in or permission to view.'
+                : 'Google Form HTML was unavailable.'
+            ),
+          ],
+          legacyFormData: null,
+          canonicalForm: null,
+          diagnostics: {
+            authSignal: Boolean(result.authRequired),
+            renderSignal: false,
+            aiFallbackUsed: false,
+            extractionWarnings: [],
+          },
+          confidence: {
+            overall: 0.2,
+            fieldDetection: 0.18,
+            uiClassification: 0.18,
+            semanticClassification: 0.18,
+            fillPolicy: 0.18,
+            completeness: 0.2,
+          },
+          parseStrategy: 'google_proxy_blocked',
+        },
+      });
+    }
+
+    const domProvider = detectProviderFromDomSignature(result.html);
+    const providerSelection = chooseProvider({
+      urlProvider: provider,
+      domProvider,
+    });
+    const selectedProvider = providerSelection.provider || provider;
+    const selectedProviderLabel = getProviderLabel(selectedProvider);
+
+    const adapterResult = await runPlainHtmlAdapter({
+      html: result.html,
+      url,
+      provider: selectedProviderLabel,
+      parseStrategy: result.strategy === 'formResponse' ? 'google_form_response_dom' : 'google_viewform_dom',
+      parseWithAiHtml: parseFormHtml,
+    });
+
+    return buildEnvelopeFromAdapter({
+      sourceUrl: url,
+      normalizedUrl,
+      finalUrl,
+      provider: selectedProvider,
+      adapterKey: 'google-forms',
+      fetchStrategy: result.strategy || 'google_proxy',
+      httpStatus,
+      domSignatureProvider: domProvider,
+      parseStrategy: adapterResult.parseStrategy || 'google_dom_parse',
+      adapterResult,
+    });
+  } catch (err) {
+    return buildFallbackErrorEnvelope(url, provider, err, 'google_error');
+  }
+}
+
+async function parseGenericForm(url) {
+  const authHeaders = getRequestAuthHeaders();
+  const urlProvider = detectProviderFromUrl(url);
+  const initialProvider = urlProvider || PROVIDER_TYPE.PLAIN_HTML;
+
+  try {
+    const response = await fetch(`/api/proxy/scrape?url=${encodeURIComponent(url)}`, {
+      headers: authHeaders,
+    });
+    if (!response.ok) {
+      throw createParseError('NETWORK', `Proxy fetch failed: ${response.statusText}`, { platform: initialProvider, url });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    let html = '';
+    let httpStatus = response.status;
+    let normalizedUrl = url;
+    let finalUrl = url;
+    let fetchStrategy = 'scrape_proxy';
+
+    if (contentType.includes('application/json')) {
+      const result = await response.json();
+      html = result.html || '';
+      httpStatus = result.httpStatus || response.status;
+      normalizedUrl = result.normalizedUrl || url;
+      finalUrl = result.finalUrl || url;
+      fetchStrategy = result.fetchStrategy || fetchStrategy;
+    } else {
+      html = await response.text();
+    }
+
+    const domProvider = detectProviderFromDomSignature(html);
+    const providerSelection = chooseProvider({
+      urlProvider,
+      domProvider,
+    });
+    const selectedProvider = providerSelection.provider || initialProvider;
+    const selectedProviderLabel = getProviderLabel(selectedProvider);
+
+    let adapterResult = await runPlainHtmlAdapter({
+      html,
+      url,
+      provider: selectedProviderLabel,
+      parseStrategy: 'dom_parse',
+      parseWithAiHtml: parseFormHtml,
+    });
+    adapterResult = applyProviderAdapterOverrides({
+      provider: selectedProvider,
+      adapterResult,
+    });
+
+    return buildEnvelopeFromAdapter({
+      sourceUrl: url,
+      normalizedUrl,
+      finalUrl,
+      provider: selectedProvider,
+      adapterKey: selectedProvider === PROVIDER_TYPE.PLAIN_HTML ? 'plain-html' : `provider-${selectedProvider}`,
+      fetchStrategy,
+      httpStatus,
+      domSignatureProvider: domProvider,
+      parseStrategy: adapterResult.parseStrategy || 'dom_parse',
+      adapterResult,
+    });
+  } catch (err) {
+    return buildFallbackErrorEnvelope(url, initialProvider, err, 'generic_error');
+  }
+}
+
+function buildDemoEnvelope(url) {
+  const demoId = getDemoId(url);
+  const demo = MOCK_FORMS[demoId];
+  if (!demo) {
+    return createBaseParseEnvelope({
+      sourceType: SOURCE_TYPE.DEMO,
+      sourceUrl: url,
+      normalizedUrl: url,
+      finalUrl: url,
+      provider: PROVIDER_TYPE.DEMO,
+      adapterKey: 'demo',
+      fetchStrategy: 'demo',
+      parseStatus: PARSE_STATUS.UNSUPPORTED,
+      completeness: COMPLETENESS_STATUS.EMPTY,
+      unsupportedReasons: [UNSUPPORTED_REASON.UNKNOWN],
+      warnings: [
+        createParserMessage('DEMO_NOT_FOUND', 'warning', 'Unknown demo form reference.'),
+      ],
+      nextAction: NEXT_ACTION.MANUAL_REVIEW,
+      confidence: {
+        overall: 0.1,
+        fieldDetection: 0.1,
+        uiClassification: 0.1,
+        semanticClassification: 0.1,
+        fillPolicy: 0.1,
+        completeness: 0.1,
+      },
+      diagnostics: {
+        authSignal: false,
+        renderSignal: false,
+        aiFallbackUsed: false,
+        extractionWarnings: ['Unknown demo reference.'],
+        parseStrategy: 'demo',
+      },
+    });
+  }
+
+  const legacyFormData = {
+    ...demo,
+    url,
+    source: 'Demo',
+    parseStrategy: 'demo',
+    demoId,
+    authRequired: false,
+    supportState: 'supported',
+    diagnostics: {
+      inputUrl: url,
+      normalizedUrl: url,
+      finalUrl: url,
+      parseStrategy: 'demo',
+      authSignal: false,
+      renderSignal: false,
+      aiFallbackUsed: false,
+      questionCount: Array.isArray(demo.questions) ? demo.questions.length : 0,
+      httpStatus: 200,
+    },
   };
+
+  const canonicalForm = legacyFormDataToCanonical(legacyFormData, { provider: PROVIDER_TYPE.DEMO });
+  return createBaseParseEnvelope({
+    sourceType: SOURCE_TYPE.DEMO,
+    sourceUrl: url,
+    normalizedUrl: url,
+    finalUrl: url,
+    provider: PROVIDER_TYPE.DEMO,
+    adapterKey: 'demo',
+    fetchStrategy: 'demo',
+    parseStatus: PARSE_STATUS.SUCCESS,
+    completeness: COMPLETENESS_STATUS.COMPLETE,
+    nextAction: NEXT_ACTION.NONE,
+    warnings: [],
+    confidence: {
+      fieldDetection: 0.96,
+      uiClassification: 0.95,
+      semanticClassification: 0.82,
+      fillPolicy: 0.84,
+      completeness: 0.96,
+    },
+    diagnostics: {
+      authSignal: false,
+      renderSignal: false,
+      aiFallbackUsed: false,
+      extractionWarnings: [],
+      parseStrategy: 'demo',
+      httpStatus: 200,
+    },
+    form: canonicalForm,
+    compatibility: legacyFormData,
+  });
 }
 
 export async function parseFormUrl(url) {
   if (isDemoUrl(url)) {
-    const demoId = getDemoId(url);
-    const demo = MOCK_FORMS[demoId];
-    if (!demo) {
-      throw createParseError('PARSE_FAILED', 'Unknown demo form.', { demoId });
-    }
-
-    return finalizeFormResult(demo, {
-      url,
-      source: 'Demo',
-      authRequired: false,
-      parseStrategy: 'demo',
-      diagnostics: {
-        inputUrl: url,
-        normalizedUrl: url,
-        platform: 'Demo',
-        fetchStrategy: 'demo',
-        parseStrategy: 'demo',
-        httpStatus: 200,
-        finalUrl: url,
-        authSignal: false,
-        renderSignal: false,
-        aiFallbackUsed: false,
-        questionCount: demo.questions.length,
-      }
-    });
+    return buildDemoEnvelope(url);
   }
 
   if (isGoogleFormUrl(url)) {
@@ -175,183 +563,26 @@ export async function parseFormUrl(url) {
   return parseGenericForm(url);
 }
 
-async function parseGoogleForm(url) {
-  const diagnostics = createDiagnostics(url, 'Google Forms');
-  diagnostics.fetchStrategy = 'google_proxy';
-
+export function parseCapturePayload(payload) {
   try {
-    const response = await fetch(`/api/proxy/google-form?url=${encodeURIComponent(url)}`);
-    if (!response.ok) {
-      throw createParseError('NETWORK', `Google Form fetch failed: ${response.statusText}`, { platform: 'Google Forms', url });
-    }
-
-    const result = await response.json();
-    diagnostics.httpStatus = result.httpStatus || response.status;
-    diagnostics.normalizedUrl = result.normalizedUrl || url;
-    diagnostics.finalUrl = result.finalUrl || result.normalizedUrl || url;
-    diagnostics.fetchStrategy = result.strategy || diagnostics.fetchStrategy;
-
-    if (result.fbPublicLoadData) {
-      const fbParsed = parseFbPublicLoadData(result.fbPublicLoadData);
-      if (fbParsed?.questions?.length) {
-        return finalizeFormResult(fbParsed, {
-          url,
-          source: 'Google Forms',
-          authRequired: false,
-          parseStrategy: 'fb_public_load_data',
-          diagnostics: {
-            ...diagnostics,
-            parseStrategy: 'fb_public_load_data',
-          }
-        });
-      }
-    }
-
-    if (!result.html) {
-      diagnostics.authSignal = Boolean(result.authRequired);
-      throw createParseError(
-        result.authRequired ? 'AUTH_REQUIRED' : 'PARSE_FAILED',
-        result.authRequired
-          ? 'This Google Form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.'
-          : 'Could not fetch a parseable Google Form response.',
-        { platform: 'Google Forms', url }
-      );
-    }
-
-    let formData = parseDOM(result.html);
-    diagnostics.authSignal = Boolean(formData.requiresAuth || result.authRequired);
-    diagnostics.renderSignal = Boolean(formData.requiresRender);
-
-    if (formData.requiresAuth && formData.questions.length === 0) {
-      throw createParseError(
-        'AUTH_REQUIRED',
-        'This Google Form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.',
-        { platform: 'Google Forms', url }
-      );
-    }
-
-    if (formData.requiresRender && formData.questions.length < MIN_CONFIDENT_FIELDS) {
-      throw createParseError(
-        'RENDER_REQUIRED',
-        "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
-        { platform: 'Google Forms', url }
-      );
-    }
-
-    if (!formData.questions?.length) {
-      diagnostics.aiFallbackUsed = true;
-      formData = await parseFormHtml(result.html, url);
-    }
-
-    if (!formData?.questions?.length) {
-      throw createParseError(
-        'PARSE_FAILED',
-        'Could not extract form fields from this Google Form. The form may be restricted or use an unsupported layout.',
-        { platform: 'Google Forms', url }
-      );
-    }
-
-    return finalizeFormResult(formData, {
-      url,
-      source: 'Google Forms',
-      authRequired: false,
-      parseStrategy: diagnostics.aiFallbackUsed ? 'ai_html_parse' : 'dom_parse',
-      diagnostics,
+    const adapterResult = runCaptureAdapter(payload);
+    return buildEnvelopeFromAdapter({
+      sourceUrl: payload?.pageUrl || '',
+      normalizedUrl: payload?.pageUrl || '',
+      finalUrl: payload?.pageUrl || '',
+      provider: PROVIDER_TYPE.PLAIN_HTML,
+      adapterKey: 'capture',
+      sourceType: SOURCE_TYPE.CAPTURE,
+      fetchStrategy: 'capture_payload',
+      httpStatus: 200,
+      parseStrategy: adapterResult.parseStrategy || 'capture_v1',
+      adapterResult,
     });
   } catch (err) {
-    console.error('[FormParser] Google Forms pipeline error:', err);
-    throw err;
-  }
-}
-
-async function parseGenericForm(url) {
-  const platform = detectFormPlatform(url);
-  const diagnostics = createDiagnostics(url, platform);
-  diagnostics.fetchStrategy = 'scrape_proxy';
-
-  try {
-    const response = await fetch(`/api/proxy/scrape?url=${encodeURIComponent(url)}`);
-    if (!response.ok) {
-      throw createParseError('NETWORK', `Proxy fetch failed: ${response.statusText}`, { platform, url });
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    let html = '';
-    if (contentType.includes('application/json')) {
-      const result = await response.json();
-      html = result.html || '';
-      diagnostics.httpStatus = result.httpStatus || response.status;
-      diagnostics.normalizedUrl = result.normalizedUrl || url;
-      diagnostics.finalUrl = result.finalUrl || url;
-      diagnostics.fetchStrategy = result.fetchStrategy || diagnostics.fetchStrategy;
-    } else {
-      html = await response.text();
-      diagnostics.httpStatus = response.status;
-      diagnostics.finalUrl = url;
-    }
-
-    let formData = parseDOM(html);
-    diagnostics.authSignal = Boolean(formData.requiresAuth);
-    diagnostics.renderSignal = Boolean(formData.requiresRender);
-
-    if (formData.requiresAuth && formData.questions.length === 0) {
-      throw createParseError(
-        'AUTH_REQUIRED',
-        'This form requires sign-in or permission to view. Use Assisted Capture (bookmarklet) while you are signed in.',
-        { platform, url }
-      );
-    }
-
-    if (formData.requiresRender && formData.questions.length < MIN_CONFIDENT_FIELDS) {
-      throw createParseError(
-        'RENDER_REQUIRED',
-        "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
-        { platform, url }
-      );
-    }
-
-    if (!formData.questions?.length) {
-      if (RENDER_REQUIRED_PLATFORMS.has(platform)) {
-        throw createParseError(
-          'RENDER_REQUIRED',
-          "This form is rendered in your browser and can't be reliably scanned from a URL. Use Assisted Capture (bookmarklet) to import it.",
-          { platform, url }
-        );
-      }
-
-      diagnostics.aiFallbackUsed = true;
-      formData = await parseFormHtml(html, url);
-    }
-
-    if (!formData?.questions?.length) {
-      throw createParseError('PARSE_FAILED', 'No form fields detected on this page.', { platform, url });
-    }
-
-    return finalizeFormResult(formData, {
-      url,
-      source: platform,
-      authRequired: false,
-      parseStrategy: diagnostics.aiFallbackUsed ? 'ai_html_parse' : 'dom_parse',
-      diagnostics,
-    });
-  } catch (err) {
-    console.error('[FormParser] Scrape/Parse failed:', err);
-    throw err;
+    return buildFallbackErrorEnvelope(payload?.pageUrl || '', PROVIDER_TYPE.PLAIN_HTML, err, 'capture_error');
   }
 }
 
 export function detectFormPlatform(url) {
-  const normalized = String(url || '').toLowerCase();
-  if (isDemoUrl(url)) return 'Demo';
-  if (normalized.includes('google.com/forms') || normalized.includes('docs.google.com') || normalized.includes('forms.gle')) return 'Google Forms';
-  if (normalized.includes('typeform.com')) return 'Typeform';
-  if (normalized.includes('jotform.com')) return 'JotForm';
-  if (normalized.includes('lever.co') || normalized.includes('greenhouse.io')) return 'Job Board';
-  if (normalized.includes('surveymonkey.com')) return 'SurveyMonkey';
-  if (normalized.includes('workday.com') || normalized.includes('myworkdayjobs.com')) return 'Workday';
-  if (normalized.includes('tally.so')) return 'Tally';
-  if (normalized.includes('qualtrics.com')) return 'Qualtrics';
-  if (normalized.includes('airtable.com')) return 'Airtable Forms';
-  if (normalized.includes('feathery.io')) return 'Feathery';
-  return 'Web Form';
+  return getProviderLabel(detectProviderFromUrl(url));
 }

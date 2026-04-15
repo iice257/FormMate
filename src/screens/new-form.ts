@@ -7,7 +7,7 @@ import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { toast } from '../components/toast';
 import { initAurora } from './Aurora';
 import './Aurora.css';
-import { escapeHtml, safeHttpUrl } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { isZenModeEnabled, updateZenMode, bindZenModeControls, openAccountModal, getZenModeToggleHtml } from '../components/layout';
 
 export function newFormScreen() {
@@ -20,7 +20,7 @@ export function newFormScreen() {
 
   const authButtonHtml = isAuthenticated
     ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
-         <img src="${avatarSrc}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
+         <img src="${escapeAttr(avatarSrc)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
          <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
@@ -28,7 +28,7 @@ export function newFormScreen() {
   const zenActive = isZenModeEnabled('new');
 
   const html = `
-    <div class="relative flex h-screen w-full flex-col overflow-hidden animate-screen-enter zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
+    <div class="relative flex h-screen w-full flex-col overflow-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
       <button
         type="button"
         id="btn-zen-exit"
@@ -98,7 +98,7 @@ export function newFormScreen() {
                   <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
                 </button>
                 <button id="nav-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
-                  <span class="material-symbols-outlined text-base">help</span> Help Center
+                  <span class="material-symbols-outlined text-base">menu_book</span> Docs &amp; Help
                 </button>
               </div>
             </div>
@@ -162,7 +162,7 @@ export function newFormScreen() {
       try {
         const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
         urlInput.value = url;
-        setState({ formUrl: url });
+        setState({ formUrl: url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       } catch (error) {
         toast.error(error?.message || 'Invalid URL format');
@@ -177,7 +177,7 @@ export function newFormScreen() {
     wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
       navigateTo('ai-chat');
     });
-    wrapper.querySelector('#nav-help')?.addEventListener('click', () => openAccountModal('help'));
+    wrapper.querySelector('#nav-help')?.addEventListener('click', () => navigateTo('docs'));
 
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));

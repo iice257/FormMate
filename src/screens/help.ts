@@ -31,10 +31,10 @@ export function helpScreen() {
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="dashboard">
             <span class="material-symbols-outlined">dashboard</span> Dashboard
           </button>
-          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts">
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts" data-account-tab="profile">
             <span class="material-symbols-outlined">person</span> Account
           </button>
-          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts">
+          <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors w-full text-left" style="color: var(--fm-text-secondary);" data-nav="accounts" data-account-tab="settings">
             <span class="material-symbols-outlined">settings</span> Preferences
           </button>
           <button type="button" class="flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer w-full text-left" style="background: var(--fm-primary-50); color: var(--fm-primary);" aria-current="page">
@@ -47,7 +47,7 @@ export function helpScreen() {
       <main class="flex-1 overflow-y-auto no-scrollbar relative" style="background: var(--fm-bg);">
         <header class="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-10 glass" style="border-color: var(--fm-border);">
           <div class="flex items-center gap-3">
-            <button id="btn-back" class="p-2 rounded-lg transition-colors" style="color: var(--fm-text-secondary);">
+            <button id="btn-back" type="button" aria-label="Go back" title="Go back" class="p-2 rounded-lg transition-colors" style="color: var(--fm-text-secondary);">
               <span class="material-symbols-outlined">arrow_back</span>
             </button>
             <h2 class="text-lg font-bold" style="color: var(--fm-text);">Help & Support</h2>
@@ -112,7 +112,7 @@ export function helpScreen() {
           <div class="space-y-6">
             <div class="relative pl-6 border-l-2" style="border-color: var(--fm-primary);">
               <div class="absolute w-3 h-3 rounded-full top-1 -left-[7px]" style="background: var(--fm-primary);"></div>
-              <p class="text-xs font-bold mb-1" style="color: var(--fm-primary);">v0.9 — Core Launch</p>
+              <p class="text-xs font-bold mb-1" style="color: var(--fm-primary);">v0.9 - Core Launch</p>
               <ul class="text-sm space-y-1 list-disc list-inside" style="color: var(--fm-text-secondary);">
                 <li>Core AI form parsing engine capable of navigating complex DOM structures.</li>
                 <li>Information Vault integration for secure context retrieval.</li>
@@ -133,7 +133,7 @@ export function helpScreen() {
     wrapper.querySelectorAll('button[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => {
         if (btn.dataset.nav === 'accounts') {
-          openAccountModal(btn.textContent?.includes('Preferences') ? 'settings' : 'profile');
+          openAccountModal(btn.dataset.accountTab === 'settings' ? 'settings' : 'profile');
           return;
         }
         navigateTo(btn.dataset.nav);

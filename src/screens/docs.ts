@@ -3,12 +3,8 @@ import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBa
 import { generateText, getAiErrorMessage } from '../ai/ai-service';
 import { toast } from '../components/toast';
 import { getState } from '../state';
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+import { escapeHtml } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
@@ -24,19 +20,19 @@ export function docsScreen() {
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
-          <button type="button" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
+          <button type="button" class="docs-home-button bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
             ${backText}
           </button>
         </div>
         
         <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
-            <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Help Center</span>
+            <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Docs &amp; Help</span>
           <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
           <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-               <input type="text" id="docs-search-input" placeholder="Search guides..." class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
+               <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
                <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors hidden">
                   <span class="material-symbols-outlined text-[16px]">close</span>
                </button>
@@ -452,7 +448,7 @@ export function docsScreen() {
           </div>
           
           <div class="border-t border-slate-200 py-6 px-6 lg:px-12 flex justify-between items-center text-sm">
-             <div class="text-slate-500">© 2026 FormMate. All rights reserved.</div>
+             <div class="text-slate-500">(c) 2026 FormMate. All rights reserved.</div>
           </div>
         </main>
 
@@ -487,8 +483,9 @@ export function docsScreen() {
             </div>
 
             <div class="relative group">
-              <textarea id="docs-chat-input" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
-              <button id="btn-docs-send" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
+              <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
+              <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
+              <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
                 <span class="material-symbols-outlined text-[16px]">send</span>
               </button>
             </div>
@@ -516,6 +513,7 @@ export function docsScreen() {
     const chatInput = wrapper.querySelector('#docs-chat-input');
     const btnSend = wrapper.querySelector('#btn-docs-send');
     const chatMessages = wrapper.querySelector('#docs-chat-messages');
+    const cleanupTasks = [];
 
     const searchIndex = [
       { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate is your intelligent assistant for filling out tedious, long, and complex online forms.', type: 'guide' },
@@ -549,7 +547,7 @@ export function docsScreen() {
       ).slice(0, 3);
 
       if (results.length > 0) {
-        searchResultsList.innerHTML = results.map(item => `
+        replaceChildrenWithSafeHtml(searchResultsList, results.map(item => `
              <button type="button" class="docs-search-result w-full text-left p-2 hover:bg-slate-50 rounded-lg transition-colors group" data-doc-target="${item.id}">
                 <div class="flex items-center gap-2 mb-0.5">
                    <span class="material-symbols-outlined text-[14px] text-slate-400 group-hover:text-primary">${item.type === 'faq' ? 'quiz' : 'description'}</span>
@@ -557,23 +555,25 @@ export function docsScreen() {
                 </div>
                 <p class="text-[11px] text-slate-500 line-clamp-1">${item.text}</p>
              </button>
-          `).join('');
+          `).join(''));
         searchDropdown.classList.remove('hidden');
       } else {
-        searchResultsList.innerHTML = `
+        replaceChildrenWithSafeHtml(searchResultsList, `
              <div class="p-4 text-center">
                 <p class="text-xs text-slate-400 font-medium">No results found for "${escapeHtml(query)}"</p>
-             </div>
-          `;
+              </div>
+          `);
         searchDropdown.classList.remove('hidden');
       }
     });
 
-    document.addEventListener('click', (e) => {
+    const handleDocumentClick = (e) => {
       if (!wrapper.querySelector('#docs-search-container')?.contains(e.target)) {
         searchDropdown.classList.add('hidden');
       }
-    });
+    };
+    document.addEventListener('click', handleDocumentClick);
+    cleanupTasks.push(() => document.removeEventListener('click', handleDocumentClick));
 
     searchResultsList?.addEventListener('click', (e) => {
       const btn = e.target.closest?.('button.docs-search-result[data-doc-target]');
@@ -624,14 +624,16 @@ export function docsScreen() {
 
     // Setup smooth scrolling for hash links within this view
     wrapper.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
+      const handleAnchorClick = function (e) {
         e.preventDefault();
         const targetId = this.getAttribute('href').substring(1);
         const target = wrapper.querySelector('#' + targetId);
         if (target) {
           target.scrollIntoView({ behavior: 'smooth' });
         }
-      });
+      };
+      anchor.addEventListener('click', handleAnchorClick);
+      cleanupTasks.push(() => anchor.removeEventListener('click', handleAnchorClick));
     });
 
     // --- Docs AI Chat Logic ---
@@ -651,19 +653,19 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
       const tooltip = wrapper.querySelector('#ai-focus-tooltip');
       let isChatPending = false;
 
-      chatInput.addEventListener('focus', () => {
+      const handleChatFocus = () => {
         if (!chatInput.value.trim()) {
           tooltip?.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
           tooltip?.classList.add('opacity-100', '-translate-y-1');
         }
-      });
+      };
 
-      chatInput.addEventListener('blur', () => {
+      const handleChatBlur = () => {
         tooltip?.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
         tooltip?.classList.remove('opacity-100', '-translate-y-1');
-      });
+      };
 
-      chatInput.addEventListener('input', function () {
+      const handleChatInput = function () {
         if (this.value.trim()) {
           tooltip?.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
           tooltip?.classList.remove('opacity-100', '-translate-y-1');
@@ -672,7 +674,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
         btnSend.disabled = !this.value.trim();
-      });
+      };
 
       const sendMessage = async () => {
         const text = chatInput.value.trim();
@@ -752,13 +754,23 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         }
       };
 
-      btnSend.addEventListener('click', sendMessage);
-      chatInput.addEventListener('keydown', (e) => {
+      const handleChatKeydown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           sendMessage();
         }
-      });
+      };
+
+      btnSend.addEventListener('click', sendMessage);
+      chatInput.addEventListener('focus', handleChatFocus);
+      chatInput.addEventListener('blur', handleChatBlur);
+      chatInput.addEventListener('input', handleChatInput);
+      chatInput.addEventListener('keydown', handleChatKeydown);
+      cleanupTasks.push(() => btnSend.removeEventListener('click', sendMessage));
+      cleanupTasks.push(() => chatInput.removeEventListener('focus', handleChatFocus));
+      cleanupTasks.push(() => chatInput.removeEventListener('blur', handleChatBlur));
+      cleanupTasks.push(() => chatInput.removeEventListener('input', handleChatInput));
+      cleanupTasks.push(() => chatInput.removeEventListener('keydown', handleChatKeydown));
     }
 
     // --- Resizable Sidebars Logic ---
@@ -796,7 +808,13 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
       };
 
       handle.addEventListener('mousedown', onMouseDown);
-      return () => handle.removeEventListener('mousedown', onMouseDown);
+      return () => {
+        handle.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
     };
 
     const cleanupLeft = setupResizer(handleLeft, sidebarLeft, 'left');
@@ -854,6 +872,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
     });
 
     return () => {
+      cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();
       cleanupLeft();

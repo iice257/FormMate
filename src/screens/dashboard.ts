@@ -1,7 +1,7 @@
 // @ts-nocheck
 // FormMate - Dashboard Screen
 
-import { getState } from '../state';
+import { getState, setState } from '../state';
 import { withLayout, initLayout } from '../components/layout';
 import { navigateTo } from '../router';
 import { escapeAttr, escapeHtml } from '../utils/escape';
@@ -11,6 +11,9 @@ export function dashboardScreen() {
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const planLabel = tier === 'free' ? 'Basic' : 'Pro';
   const workspaceLabel = formData ? 'Active Workspace' : 'Ready Workspace';
+  const workspaceRoute = formData ? 'workspace' : 'new';
+  const workspaceActionLabel = formData ? 'Resume Active Form' : 'Start New Form';
+  const workspaceActionIcon = formData ? 'description' : 'add_circle';
 
   const totalForms = formHistory.length || 0;
   const aiCredits = tier === 'free' ? 'Limited' : 'Expanded';
@@ -54,11 +57,22 @@ export function dashboardScreen() {
         ? 'dashboard-status-active'
         : status === 'draft'
           ? 'dashboard-status-draft'
-          : 'dashboard-status-closed';
-      const answerCount = typeof form.answerCount === 'number' ? String(form.answerCount) : '-';
+        : 'dashboard-status-closed';
+      const fieldCount = typeof form.fields === 'number'
+        ? String(form.fields)
+        : typeof form.answerCount === 'number'
+          ? String(form.answerCount)
+          : '-';
 
       return `
-        <tr class="recent-form-row dashboard-activity-row" data-form-url="${escapeAttr(form.url || '')}">
+        <tr
+          class="recent-form-row dashboard-activity-row"
+          data-form-url="${escapeAttr(form.url || '')}"
+          data-form-title="${escapeAttr(form.title || 'Untitled Form')}"
+          role="button"
+          tabindex="0"
+          aria-label="Reopen ${escapeAttr(form.title || 'Untitled Form')}"
+        >
           <td class="dashboard-table-cell dashboard-table-cell-form">
             <div class="dashboard-activity-form">
               <div class="dashboard-activity-form-icon">
@@ -75,11 +89,16 @@ export function dashboardScreen() {
               ${statusLabel}
             </span>
           </td>
-          <td class="dashboard-table-cell dashboard-cell-muted">${answerCount}</td>
+          <td class="dashboard-table-cell dashboard-cell-muted">${fieldCount}</td>
           <td class="dashboard-table-cell dashboard-cell-muted">${new Date(form.timestamp).toLocaleDateString()}</td>
           <td class="dashboard-table-cell dashboard-table-cell-actions">
-            <button class="recent-form-menu" aria-label="No actions available yet" disabled>
-              <span class="material-symbols-outlined">more_horiz</span>
+            <button
+              type="button"
+              class="dashboard-row-action btn-press"
+              data-open-form-url="${escapeAttr(form.url || '')}"
+              ${form.url ? '' : 'disabled aria-disabled="true"'}
+            >
+              Reopen
             </button>
           </td>
         </tr>
@@ -88,13 +107,16 @@ export function dashboardScreen() {
     : `
       <tr>
         <td colspan="5" class="dashboard-activity-empty">
-          No forms yet. Start by pasting a link to analyze your first form.
+          <div class="dashboard-empty-state">
+            <p>No forms yet. Start by pasting a link to analyze your first form.</p>
+            <button type="button" id="btn-dashboard-empty-new" class="app-button-primary btn-press">Start New Form</button>
+          </div>
         </td>
       </tr>
     `;
 
   const dashboardContent = `
-    <div class="app-page-scroll no-scrollbar scroll-smooth animate-screen-enter dashboard-page">
+    <div class="app-page-scroll no-scrollbar scroll-smooth dashboard-page">
       <div class="app-page-inner dashboard-page-inner">
         <div class="app-page-stack">
           <section class="dashboard-hero">
@@ -114,8 +136,8 @@ export function dashboardScreen() {
                     <span>Open History</span>
                   </button>
                   <button id="btn-dashboard-open-workspace" class="app-button-primary dashboard-primary-action btn-press">
-                    <span class="material-symbols-outlined">description</span>
-                    <span>${formData ? 'Resume Active Form' : 'Open Workspace'}</span>
+                    <span class="material-symbols-outlined">${workspaceActionIcon}</span>
+                    <span>${workspaceActionLabel}</span>
                   </button>
                 </div>
               </div>
@@ -192,18 +214,18 @@ export function dashboardScreen() {
               <button id="btn-dashboard-view-all" class="app-button-secondary btn-press">View All</button>
             </div>
             <div class="dashboard-activity-table-wrap">
-              <table class="dashboard-activity-table">
-                <thead>
-                  <tr>
-                    <th>Form Name</th>
-                    <th>Status</th>
-                    <th>Captured Answers</th>
-                    <th>Last Modified</th>
-                    <th class="dashboard-table-head-actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${recentFormsHtml}
+                <table class="dashboard-activity-table">
+                  <thead>
+                    <tr>
+                      <th>Form Name</th>
+                      <th>Status</th>
+                    <th>Fields</th>
+                      <th>Last Modified</th>
+                      <th class="dashboard-table-head-actions">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${recentFormsHtml}
                 </tbody>
               </table>
             </div>
@@ -220,14 +242,20 @@ export function dashboardScreen() {
   });
 
   function init(wrapper) {
-    initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
+    const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'dashboard' } });
+
+    const openRecentForm = (formUrl) => {
+      if (!formUrl) return;
+      setState({ formUrl, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
+      navigateTo('analyzing');
+    };
 
     wrapper.querySelector('#btn-dashboard-open-history')?.addEventListener('click', () => {
       navigateTo('history');
     });
 
     wrapper.querySelector('#btn-dashboard-open-workspace')?.addEventListener('click', () => {
-      navigateTo('workspace');
+      navigateTo(workspaceRoute);
     });
 
     wrapper.querySelector('#btn-dashboard-view-all')?.addEventListener('click', () => {
@@ -246,11 +274,29 @@ export function dashboardScreen() {
       navigateTo('ai-chat');
     });
 
-    wrapper.querySelectorAll('.recent-form-row').forEach((el) => {
-      el.removeAttribute('role');
-      el.removeAttribute('tabindex');
-      el.style.cursor = 'default';
+    wrapper.querySelector('#btn-dashboard-empty-new')?.addEventListener('click', () => {
+      navigateTo('new');
     });
+
+    wrapper.querySelectorAll('[data-open-form-url]').forEach((button) => {
+      button.addEventListener('click', () => openRecentForm(button.dataset.openFormUrl));
+    });
+
+    wrapper.querySelectorAll('.recent-form-row').forEach((row) => {
+      row.addEventListener('click', (event) => {
+        if (event.target.closest('button')) return;
+        openRecentForm(row.dataset.formUrl);
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openRecentForm(row.dataset.formUrl);
+      });
+    });
+
+    return () => {
+      cleanupLayout?.();
+    };
   }
 
   return { html, init };

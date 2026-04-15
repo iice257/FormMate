@@ -5,27 +5,62 @@ import { getState, addChatMessage } from '../state';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
-import { escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
+import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 
 function loadSessions() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '[]');
+    return JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || '[]');
   } catch {
     return [];
   }
+}
+
+function saveSessions(sessions) {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    // Ignore storage failures and keep the current chat responsive.
+  }
+}
+
+function buildChatAvatar(icon, background) {
+  const avatar = document.createElement('div');
+  avatar.style.cssText = `width: 28px; height: 28px; border-radius: 50%; background: ${background}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;`;
+
+  const iconEl = document.createElement('span');
+  iconEl.className = 'material-symbols-outlined';
+  iconEl.style.cssText = 'font-size: 16px; color: #fff;';
+  iconEl.textContent = icon;
+  avatar.appendChild(iconEl);
+  return avatar;
+}
+
+function buildTypingBubble() {
+  const container = document.createElement('div');
+  container.style.cssText = 'background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;';
+
+  for (let index = 0; index < 3; index += 1) {
+    const dot = document.createElement('div');
+    dot.className = 'typing-dot';
+    dot.style.cssText = 'width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;';
+    container.appendChild(dot);
+  }
+
+  return container;
 }
 
 export function aiChatScreen() {
   const { userProfile, formData } = getState();
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const sessions = loadSessions();
-  const avatarSrc = userProfile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const avatarSrc = safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 
   const chatContent = `
-    <div class="flex-1 flex overflow-hidden animate-screen-enter zen-chat-shell">
+    <div class="flex-1 flex overflow-hidden zen-chat-shell">
       <div class="zen-chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
         <div class="zen-chat-header" data-zen-hide="always" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -33,10 +68,10 @@ export function aiChatScreen() {
             <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
           </div>
           <div style="display: flex; gap: 0.35rem;">
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button type="button" aria-label="Search chats" title="Search chats" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
             </button>
-            <button style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
+            <button type="button" aria-label="Share chat" title="Share chat" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>
             </button>
           </div>
@@ -64,16 +99,17 @@ export function aiChatScreen() {
 
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
             <div style="flex: 1; position: relative;">
-              <input type="text" id="chat-input" data-zen-focus-target placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
-              <button id="btn-send" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
+              <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
+              <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
+              <button id="btn-send" type="button" aria-label="Send message" title="Send message" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
             </div>
-            <button style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button type="button" aria-label="Start voice input" title="Start voice input" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
@@ -83,7 +119,7 @@ export function aiChatScreen() {
 
       <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
-          <img src="${avatarSrc}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
+          <img src="${escapeAttr(avatarSrc)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>
             <div style="font-size: 0.85rem; font-weight: 700; color: var(--fm-text);">${displayName}</div>
             <div style="font-size: 0.65rem; color: #94a3b8; font-weight: 500;">Online</div>
@@ -128,7 +164,23 @@ export function aiChatScreen() {
     const emptyState = wrapper.querySelector('#chat-empty-state');
     let isChatPending = false;
     let chatHistory = [];
+    let sessionList = Array.isArray(sessions) ? [...sessions] : [];
     const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
+
+    function persistCurrentSession(latestPrompt) {
+      const baseTitle = String(latestPrompt || formData?.title || 'New chat').trim() || 'New chat';
+      const nextSession = {
+        id: sessionList[0]?.id || `session-${Date.now()}`,
+        title: baseTitle.length > 60 ? `${baseTitle.slice(0, 57)}...` : baseTitle,
+        updatedAt: new Date().toISOString(),
+      };
+
+      sessionList = [nextSession, ...sessionList.filter((session) => session.id !== nextSession.id)]
+        .sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))
+        .slice(0, 8);
+
+      saveSessions(sessionList);
+    }
 
     function appendBubble(role, text) {
       if (emptyState && emptyState.parentElement === chatMessages) {
@@ -141,14 +193,37 @@ export function aiChatScreen() {
       const bubble = document.createElement('div');
       bubble.className = 'animate-message-in';
       bubble.style.cssText = `display: flex; gap: 0.6rem; align-items: flex-start; ${isUser ? 'flex-direction: row-reverse;' : ''} margin-bottom: 0.75rem;`;
-      bubble.innerHTML = `
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">${isUser ? 'person' : 'smart_toy'}</span>
-        </div>
-        <div style="background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;">
-          ${isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderAssistantRichText(text)}
-        </div>
-      `;
+      bubble.appendChild(buildChatAvatar(isUser ? 'person' : 'smart_toy', isUser ? 'var(--fm-primary-dark)' : 'var(--fm-primary)'));
+
+      const body = document.createElement('div');
+      body.style.cssText = `background: ${isUser ? 'var(--fm-primary)' : 'var(--fm-bg-sunken)'}; color: ${isUser ? '#fff' : 'var(--fm-text)'}; border-radius: ${isUser ? 'var(--fm-radius-lg) 0 var(--fm-radius-lg) var(--fm-radius-lg)' : '0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg)'}; padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%;`;
+      if (isUser) {
+        body.textContent = text;
+        body.style.whiteSpace = 'pre-wrap';
+      } else {
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+      }
+      bubble.appendChild(body);
+      chatMessages.appendChild(bubble);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendErrorBubble(text) {
+      if (emptyState && emptyState.parentElement === chatMessages) {
+        emptyState.remove();
+        chatMessages.style.justifyContent = 'flex-start';
+        chatMessages.style.alignItems = 'stretch';
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'animate-message-in';
+      bubble.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
+      bubble.appendChild(buildChatAvatar('error', '#ef4444'));
+
+      const body = document.createElement('div');
+      body.style.cssText = 'background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%; white-space: pre-wrap;';
+      body.textContent = text;
+      bubble.appendChild(body);
       chatMessages.appendChild(bubble);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -164,10 +239,12 @@ export function aiChatScreen() {
       appendBubble('user', trimmed);
       addChatMessage('user', trimmed);
       chatHistory.push({ role: 'user', content: trimmed });
+      persistCurrentSession(trimmed);
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
-      typingEl.innerHTML = `<div style="width: 28px; height: 28px; border-radius: 50%; background: var(--fm-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px; color: #fff;">smart_toy</span></div><div style="background: var(--fm-bg-sunken); border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem; display: flex; gap: 5px;"><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div><div class="typing-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;"></div></div>`;
+      typingEl.appendChild(buildChatAvatar('smart_toy', 'var(--fm-primary)'));
+      typingEl.appendChild(buildTypingBubble());
       chatMessages.appendChild(typingEl);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -181,7 +258,7 @@ export function aiChatScreen() {
       } catch (error) {
         typingEl.remove();
         const msg = getAiErrorMessage(error, 'AI service is unavailable right now.');
-        appendBubble('assistant', msg);
+        appendErrorBubble(msg);
       } finally {
         btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;
@@ -213,7 +290,9 @@ export function aiChatScreen() {
 
     wrapper.querySelector('#btn-new-chat')?.addEventListener('click', () => {
       chatHistory = [];
-      chatMessages.innerHTML = '';
+      sessionList = [];
+      saveSessions(sessionList);
+      chatMessages.replaceChildren();
       chatMessages.style.justifyContent = 'center';
       chatMessages.style.alignItems = 'center';
       chatMessages.appendChild(emptyState || document.createTextNode(''));

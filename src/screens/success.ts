@@ -6,6 +6,21 @@
 import { getState, setState } from '../state';
 import { navigateTo, goBack } from '../router';
 
+let confettiModulePromise = null;
+
+function loadConfetti() {
+  if (!confettiModulePromise) {
+    confettiModulePromise = import('canvas-confetti')
+      .then((mod) => mod.default || mod)
+      .catch((error) => {
+        console.warn('[Success] Failed to load confetti module:', error);
+        return null;
+      });
+  }
+
+  return confettiModulePromise;
+}
+
 export function successScreen() {
   const { formData, answers } = getState();
   const answeredCount = formData ? Object.values(answers).filter(a => a?.text).length : 0;
@@ -23,7 +38,7 @@ export function successScreen() {
             </div>
             <h2 class="text-slate-900 text-xl font-black tracking-tighter">Form<span class="text-primary">Mate</span></h2>
           </button>
-          <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          <button id="btn-close" class="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" aria-label="Close success screen">
             <span class="material-symbols-outlined">close</span>
           </button>
         </header>
@@ -138,25 +153,25 @@ export function successScreen() {
   `;
 
   function init(wrapper) {
-    // Add confetti animation
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js';
-    script.onload = () => {
+    let confettiInterval = null;
+    let disposed = false;
+
+    void loadConfetti().then((confetti) => {
+      if (!confetti || disposed) return;
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, disableForReducedMotion: true };
 
-      const interval = setInterval(function () {
+      confettiInterval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
+        if (timeLeft <= 0) return clearInterval(confettiInterval);
         const particleCount = 50 * (timeLeft / duration);
-        window.confetti(Object.assign({}, defaults, {
+        confetti(Object.assign({}, defaults, {
           particleCount,
           origin: { x: Math.random() - 0.2 + (Math.random() * 0.4), y: Math.random() - 0.2 }
         }));
       }, 250);
-    };
-    document.body.appendChild(script);
+    });
 
     wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
 
@@ -172,6 +187,9 @@ export function successScreen() {
       // Reset state for new form
       setState({
         formUrl: '',
+        capturePayload: null,
+        imageArtifacts: null,
+        parseResult: null,
         formData: null,
         answers: {},
         chatMessages: [],
@@ -179,6 +197,14 @@ export function successScreen() {
       });
       navigateTo(authed ? 'new' : 'landing');
     });
+
+    return () => {
+      disposed = true;
+      if (confettiInterval) {
+        clearInterval(confettiInterval);
+        confettiInterval = null;
+      }
+    };
   }
 
   return { html, init };
