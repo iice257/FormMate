@@ -186,7 +186,7 @@ export function examplesScreen() {
 
     wrapper.querySelectorAll('.demo-card').forEach((card) => {
       card.addEventListener('click', () => {
-        setState({ formUrl: card.dataset.url, parseResult: null, formData: null });
+        setState({ formUrl: card.dataset.url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       });
     });

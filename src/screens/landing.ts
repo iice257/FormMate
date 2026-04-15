@@ -475,7 +475,7 @@ export function landingScreen() {
       try {
         const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
         urlInput.value = url;
-        setState({ formUrl: url, parseResult: null, formData: null });
+        setState({ formUrl: url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       } catch (e) {
         triggerError(e?.message || 'Invalid URL format');
@@ -510,7 +510,7 @@ export function landingScreen() {
           'scholarship': 'demo://scholarship'
         };
         urlInput.value = urls[demoType] || urls['customer-feedback'];
-        setState({ formUrl: urlInput.value, parseResult: null, formData: null });
+        setState({ formUrl: urlInput.value, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       });
     });

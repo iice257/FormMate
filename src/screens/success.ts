@@ -187,6 +187,8 @@ export function successScreen() {
       // Reset state for new form
       setState({
         formUrl: '',
+        capturePayload: null,
+        imageArtifacts: null,
         parseResult: null,
         formData: null,
         answers: {},

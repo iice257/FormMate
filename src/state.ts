@@ -42,6 +42,7 @@ const state = {
 
   // Assisted Capture payload (bookmarklet import)
   capturePayload: null,
+  imageArtifacts: null,
 
   // Form data from parser
   parseResult: load('parse_result_state') || null,

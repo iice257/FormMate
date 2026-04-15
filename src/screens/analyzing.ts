@@ -6,6 +6,7 @@
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
 import { parseFormUrl, detectFormPlatform, parseCapturePayload } from '../parser/form-parser';
+import { requestImageParse } from '../parser/adapters/image';
 import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
@@ -248,7 +249,7 @@ export function analyzingScreen() {
         if (cancelled) return;
 
         // Parse / import form
-        const { capturePayload } = getState();
+        const { capturePayload, imageArtifacts } = getState();
         let parseResult;
         if (capturePayload) {
           updateProgress(40, 'Importing capture', 'Step 1 of 3', 'Normalizing captured fields...');
@@ -257,6 +258,15 @@ export function analyzingScreen() {
           parseResult = parseCapturePayload(capturePayload);
           // Clear after use to prevent accidental reuse
           setState({ capturePayload: null });
+        } else if (Array.isArray(imageArtifacts) && imageArtifacts.length > 0) {
+          updateProgress(40, 'Extracting from screenshots', 'Step 1 of 3', 'Running image parser...');
+          await delay(250);
+          if (cancelled) return;
+          parseResult = await requestImageParse({
+            imageArtifacts,
+            sourceUrl: formUrl,
+          });
+          setState({ imageArtifacts: null });
         } else {
           parseResult = await parseFormUrl(formUrl);
         }
@@ -404,6 +414,11 @@ export function analyzingScreen() {
         captureModal.classList.add('flex');
         if (captureIcon) {
           captureIcon.textContent = outcome.nextAction === 'upload_screenshots' ? 'photo_library' : 'lock';
+        }
+        if (btnCaptureStart) {
+          btnCaptureStart.textContent = outcome.nextAction === 'upload_screenshots'
+            ? 'Upload Screenshots'
+            : 'Use Assisted Capture';
         }
         if (captureMsg) {
           const hint = outcome.nextStepHint ? ` ${outcome.nextStepHint}` : '';

@@ -141,7 +141,7 @@ export function historyScreen() {
 
     const reopenForm = (formUrl) => {
       if (!formUrl) return;
-      setState({ formUrl, capturePayload: null, parseResult: null, formData: null });
+      setState({ formUrl, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
       navigateTo('analyzing');
     };
 

@@ -162,7 +162,7 @@ export function newFormScreen() {
       try {
         const url = normalizeSubmittedFormUrl(urlInput.value, { allowDemo: true });
         urlInput.value = url;
-        setState({ formUrl: url, parseResult: null, formData: null });
+        setState({ formUrl: url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       } catch (error) {
         toast.error(error?.message || 'Invalid URL format');
