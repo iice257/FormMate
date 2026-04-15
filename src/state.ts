@@ -44,6 +44,7 @@ const state = {
   capturePayload: null,
 
   // Form data from parser
+  parseResult: load('parse_result_state') || null,
   formData: load('form_data_state') || null,
 
   // AI-generated answers: { [questionId]: { text, source, confidence } }
@@ -130,7 +131,14 @@ export function setState(updates) {
     else remove('form_history');
     queueRemoteSync(state.authUser, { form_history: updates.formHistory });
   }
-  if (updates.formData) save('form_data_state', updates.formData);
+  if (Object.prototype.hasOwnProperty.call(updates, 'parseResult')) {
+    if (updates.parseResult == null) remove('parse_result_state');
+    else save('parse_result_state', updates.parseResult);
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, 'formData')) {
+    if (updates.formData == null) remove('form_data_state');
+    else save('form_data_state', updates.formData);
+  }
   if (updates.answers && !Object.prototype.hasOwnProperty.call(updates, 'answeredCount')) {
     state.answeredCount = countAnsweredEntries(updates.answers);
   }

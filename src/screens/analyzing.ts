@@ -5,10 +5,9 @@
 
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
-import { parseFormUrl, detectFormPlatform } from '../parser/form-parser';
+import { parseFormUrl, detectFormPlatform, parseCapturePayload } from '../parser/form-parser';
 import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
-import { capturedPayloadToFormData } from '../parser/capture-parser';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
 import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store';
 
@@ -236,6 +235,8 @@ export function analyzingScreen() {
     async function runAnalysis() {
       try {
         const { formUrl } = getState();
+        // Reset stale parser state before a fresh analysis run.
+        setState({ parseResult: null, formData: null });
 
         // Step 1: Detecting questions
         updateProgress(15, 'Detecting questions', 'Step 1 of 3', 'Scanning form...');
@@ -248,20 +249,29 @@ export function analyzingScreen() {
 
         // Parse / import form
         const { capturePayload } = getState();
-        let formData;
+        let parseResult;
         if (capturePayload) {
           updateProgress(40, 'Importing capture', 'Step 1 of 3', 'Normalizing captured fields...');
           await delay(250);
           if (cancelled) return;
-          formData = capturedPayloadToFormData(capturePayload);
+          parseResult = parseCapturePayload(capturePayload);
           // Clear after use to prevent accidental reuse
           setState({ capturePayload: null });
         } else {
-          formData = await parseFormUrl(formUrl);
+          parseResult = await parseFormUrl(formUrl);
         }
         if (cancelled) return;
 
-        completeStep(1, `Found ${formData.questions.length} distinct form fields`);
+        const parseOutcome = parseResult?.outcome || {};
+        const formData = parseResult?.compatibility || null;
+        const questionCount = Array.isArray(formData?.questions) ? formData.questions.length : 0;
+
+        if (!formData || questionCount === 0 || ['blocked', 'unsupported', 'no_form', 'error'].includes(parseOutcome.status)) {
+          handleOutcomeFailure(parseResult);
+          return;
+        }
+
+        completeStep(1, `Found ${questionCount} distinct form fields`);
 
         // Step 2: Understanding inputs
         activateStep(2, 'Mapping validation rules & types...');
@@ -321,14 +331,18 @@ export function analyzingScreen() {
             url: formData.url || formUrl,
             status: 'completed',
             provider: formData.source || platform,
-            parseStrategy: formData.parseStrategy || 'unknown',
-            supportState: formData.supportState || 'supported',
-            diagnostics: formData.diagnostics || null,
+            parseStrategy: formData.parseStrategy || parseResult?.diagnostics?.parseStrategy || 'unknown',
+            supportState: formData.supportState || parseOutcome.status || 'supported',
+            diagnostics: {
+              ...(formData.diagnostics || {}),
+              parseOutcome,
+              parserWarnings: parseOutcome?.warnings || [],
+            },
             fields: Array.isArray(formData.questions) ? formData.questions.length : 0
           });
         } catch (e) { console.warn('[AnalyzingScreen] Failed to save form history:', e); }
 
-        setState({ formData, answers, aiDiagnostics, formHistory: loadFormHistory() });
+        setState({ parseResult, formData, answers, aiDiagnostics, formHistory: loadFormHistory() });
 
         // Navigate to workspace
         await delay(600);
@@ -368,6 +382,40 @@ export function analyzingScreen() {
           errorModal.classList.add('flex');
           if (errorMsg) errorMsg.textContent = getAiErrorMessage(err, err?.message || 'Could not map inputs from this form. Please ensure it is publicly accessible.');
         }
+      }
+    }
+
+    function handleOutcomeFailure(parseResult) {
+      const outcome = parseResult?.outcome || {};
+      const fallbackMessage = parseResult?.outcome?.warnings?.[0]?.message
+        || parseResult?.diagnostics?.extractionWarnings?.[0]
+        || 'Could not map inputs from this form.';
+
+      // Stop animations
+      const radar = wrapper.querySelector('.animate-float');
+      if (radar) radar.classList.remove('animate-float');
+      const ping = wrapper.querySelector('.animate-ping');
+      if (ping) ping.classList.remove('animate-ping');
+      const scanLine = wrapper.querySelector('.animate-scan-line');
+      if (scanLine) scanLine.classList.remove('animate-scan-line');
+
+      if ((outcome.nextAction === 'use_capture' || outcome.nextAction === 'upload_screenshots') && captureModal) {
+        captureModal.classList.remove('hidden');
+        captureModal.classList.add('flex');
+        if (captureIcon) {
+          captureIcon.textContent = outcome.nextAction === 'upload_screenshots' ? 'photo_library' : 'lock';
+        }
+        if (captureMsg) {
+          const hint = outcome.nextStepHint ? ` ${outcome.nextStepHint}` : '';
+          captureMsg.textContent = `${fallbackMessage}${hint}`;
+        }
+        return;
+      }
+
+      if (errorModal) {
+        errorModal.classList.remove('hidden');
+        errorModal.classList.add('flex');
+        if (errorMsg) errorMsg.textContent = fallbackMessage;
       }
     }
 

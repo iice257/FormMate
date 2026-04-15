@@ -246,7 +246,7 @@ export function dashboardScreen() {
 
     const openRecentForm = (formUrl) => {
       if (!formUrl) return;
-      setState({ formUrl, capturePayload: null });
+      setState({ formUrl, capturePayload: null, parseResult: null, formData: null });
       navigateTo('analyzing');
     };
 

@@ -187,6 +187,7 @@ export function successScreen() {
       // Reset state for new form
       setState({
         formUrl: '',
+        parseResult: null,
         formData: null,
         answers: {},
         chatMessages: [],
