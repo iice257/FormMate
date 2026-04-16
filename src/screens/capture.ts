@@ -4,8 +4,8 @@ import { navigateTo } from '../router';
 import { toast } from '../components/toast';
 import { capturedPayloadToFormData } from '../parser/capture-parser';
 
-const MAX_SCREENSHOTS = 6;
-const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+const MAX_SCREENSHOTS = 5;
+const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 
 function randomToken() {
   return `cap_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;

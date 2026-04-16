@@ -14,8 +14,8 @@ const RATE_LIMIT = { max: 8, windowMs: 60_000 };
 const buckets = new Map();
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const REQUEST_TIMEOUT_MS = 14_000;
-const MAX_IMAGES = 6;
-const MAX_IMAGE_ARTIFACT_CHARS = 5_500_000;
+const MAX_IMAGES = 5;
+const MAX_IMAGE_ARTIFACT_CHARS = 4_100_000;
 
 const SYSTEM_PROMPT = [
   'You are FormMate image parser.',
@@ -314,9 +314,6 @@ function getVisionModelChain() {
 
   return [
     'meta-llama/llama-4-scout-17b-16e-instruct',
-    'meta-llama/llama-4-maverick-17b-128e-instruct',
-    'llama-3.2-90b-vision-preview',
-    'llama-3.2-11b-vision-preview',
   ];
 }
 

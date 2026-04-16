@@ -12,8 +12,8 @@ import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
 import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store';
 
-const MAX_GOOGLE_SCREENSHOTS = 6;
-const MAX_GOOGLE_SCREENSHOT_BYTES = 5 * 1024 * 1024;
+const MAX_GOOGLE_SCREENSHOTS = 5;
+const MAX_GOOGLE_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 
 export function analyzingScreen() {
   const { formUrl } = getState();

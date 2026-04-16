@@ -5,9 +5,9 @@ import { getRequestAuthHeaders } from '../auth/auth-service';
 export const MODELS = {
   HEAVY: 'llama-3.3-70b-versatile',
   STANDARD: 'llama-3.1-8b-instant',
-  COPILOT: 'mixtral-8x7b-32768',
-  FAST: 'llama3-8b-8192',
-  WHISPER: 'whisper-large-v3',
+  COPILOT: 'openai/gpt-oss-20b',
+  FAST: 'llama-3.1-8b-instant',
+  WHISPER: 'whisper-large-v3-turbo',
 };
 
 export const TASK_ROUTES = {

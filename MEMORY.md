@@ -11,3 +11,4 @@
 ## Repository Workflow Preferences
 - Commit and push after major tasks/changes.
 - Keep this memory file updated when new critical preferences or decisions are introduced.
+- Treat API keys/secrets as local-only runtime config; never commit or expose them in plaintext.
