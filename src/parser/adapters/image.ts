@@ -114,15 +114,20 @@ export async function requestImageParse({ imageArtifacts, imageServiceUrl = '/ap
       body: JSON.stringify({ images: artifacts, sourceUrl }),
     });
 
+    const responseText = await response.text().catch(() => '');
     let payload = null;
     try {
-      payload = await response.json();
+      payload = responseText ? JSON.parse(responseText) : null;
     } catch {
       payload = null;
     }
 
     if (!response.ok) {
-      const errorMessage = payload?.error?.message || `Image parser returned HTTP ${response.status}.`;
+      const errorMessage = payload?.error?.message
+        || payload?.message
+        || (typeof payload?.error === 'string' ? payload.error : '')
+        || (responseText ? responseText.slice(0, 240) : '')
+        || `Image parser returned HTTP ${response.status}.`;
       return buildImageUnsupportedResult({
         reason: UNSUPPORTED_REASON.IMAGE_INCOMPLETE,
         message: errorMessage,
