@@ -5,12 +5,15 @@
 
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
-import { parseFormUrl, detectFormPlatform, parseCapturePayload } from '../parser/form-parser';
+import { parseFormUrl, detectFormPlatform, parseCapturePayload, isGoogleFormUrl } from '../parser/form-parser';
 import { requestImageParse } from '../parser/adapters/image';
 import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
 import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store';
+
+const MAX_GOOGLE_SCREENSHOTS = 6;
+const MAX_GOOGLE_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 
 export function analyzingScreen() {
   const { formUrl } = getState();
@@ -177,6 +180,44 @@ export function analyzingScreen() {
         </div>
       </div>
 
+      <!-- Google Forms Screenshot Gate -->
+      <div id="google-screenshot-modal" class="fixed inset-0 z-[102] bg-white hidden flex-col p-6 md:p-10">
+        <div class="w-full max-w-2xl mx-auto my-auto bg-white border border-slate-200 rounded-3xl shadow-xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <span class="material-symbols-outlined">photo_library</span>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Google Form Screenshot Import</h2>
+          </div>
+
+          <p class="text-sm text-slate-600 leading-relaxed mb-5">
+            Google Forms can hide parseable structure behind session checks, so FormMate needs screenshots from your live form tab for reliable field extraction.
+          </p>
+
+          <a id="google-open-form" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-colors mb-5">
+            <span class="material-symbols-outlined text-base">open_in_new</span>
+            Open Form In New Tab
+          </a>
+
+          <div id="google-dropzone" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 md:p-5">
+            <div class="flex flex-col gap-3">
+              <input id="google-screenshot-input" type="file" accept="image/*" multiple class="block w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-800" />
+              <p class="text-xs text-slate-500">
+                Attach screenshots here, drag-drop, or paste directly with Ctrl/Cmd+V.
+              </p>
+              <p id="google-screenshot-count" class="text-xs font-medium text-slate-600">
+                No screenshots attached yet.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+            <button id="btn-google-start" class="px-6 py-3 rounded-xl font-bold bg-primary text-white hover:bg-primary/95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Parse Screenshots</button>
+            <button id="btn-google-cancel" class="px-6 py-3 rounded-xl font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 transition-all">${homeLabel}</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -200,8 +241,36 @@ export function analyzingScreen() {
     const captureMsg = wrapper.querySelector('#capture-modal-msg');
     const btnCaptureStart = wrapper.querySelector('#btn-capture-start');
     const btnCaptureDemo = wrapper.querySelector('#btn-capture-demo');
+    const googleScreenshotModal = wrapper.querySelector('#google-screenshot-modal');
+    const googleOpenFormLink = wrapper.querySelector('#google-open-form');
+    const googleScreenshotInput = wrapper.querySelector('#google-screenshot-input');
+    const googleDropzone = wrapper.querySelector('#google-dropzone');
+    const googleScreenshotCount = wrapper.querySelector('#google-screenshot-count');
+    const btnGoogleStart = wrapper.querySelector('#btn-google-start');
+    const btnGoogleCancel = wrapper.querySelector('#btn-google-cancel');
 
     let cancelled = false;
+    let googleGateOpen = false;
+    let googleImageArtifacts = [];
+
+    const setGoogleCountText = (text) => {
+      if (googleScreenshotCount) googleScreenshotCount.textContent = text;
+    };
+
+    const setGoogleStartEnabled = () => {
+      if (btnGoogleStart) {
+        btnGoogleStart.disabled = googleImageArtifacts.length === 0;
+      }
+    };
+
+    const renderGoogleAttachmentState = () => {
+      if (!googleImageArtifacts.length) {
+        setGoogleCountText('No screenshots attached yet.');
+      } else {
+        setGoogleCountText(`${googleImageArtifacts.length} screenshot(s) attached and ready to parse.`);
+      }
+      setGoogleStartEnabled();
+    };
 
     const goHome = () => {
       cancelled = true;
@@ -230,8 +299,137 @@ export function analyzingScreen() {
       navigateTo('examples');
     });
 
-    // Run analysis pipeline
-    runAnalysis();
+    async function addGoogleScreenshots(fileList, sourceLabel) {
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+
+      const availableSlots = MAX_GOOGLE_SCREENSHOTS - googleImageArtifacts.length;
+      if (availableSlots <= 0) {
+        setGoogleCountText(`Limit reached (${MAX_GOOGLE_SCREENSHOTS} screenshots). Remove and retry.`);
+        return;
+      }
+
+      const accepted = files
+        .filter((file) => String(file.type || '').startsWith('image/'))
+        .slice(0, availableSlots);
+
+      if (!accepted.length) {
+        setGoogleCountText('Only image files are supported for screenshot parsing.');
+        return;
+      }
+
+      const oversized = accepted.filter((file) => file.size > MAX_GOOGLE_SCREENSHOT_BYTES);
+      const valid = accepted.filter((file) => file.size <= MAX_GOOGLE_SCREENSHOT_BYTES);
+      if (oversized.length > 0) {
+        setGoogleCountText(`Skipped ${oversized.length} oversized file(s). Max ${Math.floor(MAX_GOOGLE_SCREENSHOT_BYTES / (1024 * 1024))}MB each.`);
+      } else {
+        setGoogleCountText(`Importing ${valid.length} image(s) from ${sourceLabel}...`);
+      }
+
+      for (const file of valid) {
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          if (dataUrl) {
+            googleImageArtifacts.push(dataUrl);
+          }
+        } catch {
+          // ignore individual file failures and continue
+        }
+      }
+
+      googleImageArtifacts = googleImageArtifacts.slice(0, MAX_GOOGLE_SCREENSHOTS);
+      renderGoogleAttachmentState();
+    }
+
+    const onGooglePaste = async (event) => {
+      if (!googleGateOpen) return;
+      const items = Array.from(event?.clipboardData?.items || []);
+      const imageFiles = items
+        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+
+      if (!imageFiles.length) return;
+      event.preventDefault();
+      await addGoogleScreenshots(imageFiles, 'paste');
+    };
+
+    const showGoogleScreenshotGate = () => {
+      if (!googleScreenshotModal) {
+        runAnalysis();
+        return;
+      }
+
+      googleGateOpen = true;
+      googleImageArtifacts = [];
+      renderGoogleAttachmentState();
+
+      if (/^https?:\/\//i.test(formUrl || '')) {
+        googleOpenFormLink?.setAttribute('href', formUrl);
+      } else {
+        googleOpenFormLink?.setAttribute('href', '#');
+      }
+
+      googleScreenshotModal.classList.remove('hidden');
+      googleScreenshotModal.classList.add('flex');
+      window.addEventListener('paste', onGooglePaste);
+    };
+
+    const closeGoogleScreenshotGate = () => {
+      googleGateOpen = false;
+      googleScreenshotModal?.classList.add('hidden');
+      googleScreenshotModal?.classList.remove('flex');
+      window.removeEventListener('paste', onGooglePaste);
+    };
+
+    googleScreenshotInput?.addEventListener('change', async () => {
+      await addGoogleScreenshots(googleScreenshotInput.files, 'file picker');
+      googleScreenshotInput.value = '';
+    });
+
+    googleDropzone?.addEventListener('dragover', (event) => {
+      if (!googleGateOpen) return;
+      event.preventDefault();
+      googleDropzone.classList.add('border-primary', 'bg-primary/5');
+    });
+
+    googleDropzone?.addEventListener('dragleave', () => {
+      googleDropzone.classList.remove('border-primary', 'bg-primary/5');
+    });
+
+    googleDropzone?.addEventListener('drop', async (event) => {
+      if (!googleGateOpen) return;
+      event.preventDefault();
+      googleDropzone.classList.remove('border-primary', 'bg-primary/5');
+      await addGoogleScreenshots(event.dataTransfer?.files, 'drag and drop');
+    });
+
+    btnGoogleCancel?.addEventListener('click', () => {
+      cancelled = true;
+      closeGoogleScreenshotGate();
+      goHome();
+    });
+
+    btnGoogleStart?.addEventListener('click', () => {
+      if (!googleImageArtifacts.length || cancelled) return;
+      closeGoogleScreenshotGate();
+      setState({
+        capturePayload: null,
+        imageArtifacts: googleImageArtifacts.slice(0, MAX_GOOGLE_SCREENSHOTS),
+      });
+      runAnalysis();
+    });
+
+    const { capturePayload, imageArtifacts } = getState();
+    const shouldGateGoogle = isGoogleFormUrl(formUrl)
+      && !capturePayload
+      && (!Array.isArray(imageArtifacts) || imageArtifacts.length === 0);
+
+    if (shouldGateGoogle) {
+      showGoogleScreenshotGate();
+    } else {
+      runAnalysis();
+    }
 
     async function runAnalysis() {
       try {
@@ -473,10 +671,22 @@ export function analyzingScreen() {
       }
     }
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      closeGoogleScreenshotGate();
+    };
   }
 
   return { html, init };
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read screenshot.'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function delay(ms) {
