@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { legacyFormDataToCanonical } from '../compat';
+import { getRequestAuthHeaders } from '../../auth/auth-service';
 import {
   COMPLETENESS_STATUS,
   NEXT_ACTION,
@@ -103,10 +104,12 @@ export async function requestImageParse({ imageArtifacts, imageServiceUrl = '/ap
   }
 
   try {
+    const authHeaders = getRequestAuthHeaders();
     const response = await fetch(imageServiceUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       body: JSON.stringify({ images: artifacts, sourceUrl }),
     });
