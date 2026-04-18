@@ -6,8 +6,15 @@ const children = [];
 const API_HOST = '127.0.0.1';
 const API_PORT = 3000;
 const STARTUP_TIMEOUT_MS = 20_000;
+const backendEnv = {};
 
-function run(args, extraEnv = {}) {
+if (typeof process.env.NODE_TLS_REJECT_UNAUTHORIZED === 'undefined') {
+  backendEnv.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  console.error('[dev:stack] Local backend TLS verification is disabled (NODE_TLS_REJECT_UNAUTHORIZED=0).');
+  console.error('[dev:stack] Configure local root certificates and set NODE_TLS_REJECT_UNAUTHORIZED=1 to restore strict TLS validation.');
+}
+
+function run(args, extraEnv = {}, { propagateExitCode = true } = {}) {
   const child = spawn(npmCommand, args, {
     stdio: 'inherit',
     env: { ...process.env, ...extraEnv },
@@ -16,7 +23,7 @@ function run(args, extraEnv = {}) {
 
   children.push(child);
   child.on('exit', (code) => {
-    if (code && !process.exitCode) {
+    if (propagateExitCode && code && !process.exitCode) {
       process.exitCode = code;
     }
   });
@@ -66,29 +73,18 @@ function waitForApiPort({ host, port, timeoutMs }) {
   });
 }
 
-const vercelChild = run(['run', 'dev:vercel']);
-let vercelExitedEarly = false;
-
-vercelChild.once('exit', (code) => {
-  if (code && code !== 0) {
-    vercelExitedEarly = true;
-  }
-});
+run(['run', 'dev:api-local'], backendEnv, { propagateExitCode: false });
 
 try {
   await waitForApiPort({ host: API_HOST, port: API_PORT, timeoutMs: STARTUP_TIMEOUT_MS });
 } catch (error) {
   stopChildren();
   const message = String(error?.message || error);
-  console.error('[dev:stack] Failed to start `vercel dev` on http://127.0.0.1:3000.');
-  if (vercelExitedEarly) {
-    console.error('[dev:stack] `vercel dev` exited early. Confirm Vercel CLI auth (`npx vercel login`) and local TLS trust settings.');
-  }
-  console.error(`[dev:stack] ${message}`);
+  console.error(`[dev:stack] Local API server failed to start: ${message}`);
   process.exit(1);
 }
 
-run(['run', 'dev'], {
+run(['run', 'dev:vite'], {
   VITE_API_PROXY_TARGET: `http://${API_HOST}:${API_PORT}`,
   VITE_STRICT_PORT: '1',
 });

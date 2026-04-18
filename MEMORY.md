@@ -14,5 +14,6 @@
 - Treat API keys/secrets as local-only runtime config; never commit or expose them in plaintext.
 
 ## Operational Notes
-- On this workstation/network, `vercel dev` can fail with `self-signed certificate in certificate chain` until local TLS trust is configured for Vercel CLI auth endpoints.
-- Local AI proxy relies on `npm run dev:stack` to boot `vercel dev` on `127.0.0.1:3000` before Vite starts.
+- On this workstation/network, outbound TLS to some hosts can fail with `self-signed certificate in certificate chain` until local trust is configured.
+- Local development uses an internal API server (`scripts/dev-api-server.ts`) on `127.0.0.1:3000` via `npm run dev`/`npm run dev:stack`; this avoids `vercel dev` proxy drift for `/api/*`.
+- Local stack defaults `NODE_TLS_REJECT_UNAUTHORIZED=0` when unset so Groq calls can run behind the current corporate/self-signed TLS chain.

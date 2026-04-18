@@ -4,8 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite dev --configLoader native",
+    "dev": "node scripts/dev-stack.mjs",
+    "dev:vite": "vite dev --configLoader native",
     "dev:vercel": "vercel dev --listen 3000",
+    "dev:api-local": "tsx scripts/dev-api-server.ts",
     "dev:stack": "node scripts/dev-stack.mjs",
     "build": "vite build --configLoader native",
     "preview": "vite preview --configLoader native",
@@ -28,6 +30,7 @@
     "jsdom": "^28.1.0",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vercel": "^50.31.1",
     "vite": "^6.2.0"

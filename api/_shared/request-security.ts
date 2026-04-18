@@ -161,8 +161,9 @@ async function validateSupabaseAccessToken(token) {
 export async function assertTrustedAppSignal(req, res, message = 'Access denied.') {
   const origin = getRequestOrigin(req);
   const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim().toLowerCase();
-  if (['1', 'true'].includes(devAuthHeader) && isLocalDevRequest(req, origin)) {
-    return true;
+  if (['1', 'true'].includes(devAuthHeader)) {
+    if (isLocalDevRequest(req, origin)) return true;
+    if (isDevAuthEnabled() && isLocalOrigin(origin)) return true;
   }
 
   const bearerToken = getBearerToken(req);
