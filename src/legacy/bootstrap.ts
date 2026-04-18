@@ -14,7 +14,6 @@ import { successScreen } from '../screens/success';
 import { accountsScreen } from '../screens/accounts';
 import { analyticsScreen } from '../screens/analytics';
 import { docsScreen } from '../screens/docs';
-import { pricingScreen } from '../screens/pricing';
 import { helpScreen } from '../screens/help';
 import { examplesScreen } from '../screens/examples';
 import { newFormScreen } from '../screens/new-form';
@@ -44,7 +43,6 @@ function registerScreens() {
   registerScreen('accounts', accountsScreen);
   registerScreen('analytics', analyticsScreen);
   registerScreen('docs', docsScreen);
-  registerScreen('pricing', pricingScreen);
   registerScreen('help', helpScreen);
   registerScreen('examples', examplesScreen);
   registerScreen('new', newFormScreen);
@@ -157,7 +155,7 @@ async function boot() {
 
       if (session) {
         const { setState } = await import('../state');
-        setState({ isAuthenticated: true, authUser: session.user, tier: session.tier });
+        setState({ isAuthenticated: true, authUser: session.user });
 
         try {
           const { hydrateFromRemote } = await import('../storage/storage-provider');

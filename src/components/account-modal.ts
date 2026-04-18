@@ -459,7 +459,6 @@ function wireModalShellEvents() {
     setState({
       isAuthenticated: false,
       authUser: null,
-      tier: 'free',
       currentScreen: 'auth',
     });
     closeModal({ force: true });

@@ -7,25 +7,14 @@ import { navigateTo } from '../router';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 
 export function dashboardScreen() {
-  const { userProfile, formHistory, tier, formData } = getState();
+  const { userProfile, formHistory, formData } = getState();
   const firstName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
-  const planLabel = tier === 'free' ? 'Basic' : 'Pro';
   const workspaceLabel = formData ? 'Active Workspace' : 'Ready Workspace';
   const workspaceRoute = formData ? 'workspace' : 'new';
   const workspaceActionLabel = formData ? 'Resume Active Form' : 'Start New Form';
   const workspaceActionIcon = formData ? 'description' : 'add_circle';
 
   const totalForms = formHistory.length || 0;
-  const aiCredits = tier === 'free' ? 'Limited' : 'Expanded';
-  const timeSaved = '-';
-  const accuracy = '-';
-
-  const stats = [
-    { label: 'Total Forms', value: String(totalForms), meta: 'Forms tracked' },
-    { label: 'AI Credits', value: aiCredits, meta: `${planLabel} tier` },
-    { label: 'Time Saved', value: timeSaved, meta: 'Not yet measured' },
-    { label: 'Accuracy', value: accuracy, meta: 'Pending telemetry' }
-  ];
 
   const quickActions = [
     {
@@ -128,7 +117,7 @@ export function dashboardScreen() {
                   <p class="app-copy dashboard-hero-copy-text">
                     A consolidated view of your form activity.
                   </p>
-                  <p class="dashboard-hero-meta">${planLabel} Plan | ${workspaceLabel}</p>
+                  <p class="dashboard-hero-meta">${workspaceLabel}</p>
                 </div>
                 <div class="dashboard-hero-actions">
                   <button id="btn-dashboard-open-history" class="app-button-secondary dashboard-secondary-action btn-press">
@@ -145,7 +134,7 @@ export function dashboardScreen() {
               <div class="dashboard-hero-aside">
                 <div class="dashboard-hero-aside-top">
                   <div class="app-eyebrow">At A Glance</div>
-                  <p class="dashboard-panel-copy">Track usage, plan, and workspace state without leaving the page.</p>
+                  <p class="dashboard-panel-copy">Track your recent form activity and workspace status in one place.</p>
                 </div>
                 <div class="dashboard-hero-metrics">
                   <div>
@@ -153,8 +142,8 @@ export function dashboardScreen() {
                     <div class="dashboard-hero-metric-label">Forms Touched</div>
                   </div>
                   <div>
-                    <div class="dashboard-hero-metric-value">${planLabel}</div>
-                    <div class="dashboard-hero-metric-label">Plan</div>
+                    <div class="dashboard-hero-metric-value">${Math.min(formHistory.length, 5)}</div>
+                    <div class="dashboard-hero-metric-label">Recent Items</div>
                   </div>
                   <div>
                     <div class="dashboard-hero-metric-value">${formData ? 'Active' : 'Ready'}</div>
@@ -163,20 +152,6 @@ export function dashboardScreen() {
                 </div>
               </div>
             </div>
-          </section>
-
-          <section class="dashboard-stats-row">
-            ${stats.map(stat => `
-              <article class="dashboard-stat-card">
-                <div class="dashboard-stat-edge"></div>
-                <div class="dashboard-stat-glow"></div>
-                <div class="app-eyebrow">${stat.label}</div>
-                <div class="dashboard-stat-reading">
-                  <span class="dashboard-stat-value">${stat.value}</span>
-                  <span class="dashboard-stat-meta">${stat.meta}</span>
-                </div>
-              </article>
-            `).join('')}
           </section>
 
           <section class="dashboard-section-surface">

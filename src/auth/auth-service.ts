@@ -10,7 +10,6 @@ const DEV_TEST_USERS = [
     email: 'dev@formmate.test',
     password: 'password',
     name: 'Dev Admin',
-    tier: 'monthly',
   },
 ];
 const DEV_SESSION = {
@@ -20,10 +19,8 @@ const DEV_SESSION = {
     name: DEV_TEST_USERS[0].name,
     provider: 'email',
     avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(DEV_TEST_USERS[0].name)}&background=2298da&color=fff&bold=true`,
-    tier: DEV_TEST_USERS[0].tier,
   },
   isAuthenticated: true,
-  tier: DEV_TEST_USERS[0].tier,
   provider: 'email',
   access_token: 'dev-access-token',
   refresh_token: 'dev-refresh-token',
@@ -116,11 +113,10 @@ export function isDevAuthEnabled() {
 
 export function getDevTestUsers() {
   if (!isDevAuthEnabled()) return [];
-  return DEV_TEST_USERS.map(({ id, email, name, tier }) => ({
+  return DEV_TEST_USERS.map(({ id, email, name }) => ({
     id,
     email,
     name,
-    tier,
   }));
 }
 
@@ -178,21 +174,17 @@ function clearLocalAccountCache() {
 function normalizeSession(session) {
   const user = session?.user || {};
   const metadata = user.user_metadata || {};
-  const appMetadata = user.app_metadata || {};
   const name = String(metadata.name || metadata.full_name || metadata.fullName || user.name || user.email || 'User').trim();
-  const tier = appMetadata.tier || metadata.tier || session?.tier || 'free';
   const avatar = metadata.avatar_url || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=2298da&color=fff&bold=true`;
 
   return {
     ...session,
     isAuthenticated: true,
-    tier,
     user: {
       ...user,
       name,
       email: user.email || '',
       avatar,
-      tier,
       provider: user.app_metadata?.provider || user.app_metadata?.providers?.[0] || session?.provider || 'email',
     },
     createdAt: session?.createdAt || Date.now(),
@@ -431,12 +423,10 @@ export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id) {
   const session = normalizeSession({
     ...DEV_SESSION,
     createdAt: Date.now(),
-    tier: devUser.tier,
     user: {
       ...DEV_SESSION.user,
       email: devUser.email,
       name: devUser.name,
-      tier: devUser.tier,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(devUser.name)}&background=2298da&color=fff&bold=true`,
     },
   });

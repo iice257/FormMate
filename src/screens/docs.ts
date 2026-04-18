@@ -61,8 +61,6 @@ export function docsScreen() {
         </div>
 
         <div class="flex-1 flex items-center justify-end gap-3 md:gap-4 text-sm font-semibold">
-           <button type="button" class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer bg-transparent border-0 p-0" id="btn-docs-pricing">Pricing</button>
-           <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
            <button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
         </div>
       </header>
@@ -336,7 +334,7 @@ export function docsScreen() {
                <div class="space-y-6">
                   <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                     <h4 class="font-bold text-slate-900 mb-2">Is FormMate free to use?</h4>
-                    <p class="text-slate-600 text-sm leading-relaxed">Yes! You can fill up to 5 forms per month for free. For users who need higher volume or more advanced AI features, we offer Weekly and Monthly Pro subscriptions.</p>
+                    <p class="text-slate-600 text-sm leading-relaxed">Yes. FormMate is currently available as a free offering while we continue to expand reliability and feature coverage.</p>
                   </div>
                   
                   <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100">
@@ -408,7 +406,7 @@ export function docsScreen() {
                  Contact Us
                  <a href="#contact" class="opacity-0 group-hover:opacity-100 ml-2 text-primary transition-opacity"><span class="material-symbols-outlined text-xl">link</span></a>
                </h2>
-               <p class="text-base text-slate-600 leading-relaxed mb-8">Have a specific question, billing issue, or partnership inquiry? Reach out to our support team and we'll get back to you within 24 hours.</p>
+               <p class="text-base text-slate-600 leading-relaxed mb-8">Have a specific question or partnership inquiry? Reach out to our support team and we'll get back to you within 24 hours.</p>
 
                <div class="p-8 border border-slate-200 rounded-2xl bg-slate-50">
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -427,7 +425,6 @@ export function docsScreen() {
                    <select id="contact-subject" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                      <option value="general">General Inquiry</option>
                      <option value="support">Technical Support</option>
-                     <option value="billing">Billing</option>
                      <option value="partnership">Partnership</option>
                    </select>
                  </div>
@@ -510,7 +507,6 @@ export function docsScreen() {
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
-    wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
     wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => {
       const target = wrapper.querySelector('#contact');
       target?.scrollIntoView({ behavior: 'smooth' });
@@ -536,11 +532,11 @@ export function docsScreen() {
       { id: 'editing', title: 'Reviewing & Editing', text: 'In your Workspace center screen, you\'ll notice a list of question cards.', type: 'guide' },
       { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and account-backed settings are handled in the Accounts Center.', type: 'guide' },
       { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
-      { id: 'faqs', title: 'Pricing FAQ', text: 'Is FormMate free to use? Yes! You can fill up to 5 forms per month for free.', type: 'faq' },
+      { id: 'faqs', title: 'Free Access FAQ', text: 'Is FormMate free to use? Yes. FormMate is currently available as a free offering.', type: 'faq' },
       { id: 'faqs', title: 'Multi-step FAQ', text: 'Can FormMate handle multi-step forms? Absolutely.', type: 'faq' },
       { id: 'faqs', title: 'Security FAQ', text: 'How safe is my Vault data? Your data is stored locally and used only for your sessions.', type: 'faq' },
       { id: 'feedback', title: 'Review & Feedback', text: 'Share your feedback, rate your experience, and help us improve FormMate.', type: 'guide' },
-      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions, billing issues, or partnership inquiries.', type: 'guide' }
+      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions or partnership inquiries.', type: 'guide' }
     ];
 
     searchInput?.addEventListener('input', (e) => {

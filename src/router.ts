@@ -121,7 +121,6 @@ function performNavigation(screen: string, replace = false) {
     'accounts': 'My Account | FormMate',
     'analytics': 'Analytics | FormMate',
     'docs': 'Documentation | FormMate',
-    'pricing': 'Pricing | FormMate',
     'help': 'Help Center | FormMate',
     'examples': 'Examples | FormMate',
     'onboarding': 'Welcome | FormMate',
@@ -176,7 +175,6 @@ export function initRouter() {
       setState({
         isAuthenticated: true,
         authUser: session.user,
-        tier: session.user.tier || session.tier || 'free',
         userProfile: {
           ...getState().userProfile,
           name: session.user.name || '',

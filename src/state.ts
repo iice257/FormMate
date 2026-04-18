@@ -99,9 +99,6 @@ const state = {
   // Onboarding
   onboardingComplete: isOnboardingComplete(),
 
-  // Subscription tier
-  tier: 'free',
-
   // Runtime health and degraded-mode truth for UX
   appHealth: {
     loaded: false,
@@ -279,7 +276,7 @@ export function addChatMessage(role, text, action = null) {
   listeners.forEach(fn => fn(state));
 }
 
-// ─── Subscription ────────────────────────
+// ─── Store Listeners ─────────────────────
 
 export function subscribe(fn) {
   listeners.add(fn);

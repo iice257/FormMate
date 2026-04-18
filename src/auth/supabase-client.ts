@@ -250,7 +250,6 @@ function normalizeSession(raw) {
       name,
       avatar,
       provider: user.app_metadata?.provider || user.app_metadata?.providers?.[0] || raw.provider || 'email',
-      tier: user.app_metadata?.tier || metadata.tier || raw.tier || 'free',
     },
   };
 }

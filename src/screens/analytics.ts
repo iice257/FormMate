@@ -9,7 +9,6 @@ import {
   getActivityCount, estimateTimeSaved, getStreak, getDailyActivity
 } from '../storage/activity-logger';
 import { getUsageSummary } from '../storage/usage-gate';
-import { renderEmptyState } from '../components/ui-components';
 
 export function analyticsScreen() {
   const formsAnalyzed = getActivityCount('form_analyzed');
@@ -139,16 +138,13 @@ export function analyticsScreen() {
               </div>
             </div>
 
-            <!-- Current Plan limits -->
+            <!-- Usage limits -->
             <div class="p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
               <div class="mb-6 flex items-center justify-between">
                 <div>
-                  <h3 class="text-base font-bold" style="color: var(--fm-text);">Current Plan</h3>
-                  <p class="text-xs capitalize font-semibold mt-0.5" style="color: var(--fm-primary);">${usage.tier} Tier</p>
+                  <h3 class="text-base font-bold" style="color: var(--fm-text);">Usage Limits</h3>
+                  <p class="text-xs font-semibold mt-0.5" style="color: var(--fm-primary);">Free Access</p>
                 </div>
-                ${usage.tier === 'free' ? `
-                  <button id="btn-analytics-upgrade" class="text-[10px] font-bold uppercase px-3 py-1.5 rounded-lg btn-press" style="background: var(--fm-primary); color: white;">Upgrade</button>
-                ` : ''}
               </div>
               
               <div class="space-y-4">
@@ -214,8 +210,6 @@ export function analyticsScreen() {
     wrapper.querySelectorAll('button[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => navigateTo(btn.dataset.nav));
     });
-
-    wrapper.querySelector('#btn-analytics-upgrade')?.addEventListener('click', () => navigateTo('pricing'));
 
     return () => { };
   }

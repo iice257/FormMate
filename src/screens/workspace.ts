@@ -103,7 +103,7 @@ function buildTypingIndicator() {
 }
 
 export function workspaceScreen() {
-  const { formData, answers, tier, aiDiagnostics } = getState();
+  const { formData, answers, aiDiagnostics } = getState();
 
   if (!formData) {
     navigateTo('landing');

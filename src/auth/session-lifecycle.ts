@@ -85,7 +85,6 @@ async function expireSession(reason = 'idle_timeout') {
     setState({
       isAuthenticated: false,
       authUser: null,
-      tier: 'free',
       currentScreen: 'auth',
     });
     emitSessionClosed(reason);

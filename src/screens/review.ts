@@ -35,7 +35,7 @@ export function reviewScreen() {
 
       const iconMap = {
         'Full Name': 'person', 'Email': 'mail', 'Phone': 'call', 'LinkedIn': 'link',
-        'Date': 'calendar_today', 'Salary': 'payments', 'experience': 'work',
+        'Date': 'calendar_today', 'Salary': 'attach_money', 'experience': 'work',
         'Passport': 'badge', 'Nationality': 'public', 'Address': 'home',
       };
       let icon = 'quiz';

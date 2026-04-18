@@ -348,7 +348,7 @@ export function bindZenModeControls(wrapper, zenMode) {
  * @returns {string} The full HTML with layout wrapper.
  */
 export function withLayout(pageId, contentHtml, options = {}) {
-  const { isAuthenticated, userProfile, tier, appHealth } = getState();
+  const { isAuthenticated, userProfile, appHealth } = getState();
   const zenScreenId = options.zenMode?.screenId || pageId;
   const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
@@ -453,7 +453,6 @@ export function withLayout(pageId, contentHtml, options = {}) {
                 <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
                   <div class="layout-sidebar-avatar-wrap">
                     <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
-                    ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
                   </div>
                   <div class="layout-sidebar-user-info">
                     <span class="layout-sidebar-user-name">${displayName}</span>

@@ -27,7 +27,7 @@ export function authScreen() {
                     style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);"
                   >
                     <span class="block text-sm font-semibold">${escapeHtml(user.name)}</span>
-                    <span class="block text-xs mt-1" style="color: var(--fm-text-tertiary);">${escapeHtml(user.email)} - ${escapeHtml(user.tier)} plan</span>
+                    <span class="block text-xs mt-1" style="color: var(--fm-text-tertiary);">${escapeHtml(user.email)}</span>
                   </button>
                 `).join('')}
               </div>
@@ -186,7 +186,6 @@ export function authScreen() {
       setState({
         isAuthenticated: true,
         authUser: user,
-        tier: user.tier || 'free',
         userProfile: {
           ...getState().userProfile,
           name: user.name || '',

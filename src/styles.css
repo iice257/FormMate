@@ -1503,25 +1503,6 @@ input[type="range"]:active::-moz-range-thumb {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
-.layout-sidebar-pro-badge {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--fm-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #fff;
-}
-
-.layout-sidebar-pro-badge .material-symbols-outlined {
-  font-size: 10px;
-}
-
 .layout-sidebar-user-name {
   font-size: 0.82rem;
   font-weight: 800;
@@ -1529,18 +1510,6 @@ input[type="range"]:active::-moz-range-thumb {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.layout-sidebar-user-plan {
-  font-size: 0.64rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #94a3b8;
-}
-
-.layout-sidebar-user-plan.pro {
-  color: var(--fm-primary);
 }
 
 .layout-shell-sidebar-collapsed .layout-sidebar {
@@ -2189,8 +2158,7 @@ input[type="range"]:active::-moz-range-thumb {
 [data-fm-theme="dark"] .dashboard-cell-muted,
 [data-fm-theme="dark"] .dashboard-activity-form-provider,
 [data-fm-theme="dark"] .question-card-meta,
-[data-fm-theme="dark"] .account-modal-subtitle,
-[data-fm-theme="dark"] .layout-sidebar-user-plan {
+[data-fm-theme="dark"] .account-modal-subtitle {
   color: var(--fm-text-tertiary);
 }
 
