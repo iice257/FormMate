@@ -3,9 +3,11 @@ import { createServer } from 'node:http';
 import { config as loadDotenv } from 'dotenv';
 import chatHandler from '../api/ai/chat.ts';
 import transcribeHandler from '../api/ai/transcribe.ts';
+import visionContextHandler from '../api/ai/vision-context.ts';
 import imageExtractHandler from '../api/parser/image-extract.ts';
 import scrapeHandler from '../api/proxy/scrape.ts';
 import googleFormHandler from '../api/proxy/google-form.ts';
+import healthHandler from '../api/health.ts';
 
 const HOST = '127.0.0.1';
 const PORT = 3000;
@@ -22,9 +24,11 @@ if (typeof process.env.NODE_TLS_REJECT_UNAUTHORIZED === 'undefined') {
 const ROUTES = new Map([
   ['/api/ai/chat', { handler: chatHandler, parseJson: true, maxBytes: 2 * 1024 * 1024 }],
   ['/api/ai/transcribe', { handler: transcribeHandler, parseJson: false }],
+  ['/api/ai/vision-context', { handler: visionContextHandler, parseJson: true, maxBytes: 22 * 1024 * 1024 }],
   ['/api/parser/image-extract', { handler: imageExtractHandler, parseJson: true, maxBytes: 22 * 1024 * 1024 }],
   ['/api/proxy/scrape', { handler: scrapeHandler, parseJson: false }],
   ['/api/proxy/google-form', { handler: googleFormHandler, parseJson: false }],
+  ['/api/health', { handler: healthHandler, parseJson: false }],
 ]);
 
 function parseQuery(searchParams) {

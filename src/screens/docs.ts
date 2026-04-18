@@ -1,10 +1,21 @@
 // @ts-nocheck
 import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBack } from '../router';
-import { generateText, getAiErrorMessage } from '../ai/ai-service';
+import { AI_SURFACES, generateText, getAiErrorMessage } from '../ai/ai-service';
+import { SESSION_CLOSED_EVENT } from '../auth/session-lifecycle';
 import { toast } from '../components/toast';
 import { getState } from '../state';
-import { escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import {
+  buildMessageWithUiContext,
+  buildNextFollowUps,
+  createFollowUpClickEvent,
+  createInteractiveEditEvent,
+  enqueueUiContextEvent,
+  getDefaultFollowUps,
+  stripFollowUpTags,
+} from '../ai/chat-interactions';
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
@@ -482,6 +493,7 @@ export function docsScreen() {
               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
             </div>
 
+            <div id="docs-chat-followups" class="chat-followups mb-2"></div>
             <div class="relative group">
               <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
               <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
@@ -513,6 +525,7 @@ export function docsScreen() {
     const chatInput = wrapper.querySelector('#docs-chat-input');
     const btnSend = wrapper.querySelector('#btn-docs-send');
     const chatMessages = wrapper.querySelector('#docs-chat-messages');
+    const followUpsWrap = wrapper.querySelector('#docs-chat-followups');
     const cleanupTasks = [];
 
     const searchIndex = [
@@ -638,20 +651,53 @@ export function docsScreen() {
 
     // --- Docs AI Chat Logic ---
 
-    let chatHistory = [
-      {
-        role: 'system',
-        content: `You are a helpful, extremely concise assistant embedded directly in FormMate's documentation page.
-Your ONLY job is to help users understand FormMate, its features (like the Vault, Form Copilot, autofilling forms, and the dashboard).
-Keep your answers extremely simple, non-technical, and easy for a very casual user to understand. 
-Do NOT include any code snippets, JSON objects, SDK setups, or technical API jargon. 
-If the user asks something completely beyond the scope of FormMate, FormMate's features, or general FormMate help, you MUST decline respectfully by saying that you are only here to help with FormMate and the question is beyond your scope.`
-      }
-    ];
+    let chatHistory = [];
+    let pendingUiContextEvents = [];
+    let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.DOCS);
+    const initialDocsChatMarkup = chatMessages?.innerHTML || '';
+    const cleanupRichActions = bindRichActionClicks(chatMessages, {
+      onInteractiveCommit: (payload) => {
+        const event = createInteractiveEditEvent({
+          id: payload?.id,
+          label: payload?.label,
+          value: payload?.value,
+        });
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
+        if (chatInput && !chatInput.value.trim()) {
+          chatInput.value = 'Apply the queued docs assistant edits.';
+          chatInput.dispatchEvent(new Event('input'));
+        }
+        toast.success('Queued for your next docs message.');
+        return true;
+      },
+    });
+    cleanupTasks.push(() => cleanupRichActions?.());
 
     if (chatInput && btnSend) {
       const tooltip = wrapper.querySelector('#ai-focus-tooltip');
       let isChatPending = false;
+
+      const syncSendButton = () => {
+        const hasText = Boolean(chatInput.value.trim());
+        const hasUiContext = pendingUiContextEvents.length > 0;
+        btnSend.disabled = isChatPending || !(hasText || hasUiContext);
+      };
+
+      const renderFollowUps = () => {
+        if (!followUpsWrap) return;
+        const items = (Array.isArray(followUpSuggestions) ? followUpSuggestions : [])
+          .filter(Boolean)
+          .slice(0, 2);
+        replaceChildrenWithSafeHtml(
+          followUpsWrap,
+          items.map((prompt) => `
+            <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+              <span class="material-symbols-outlined">tips_and_updates</span>
+              <span>${escapeHtml(prompt)}</span>
+            </button>
+          `).join('')
+        );
+      };
 
       const handleChatFocus = () => {
         if (!chatInput.value.trim()) {
@@ -673,25 +719,28 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
-        btnSend.disabled = !this.value.trim();
+        syncSendButton();
       };
 
       const sendMessage = async () => {
         const text = chatInput.value.trim();
-        if (!text || isChatPending) return;
+        const hasUiContext = pendingUiContextEvents.length > 0;
+        if ((!text && !hasUiContext) || isChatPending) return;
         isChatPending = true;
 
         chatInput.value = '';
-        btnSend.disabled = true;
+        syncSendButton();
         chatInput.style.height = '48px';
         chatInput.disabled = true;
+        const userVisibleText = text || 'Applied queued interactive edits for this docs request.';
+        const modelMessage = buildMessageWithUiContext(text, pendingUiContextEvents);
 
         // User Bubble
-        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'user', content: modelMessage || userVisibleText });
         chatMessages.insertAdjacentHTML('beforeend', `
           <div class="flex flex-col gap-1 items-end animate-message-in">
             <div class="max-w-[85%] bg-primary text-white rounded-[var(--fm-card-radius)] rounded-tr-none px-4 py-3 text-xs font-medium leading-relaxed shadow-sm">
-              ${escapeHtml(text)}
+              ${escapeHtml(userVisibleText)}
             </div>
           </div>
         `);
@@ -713,24 +762,37 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         try {
           const responseText = await generateText({
             task: 'docs_chat',
+            surface: AI_SURFACES.DOCS,
             messages: chatHistory,
             temperature: 0.6,
-            maxTokens: 512
+            maxTokens: 512,
+            context: {
+              formTitle: 'FormMate Documentation',
+            },
           });
 
-          chatHistory.push({ role: 'assistant', content: responseText.replace(/`/g, '\\`') });
+          const cleanResponse = String(responseText || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+          const displayResponse = stripFollowUpTags(cleanResponse);
+          followUpSuggestions = buildNextFollowUps({
+            surface: AI_SURFACES.DOCS,
+            responseText: cleanResponse,
+            formTitle: 'FormMate Documentation',
+          });
+          renderFollowUps();
+          chatHistory.push({ role: 'assistant', content: displayResponse.replace(/`/g, '\\`') });
 
           const typingEl = wrapper.querySelector('#' + typingId);
           if (typingEl) typingEl.remove();
 
-          chatMessages.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2">
-                ${escapeHtml(responseText).replace(/\n/g, '<br>')}
-              </div>
-            </div>
-          `);
+          const row = document.createElement('div');
+          row.className = 'flex flex-col gap-1 animate-message-in';
+          const body = document.createElement('div');
+          body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse));
+          row.appendChild(body);
+          chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
+          pendingUiContextEvents = [];
         } catch (e) {
           console.error(e);
           const typingEl = wrapper.querySelector('#' + typingId);
@@ -749,7 +811,7 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         } finally {
           isChatPending = false;
           chatInput.disabled = false;
-          btnSend.disabled = !chatInput.value.trim();
+          syncSendButton();
           chatInput.focus();
         }
       };
@@ -761,17 +823,60 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         }
       };
 
+      const handleFollowUpClick = (event) => {
+        const chip = event.target?.closest?.('.chat-followup-chip[data-followup-msg]');
+        if (!chip || !followUpsWrap.contains(chip)) return;
+        const prompt = String(chip.dataset.followupMsg || '').trim();
+        if (!prompt) return;
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, createFollowUpClickEvent(prompt));
+        chatInput.value = prompt;
+        chatInput.dispatchEvent(new Event('input'));
+        sendMessage();
+      };
+      followUpsWrap?.addEventListener('click', handleFollowUpClick);
+
       btnSend.addEventListener('click', sendMessage);
       chatInput.addEventListener('focus', handleChatFocus);
       chatInput.addEventListener('blur', handleChatBlur);
       chatInput.addEventListener('input', handleChatInput);
       chatInput.addEventListener('keydown', handleChatKeydown);
+      renderFollowUps();
+      syncSendButton();
       cleanupTasks.push(() => btnSend.removeEventListener('click', sendMessage));
       cleanupTasks.push(() => chatInput.removeEventListener('focus', handleChatFocus));
       cleanupTasks.push(() => chatInput.removeEventListener('blur', handleChatBlur));
       cleanupTasks.push(() => chatInput.removeEventListener('input', handleChatInput));
       cleanupTasks.push(() => chatInput.removeEventListener('keydown', handleChatKeydown));
+      cleanupTasks.push(() => followUpsWrap?.removeEventListener('click', handleFollowUpClick));
     }
+
+    const handleSessionClosed = () => {
+      chatHistory = [];
+      pendingUiContextEvents = [];
+      followUpSuggestions = getDefaultFollowUps(AI_SURFACES.DOCS);
+      if (chatMessages) {
+        chatMessages.innerHTML = initialDocsChatMarkup;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      if (followUpsWrap) {
+        replaceChildrenWithSafeHtml(
+          followUpsWrap,
+          followUpSuggestions.slice(0, 2).map((prompt) => `
+            <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+              <span class="material-symbols-outlined">tips_and_updates</span>
+              <span>${escapeHtml(prompt)}</span>
+            </button>
+          `).join('')
+        );
+      }
+      if (chatInput) {
+        chatInput.value = '';
+        chatInput.style.height = '48px';
+      }
+      if (btnSend) btnSend.disabled = true;
+    };
+    window.addEventListener(SESSION_CLOSED_EVENT, handleSessionClosed);
+    cleanupTasks.push(() => window.removeEventListener(SESSION_CLOSED_EVENT, handleSessionClosed));
 
     // --- Resizable Sidebars Logic ---
     const handleLeft = wrapper.querySelector('#handle-left');

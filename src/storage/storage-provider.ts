@@ -89,7 +89,10 @@ export function isSupabaseStorageConfigured() {
 }
 
 export function shouldPersistLocalAccountCache(user = null) {
-  return !(getStorageMode() === 'supabase' && user?.id);
+  void user;
+  // Sensitive account data is cached in sessionStorage for responsive UX,
+  // even when remote Supabase sync is active.
+  return true;
 }
 
 export function getCachedUserData() {

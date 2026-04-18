@@ -1,19 +1,34 @@
 // @ts-nocheck
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// FormMate â€” Browser Storage Persistence Layer
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// FormMate - Browser Storage Layer
 
 const STORAGE_PREFIX = 'formmate_';
-const SESSION_KEYS = new Set([
-  'activity_log',
-  'answer_history',
-  'answer_history_index',
-  'answers_state',
-  'form_data_state',
-  'form_history',
-  'user_profile',
-  'user_vault',
-]);
+
+export const STORAGE_CLASS = Object.freeze({
+  PERSISTENT_LOCAL: 'persistent_local',
+  SESSION_SENSITIVE: 'session_sensitive',
+  MEMORY_ONLY: 'memory_only',
+});
+
+const memoryStore = new Map();
+
+const KEY_CLASSIFICATIONS = Object.freeze({
+  // Session-sensitive data
+  activity_log: STORAGE_CLASS.SESSION_SENSITIVE,
+  answer_history: STORAGE_CLASS.SESSION_SENSITIVE,
+  answer_history_index: STORAGE_CLASS.SESSION_SENSITIVE,
+  answers_state: STORAGE_CLASS.SESSION_SENSITIVE,
+  auth_session: STORAGE_CLASS.SESSION_SENSITIVE,
+  form_data_state: STORAGE_CLASS.SESSION_SENSITIVE,
+  form_history: STORAGE_CLASS.SESSION_SENSITIVE,
+  image_artifacts_state: STORAGE_CLASS.SESSION_SENSITIVE,
+  parse_result_state: STORAGE_CLASS.SESSION_SENSITIVE,
+  user_profile: STORAGE_CLASS.SESSION_SENSITIVE,
+  user_vault: STORAGE_CLASS.SESSION_SENSITIVE,
+
+  // Persistent local preferences/app chrome
+  onboarding_complete: STORAGE_CLASS.PERSISTENT_LOCAL,
+  user_settings: STORAGE_CLASS.PERSISTENT_LOCAL,
+});
 
 function isBrowser() {
   return typeof window !== 'undefined';
@@ -30,14 +45,6 @@ function getStorageKey(key) {
   return STORAGE_PREFIX + key;
 }
 
-function getPreferredStorageType(key) {
-  return key.startsWith('usage_') || !SESSION_KEYS.has(key) ? 'local' : 'session';
-}
-
-function getFallbackStorageType(type) {
-  return type === 'session' ? 'local' : 'session';
-}
-
 function listStorageKeys(storageArea) {
   if (!storageArea || typeof storageArea.length !== 'number' || typeof storageArea.key !== 'function') {
     return [];
@@ -46,9 +53,7 @@ function listStorageKeys(storageArea) {
   const keys = [];
   for (let index = 0; index < storageArea.length; index += 1) {
     const key = storageArea.key(index);
-    if (typeof key === 'string') {
-      keys.push(key);
-    }
+    if (typeof key === 'string') keys.push(key);
   }
   return keys;
 }
@@ -56,8 +61,8 @@ function listStorageKeys(storageArea) {
 function safeParseEntry(raw, storageArea, storageKey) {
   try {
     return JSON.parse(raw);
-  } catch (parseErr) {
-    console.warn('[Storage] Failed to parse JSON for key:', storageKey, parseErr);
+  } catch (parseError) {
+    console.warn('[Storage] Failed to parse JSON for key:', storageKey, parseError);
     storageArea?.removeItem(storageKey);
     return null;
   }
@@ -82,8 +87,13 @@ function readEntry(key, type) {
   return { entry, storageArea, storageKey };
 }
 
+function getFallbackStorageType(type) {
+  return type === 'session' ? 'local' : 'session';
+}
+
 function migrateEntryIfNeeded(key, primaryType) {
-  const fallbackResult = readEntry(key, getFallbackStorageType(primaryType));
+  const fallbackType = getFallbackStorageType(primaryType);
+  const fallbackResult = readEntry(key, fallbackType);
   if (!fallbackResult) return null;
 
   const primaryStorage = getStorageArea(primaryType);
@@ -91,92 +101,122 @@ function migrateEntryIfNeeded(key, primaryType) {
     primaryStorage.setItem(getStorageKey(key), JSON.stringify(fallbackResult.entry));
     fallbackResult.storageArea?.removeItem(fallbackResult.storageKey);
   }
-
   return fallbackResult.entry;
 }
 
-/**
- * Save a value to browser storage with optional TTL.
- * @param {string} key - Storage key
- * @param {*} value - Value to store (will be JSON-serialized)
- * @param {number} [ttlMs] - Optional time-to-live in milliseconds
- */
-export function save(key, value, ttlMs = null) {
+export function getStorageClass(key) {
+  const normalized = String(key || '').trim();
+  if (!normalized) return STORAGE_CLASS.PERSISTENT_LOCAL;
+  if (normalized.startsWith('usage_')) return STORAGE_CLASS.PERSISTENT_LOCAL;
+  return KEY_CLASSIFICATIONS[normalized] || STORAGE_CLASS.PERSISTENT_LOCAL;
+}
+
+export function getStorageModeForKey(key) {
+  const storageClass = getStorageClass(key);
+  if (storageClass === STORAGE_CLASS.SESSION_SENSITIVE) return 'session';
+  if (storageClass === STORAGE_CLASS.PERSISTENT_LOCAL) return 'local';
+  return 'memory';
+}
+
+export function save(key, value, ttlMs = null, options = {}) {
   try {
+    const storageClass = options?.storageClass || getStorageClass(key);
+    if (storageClass === STORAGE_CLASS.MEMORY_ONLY) {
+      memoryStore.set(String(key), {
+        value,
+        timestamp: Date.now(),
+        ttl: ttlMs,
+      });
+      return;
+    }
+
     const entry = {
       value,
       timestamp: Date.now(),
       ttl: ttlMs,
     };
-    const primaryType = getPreferredStorageType(key);
-    const primaryStorage = getStorageArea(primaryType);
-    const fallbackStorage = getStorageArea(getFallbackStorageType(primaryType));
+    const targetType = storageClass === STORAGE_CLASS.SESSION_SENSITIVE ? 'session' : 'local';
+    const targetStorage = getStorageArea(targetType);
+    const fallbackStorage = getStorageArea(getFallbackStorageType(targetType));
     const storageKey = getStorageKey(key);
 
-    primaryStorage?.setItem(storageKey, JSON.stringify(entry));
+    targetStorage?.setItem(storageKey, JSON.stringify(entry));
     fallbackStorage?.removeItem(storageKey);
-  } catch (err) {
-    console.warn('[Storage] Failed to save:', key, err);
+    memoryStore.delete(String(key));
+  } catch (error) {
+    console.warn('[Storage] Failed to save:', key, error);
   }
 }
 
-/**
- * Load a value from browser storage.
- * Returns null if not found or expired.
- */
-export function load(key) {
+export function load(key, options = {}) {
   try {
-    const primaryType = getPreferredStorageType(key);
+    const storageClass = options?.storageClass || getStorageClass(key);
+    if (storageClass === STORAGE_CLASS.MEMORY_ONLY) {
+      const entry = memoryStore.get(String(key));
+      if (!entry) return null;
+      if (entry.ttl && Date.now() - entry.timestamp > entry.ttl) {
+        memoryStore.delete(String(key));
+        return null;
+      }
+      return entry.value;
+    }
+
+    const primaryType = storageClass === STORAGE_CLASS.SESSION_SENSITIVE ? 'session' : 'local';
     const primaryResult = readEntry(key, primaryType);
     if (primaryResult) return primaryResult.entry.value;
 
     const migrated = migrateEntryIfNeeded(key, primaryType);
     return migrated ? migrated.value : null;
-  } catch (err) {
-    console.warn('[Storage] Failed to load:', key, err);
+  } catch (error) {
+    console.warn('[Storage] Failed to load:', key, error);
     return null;
   }
 }
 
-/**
- * Remove a value from browser storage.
- */
 export function remove(key) {
   const storageKey = getStorageKey(key);
   getStorageArea('local')?.removeItem(storageKey);
   getStorageArea('session')?.removeItem(storageKey);
+  memoryStore.delete(String(key));
 }
 
-/**
- * Clear all FormMate data from browser storage.
- */
-export function clearAll() {
+export function clearSensitiveSessionCache() {
+  const removeIfSensitive = (rawKey) => {
+    if (!rawKey.startsWith(STORAGE_PREFIX)) return;
+    const key = rawKey.slice(STORAGE_PREFIX.length);
+    if (getStorageClass(key) !== STORAGE_CLASS.SESSION_SENSITIVE) return;
+    getStorageArea('local')?.removeItem(rawKey);
+    getStorageArea('session')?.removeItem(rawKey);
+    memoryStore.delete(key);
+  };
+
   ['local', 'session'].forEach((type) => {
-    const storageArea = getStorageArea(type);
-    if (!storageArea) return;
-    const keys = listStorageKeys(storageArea).filter(k => k.startsWith(STORAGE_PREFIX));
-    keys.forEach(k => storageArea.removeItem(k));
+    const storage = getStorageArea(type);
+    listStorageKeys(storage).forEach(removeIfSensitive);
   });
 }
 
-/**
- * Get all stored keys (without prefix).
- */
-export function getAllKeys() {
-  const localKeys = listStorageKeys(getStorageArea('local'))
-    .filter(k => k.startsWith(STORAGE_PREFIX))
-    .map(k => k.slice(STORAGE_PREFIX.length));
-  const sessionKeys = listStorageKeys(getStorageArea('session'))
-    .filter(k => k.startsWith(STORAGE_PREFIX))
-    .map(k => k.slice(STORAGE_PREFIX.length));
-  return Array.from(new Set([...localKeys, ...sessionKeys]));
+export function clearAll() {
+  ['local', 'session'].forEach((type) => {
+    const storage = getStorageArea(type);
+    if (!storage) return;
+    const keys = listStorageKeys(storage).filter((key) => key.startsWith(STORAGE_PREFIX));
+    keys.forEach((key) => storage.removeItem(key));
+  });
+  memoryStore.clear();
 }
 
-// â”€â”€â”€ Typed helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export function getAllKeys() {
+  const localKeys = listStorageKeys(getStorageArea('local'))
+    .filter((key) => key.startsWith(STORAGE_PREFIX))
+    .map((key) => key.slice(STORAGE_PREFIX.length));
+  const sessionKeys = listStorageKeys(getStorageArea('session'))
+    .filter((key) => key.startsWith(STORAGE_PREFIX))
+    .map((key) => key.slice(STORAGE_PREFIX.length));
+  const memoryKeys = Array.from(memoryStore.keys());
+  return Array.from(new Set([...localKeys, ...sessionKeys, ...memoryKeys]));
+}
 
-/**
- * Save user profile data.
- */
 export function saveProfile(profile) {
   save('user_profile', profile);
 }
@@ -195,9 +235,6 @@ export function loadProfile() {
   };
 }
 
-/**
- * Save user settings.
- */
 export function saveSettings(settings) {
   save('user_settings', settings);
 }
@@ -242,9 +279,6 @@ export function getDefaultSettings() {
   };
 }
 
-/**
- * Save and load activity log.
- */
 export function appendActivity(entry) {
   const log = load('activity_log') || [];
   log.push({
@@ -259,9 +293,6 @@ export function loadActivityLog() {
   return load('activity_log') || [];
 }
 
-/**
- * Save and load form history.
- */
 export function saveFormHistory(formEntry) {
   const history = load('form_history') || [];
   history.unshift({
@@ -276,9 +307,6 @@ export function loadFormHistory() {
   return load('form_history') || [];
 }
 
-/**
- * Save/load user vault (reusable info for autofill).
- */
 export function saveVault(vault) {
   save('user_vault', vault);
 }
@@ -310,9 +338,6 @@ export function loadVault() {
   return normalized;
 }
 
-/**
- * Save/load onboarding status.
- */
 export function setOnboardingComplete(complete) {
   save('onboarding_complete', complete);
 }
@@ -321,9 +346,6 @@ export function isOnboardingComplete() {
   return load('onboarding_complete') === true;
 }
 
-/**
- * Usage tracking for free tier limits.
- */
 export function getMonthlyUsage() {
   const now = new Date();
   const monthKey = `usage_${now.getFullYear()}_${now.getMonth()}`;

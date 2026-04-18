@@ -17,3 +17,16 @@
 - On this workstation/network, outbound TLS to some hosts can fail with `self-signed certificate in certificate chain` until local trust is configured.
 - Local development uses an internal API server (`scripts/dev-api-server.ts`) on `127.0.0.1:3000` via `npm run dev`/`npm run dev:stack`; this avoids `vercel dev` proxy drift for `/api/*`.
 - Local stack defaults `NODE_TLS_REJECT_UNAUTHORIZED=0` when unset so Groq calls can run behind the current corporate/self-signed TLS chain.
+
+## Security and UX Hardening Decisions
+- AI scope policy is enforced server-side as `Balanced adjacent`; unrelated general-purpose inference should be rejected.
+- Sensitive browser data (profile, vault, answers, parse/form states, history) is session-scoped and should be purged on sign-out/idle expiry.
+- Session lifecycle target is a 15-minute inactivity timeout with explicit session-expired UX and cleanup.
+- Runtime degraded mode (Supabase unavailable) must be explicit in UX; do not imply cloud sync when backend config is missing.
+- Account modal settings/profile edits should be draft-only until explicit save, with discard confirmation on close/tab-switch/cancel.
+
+## Chat Interaction Contract
+- Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.
+- Assistant responses can include interactive blocks with `[fm-item ...]...[/fm-item]` and follow-up chip hints with `[fm-suggest]...[/fm-suggest]`.
+- Legacy answer-list lines in the format `[id] label | value` should be treated as interactive/editable items in the UI.
+- User clicks/edits on interactive items or follow-up chips must be sent in the next request via a tagged context block: `[fm-ui-context] ... [/fm-ui-context]`.

@@ -191,7 +191,7 @@ export function analyzingScreen() {
           </div>
 
           <p class="text-sm text-slate-600 leading-relaxed mb-5">
-            Google Forms can hide parseable structure behind session checks, so FormMate needs screenshots from your live form tab for reliable field extraction.
+            Google Forms often restrict structural access behind active sessions, so FormMate securely parses screenshots you provide from the live form tab.
           </p>
 
           <a id="google-open-form" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-colors mb-5">

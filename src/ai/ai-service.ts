@@ -3,23 +3,16 @@
 import { getRequestAuthHeaders } from '../auth/auth-service';
 
 export const MODELS = {
-  HEAVY: 'llama-3.3-70b-versatile',
-  STANDARD: 'llama-3.1-8b-instant',
-  COPILOT: 'openai/gpt-oss-20b',
-  FAST: 'llama-3.1-8b-instant',
   WHISPER: 'whisper-large-v3-turbo',
 };
 
-export const TASK_ROUTES = {
-  form_parsing: { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  question_intent: { model: MODELS.HEAVY, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  answer_generation: { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
-  regeneration: { model: MODELS.STANDARD, fallback: [MODELS.COPILOT, MODELS.FAST] },
-  copilot_chat: { model: MODELS.COPILOT, fallback: [MODELS.FAST, MODELS.STANDARD] },
-  quick_edit: { model: MODELS.FAST, fallback: [MODELS.COPILOT] },
-  docs_chat: { model: MODELS.FAST, fallback: [MODELS.STANDARD, MODELS.COPILOT] },
-  voice_transcription: { model: MODELS.WHISPER, fallback: [] },
-};
+export const AI_SURFACES = Object.freeze({
+  DOCS: 'docs',
+  WORKSPACE: 'workspace',
+  AI_CHAT: 'ai-chat',
+  ANALYZING: 'analyzing',
+  PARSER: 'parser',
+});
 
 export const AI_ERROR_CODES = {
   AUTH_REQUIRED: 'AUTH_REQUIRED',
@@ -271,12 +264,25 @@ async function fetchProxy(endpoint, init = {}, { timeoutMs = REQUEST_TIMEOUT_MS 
   }
 }
 
-async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 1024, jsonMode = false }) {
+async function proxyRequest({
+  task,
+  surface,
+  messages,
+  context = null,
+  attachments = null,
+  temperature = 0.7,
+  maxTokens = 1024,
+  jsonMode = false,
+}) {
   const body = {
-    model,
+    task,
+    surface,
     messages,
     temperature,
     max_tokens: maxTokens,
+    formContext: context || undefined,
+    attachments: Array.isArray(attachments) ? attachments : undefined,
+    expectJson: Boolean(jsonMode),
   };
 
   if (jsonMode) {
@@ -312,17 +318,19 @@ async function proxyRequest({ model, messages, temperature = 0.7, maxTokens = 10
 
 export async function generate({
   task,
+  surface,
   messages,
+  context = null,
+  attachments = null,
   temperature = 0.7,
   maxTokens = 1024,
   jsonMode = false,
   useCache = true,
 }) {
-  const route = TASK_ROUTES[task];
-  if (!route) {
+  if (!task || !surface) {
     throw createAiError({
       code: AI_ERROR_CODES.BAD_REQUEST,
-      message: `Unknown AI task: "${task}".`,
+      message: 'AI task and surface are required.',
       status: 400,
     });
   }
@@ -330,7 +338,15 @@ export async function generate({
   checkRateLimit();
   validateInput(messages);
 
-  const promptKey = messages.map((message) => message.content).join('|');
+  const promptKey = JSON.stringify({
+    surface,
+    messages: messages.map((message) => message.content),
+    context,
+    attachments: Array.isArray(attachments) ? attachments.map((entry) => entry?.name || entry?.type || 'attachment') : [],
+    temperature,
+    maxTokens,
+    jsonMode,
+  });
   const cacheKey = getCacheKey(task, promptKey);
 
   if (useCache) {
@@ -340,39 +356,44 @@ export async function generate({
     }
   }
 
-  const modelChain = [route.model, ...route.fallback];
-  let lastError = null;
-
-  for (const model of modelChain) {
-    try {
-      const result = await proxyRequest({ model, messages, temperature, maxTokens, jsonMode });
-      if (useCache) setCache(cacheKey, result);
-      return result;
-    } catch (error) {
-      const normalized = normalizeAiError(error);
-      lastError = normalized;
-
-      if (normalized.code === AI_ERROR_CODES.RATE_LIMITED && (normalized.retryAfter || 0) <= 5) {
-        await delay((normalized.retryAfter || 2) * 1000);
-        try {
-          const retryResult = await proxyRequest({ model, messages, temperature, maxTokens, jsonMode });
-          if (useCache) setCache(cacheKey, retryResult);
-          return retryResult;
-        } catch (retryError) {
-          lastError = normalizeAiError(retryError);
-        }
-      }
-
-      if (NON_FALLBACK_ERROR_CODES.has(lastError.code)) {
-        break;
-      }
+  try {
+    const result = await proxyRequest({
+      task,
+      surface,
+      messages,
+      context,
+      attachments,
+      temperature,
+      maxTokens,
+      jsonMode,
+    });
+    if (useCache) setCache(cacheKey, result);
+    return result;
+  } catch (error) {
+    const normalized = normalizeAiError(error);
+    if (normalized.code === AI_ERROR_CODES.RATE_LIMITED && (normalized.retryAfter || 0) <= 4) {
+      await delay((normalized.retryAfter || 2) * 1000);
+      const retryResult = await proxyRequest({
+        task,
+        surface,
+        messages,
+        context,
+        attachments,
+        temperature,
+        maxTokens,
+        jsonMode,
+      });
+      if (useCache) setCache(cacheKey, retryResult);
+      return retryResult;
     }
+    if (NON_FALLBACK_ERROR_CODES.has(normalized.code)) {
+      throw normalized;
+    }
+    throw normalizeAiError(normalized, {
+      code: AI_ERROR_CODES.UNKNOWN_AI_ERROR,
+      message: 'The AI request failed.',
+    });
   }
-
-  throw normalizeAiError(lastError, {
-    code: AI_ERROR_CODES.UNKNOWN_AI_ERROR,
-    message: 'The AI request failed across all available models.',
-  });
 }
 
 export function parseJsonResponse(text) {
@@ -427,17 +448,20 @@ export async function generateJson(options) {
   }
 }
 
-export async function transcribeAudio(audioBlob) {
+export async function transcribeAudio(audioBlob, { surface = AI_SURFACES.AI_CHAT, language = '' } = {}) {
   checkRateLimit();
 
   const formData = new FormData();
   formData.append('file', audioBlob, 'recording.webm');
-  formData.append('model', MODELS.WHISPER);
   formData.append('response_format', 'json');
 
   try {
     const { parsedBody, responseText } = await fetchProxy('/api/ai/transcribe', {
       method: 'POST',
+      headers: {
+        'X-FormMate-Surface': String(surface || AI_SURFACES.AI_CHAT),
+        ...(language ? { 'X-FormMate-Language': String(language).slice(0, 24) } : {}),
+      },
       body: formData,
     });
     const text = parsedBody?.text || parsedBody?.message || responseText;
@@ -455,6 +479,43 @@ export async function transcribeAudio(audioBlob) {
       message: 'Audio transcription failed.',
     });
   }
+}
+
+export async function extractVisionContext({
+  surface,
+  images,
+  prompt = '',
+  formTitle = '',
+  activeFieldText = '',
+}) {
+  const payload = {
+    surface,
+    images,
+    prompt,
+    formTitle,
+    activeFieldText,
+  };
+
+  const { parsedBody, responseText } = await fetchProxy('/api/ai/vision-context', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const result = parsedBody || tryParseJson(responseText);
+  if (!result || typeof result !== 'object') {
+    throw createAiError({
+      code: AI_ERROR_CODES.INVALID_JSON,
+      message: 'Vision context returned an unreadable payload.',
+      retryable: true,
+    });
+  }
+
+  return {
+    summary: String(result.summary || '').trim(),
+    detectedFields: Array.isArray(result.detectedFields) ? result.detectedFields : [],
+    warnings: Array.isArray(result.warnings) ? result.warnings : [],
+  };
 }
 
 export function isRetryableAiError(error) {

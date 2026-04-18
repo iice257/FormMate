@@ -4,12 +4,26 @@
 import { getState, addChatMessage } from '../state';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
-import { getAiErrorMessage } from '../ai/ai-service';
+import { AI_SURFACES, extractVisionContext, getAiErrorMessage } from '../ai/ai-service';
+import { cancelRecording, getRecordingState, isVoiceSupported, startRecording, stopAndTranscribe } from '../ai/voice';
+import { toast } from '../components/toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import {
+  buildMessageWithUiContext,
+  buildNextFollowUps,
+  createFollowUpClickEvent,
+  createInteractiveEditEvent,
+  enqueueUiContextEvent,
+  getDefaultFollowUps,
+  stripFollowUpTags,
+} from '../ai/chat-interactions';
 
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
+const MAX_IMAGE_ATTACHMENTS = 5;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_TEXT_ATTACHMENT_CHARS = 3200;
 
 function loadSessions() {
   try {
@@ -51,6 +65,24 @@ function buildTypingBubble() {
   }
 
   return container;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsText(file);
+  });
 }
 
 export function aiChatScreen() {
@@ -98,10 +130,12 @@ export function aiChatScreen() {
         </div>
 
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
+          <div id="chat-followups" class="chat-followups"></div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button id="btn-chat-attach" type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
+            <input id="chat-attach-input" type="file" accept="image/*,.txt,.md,.csv,text/plain" multiple style="display:none;" />
             <div style="flex: 1; position: relative;">
               <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
               <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
@@ -109,10 +143,11 @@ export function aiChatScreen() {
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
             </div>
-            <button type="button" aria-label="Start voice input" title="Start voice input" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button id="btn-chat-voice" type="button" aria-label="Start voice input" title="Start voice input" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
+          <div id="chat-attachment-state" style="text-align:center; font-size:0.65rem; color:#94a3b8; margin-top:0.35rem;">No attachments</div>
           <div style="text-align: center; font-size: 0.65rem; color: #cbd5e1; margin-top: 0.4rem;">AI can make mistakes. Check important info.</div>
         </div>
       </div>
@@ -160,12 +195,157 @@ export function aiChatScreen() {
     const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'ai-chat' } });
     const chatInput = wrapper.querySelector('#chat-input');
     const btnSend = wrapper.querySelector('#btn-send');
+    const btnAttach = wrapper.querySelector('#btn-chat-attach');
+    const attachInput = wrapper.querySelector('#chat-attach-input');
+    const btnVoice = wrapper.querySelector('#btn-chat-voice');
+    const followUpsWrap = wrapper.querySelector('#chat-followups');
+    const attachmentState = wrapper.querySelector('#chat-attachment-state');
     const chatMessages = wrapper.querySelector('#chat-messages');
     const emptyState = wrapper.querySelector('#chat-empty-state');
     let isChatPending = false;
     let chatHistory = [];
     let sessionList = Array.isArray(sessions) ? [...sessions] : [];
-    const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
+    let pendingImages = [];
+    let pendingTextSnippets = [];
+    let pendingUiContextEvents = [];
+    let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.AI_CHAT, formData?.title || '');
+    const cleanupRichActions = bindRichActionClicks(chatMessages, {
+      openAccountModal,
+      onInteractiveCommit: (payload) => {
+        const event = createInteractiveEditEvent({
+          id: payload?.id,
+          label: payload?.label,
+          value: payload?.value,
+        });
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
+        renderAttachmentState();
+        if (chatInput && !chatInput.value.trim()) {
+          chatInput.value = 'Apply the queued field updates.';
+        }
+        syncSendButton();
+        toast.success('Queued for the next AI message.');
+        return true;
+      },
+    });
+
+    const syncSendButton = () => {
+      if (!btnSend) return;
+      const hasText = Boolean(chatInput?.value?.trim());
+      const hasAttachment = pendingImages.length > 0 || pendingTextSnippets.length > 0 || pendingUiContextEvents.length > 0;
+      btnSend.disabled = !(hasText || hasAttachment) || isChatPending;
+    };
+
+    const renderFollowUps = () => {
+      if (!followUpsWrap) return;
+      const items = (Array.isArray(followUpSuggestions) ? followUpSuggestions : [])
+        .filter(Boolean)
+        .slice(0, 2);
+      replaceChildrenWithSafeHtml(
+        followUpsWrap,
+        items.map((prompt) => `
+          <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+            <span class="material-symbols-outlined">tips_and_updates</span>
+            <span>${escapeHtml(prompt)}</span>
+          </button>
+        `).join('')
+      );
+    };
+
+    const renderAttachmentState = () => {
+      const imageCount = pendingImages.length;
+      const textCount = pendingTextSnippets.length;
+      const uiContextCount = pendingUiContextEvents.length;
+      if (!attachmentState) return;
+      if (!imageCount && !textCount && !uiContextCount) {
+        attachmentState.textContent = 'No attachments';
+      } else {
+        const parts = [];
+        if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
+        if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
+        if (uiContextCount) parts.push(`${uiContextCount} queued edit${uiContextCount === 1 ? '' : 's'}`);
+        attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
+      }
+      syncSendButton();
+    };
+
+    const syncVoiceButton = () => {
+      if (!btnVoice) return;
+      const icon = btnVoice.querySelector('.material-symbols-outlined');
+      const recording = getRecordingState().isRecording;
+      btnVoice.style.color = recording ? '#dc2626' : '#94a3b8';
+      btnVoice.style.borderColor = recording ? '#fecaca' : 'var(--fm-border)';
+      btnVoice.setAttribute('aria-label', recording ? 'Stop voice input' : 'Start voice input');
+      btnVoice.setAttribute('title', recording ? 'Stop voice input' : 'Start voice input');
+      if (icon) icon.textContent = recording ? 'stop_circle' : 'mic';
+    };
+
+    const clearPendingAttachments = () => {
+      pendingImages = [];
+      pendingTextSnippets = [];
+      renderAttachmentState();
+    };
+
+    const clearUiContextQueue = () => {
+      pendingUiContextEvents = [];
+      renderAttachmentState();
+    };
+
+    const addTextSnippet = (label, text) => {
+      const snippet = String(text || '').trim().slice(0, MAX_TEXT_ATTACHMENT_CHARS);
+      if (!snippet) return false;
+      pendingTextSnippets.push({
+        label: label || 'Text snippet',
+        text: snippet,
+      });
+      if (pendingTextSnippets.length > 6) {
+        pendingTextSnippets = pendingTextSnippets.slice(-6);
+      }
+      renderAttachmentState();
+      return true;
+    };
+
+    const addImageFiles = async (files) => {
+      const selected = Array.from(files || []).filter((file) => String(file.type || '').startsWith('image/'));
+      if (!selected.length) return;
+      const slots = MAX_IMAGE_ATTACHMENTS - pendingImages.length;
+      if (slots <= 0) {
+        toast.warning(`Maximum ${MAX_IMAGE_ATTACHMENTS} screenshots can be attached.`);
+        return;
+      }
+
+      const valid = selected
+        .filter((file) => file.size <= MAX_IMAGE_BYTES)
+        .slice(0, slots);
+
+      if (valid.length < selected.length) {
+        toast.warning(`Ignored oversized screenshots. Max ${Math.floor(MAX_IMAGE_BYTES / (1024 * 1024))}MB each.`);
+      }
+
+      for (const file of valid) {
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          pendingImages.push({ name: file.name || 'Screenshot', dataUrl });
+        } catch {
+          // Ignore a single file failure and continue.
+        }
+      }
+      renderAttachmentState();
+    };
+
+    const addTextFiles = async (files) => {
+      const selected = Array.from(files || []).filter((file) => {
+        const type = String(file.type || '').toLowerCase();
+        return type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name || '');
+      });
+      for (const file of selected.slice(0, 4)) {
+        try {
+          const text = await readFileAsText(file);
+          addTextSnippet(file.name || 'Attachment', text);
+        } catch {
+          // Ignore read errors for individual files.
+        }
+      }
+    };
 
     function persistCurrentSession(latestPrompt) {
       const baseTitle = String(latestPrompt || formData?.title || 'New chat').trim() || 'New chat';
@@ -230,16 +410,22 @@ export function aiChatScreen() {
 
     async function sendMessage(text) {
       const trimmed = text.trim();
-      if (!trimmed || isChatPending) return;
+      const hasUiContext = pendingUiContextEvents.length > 0;
+      if ((!trimmed && !pendingImages.length && !pendingTextSnippets.length && !hasUiContext) || isChatPending) return;
       isChatPending = true;
       chatInput.value = '';
       btnSend.disabled = true;
       chatInput.disabled = true;
+      btnAttach && (btnAttach.disabled = true);
+      btnVoice && (btnVoice.disabled = true);
 
-      appendBubble('user', trimmed);
-      addChatMessage('user', trimmed);
-      chatHistory.push({ role: 'user', content: trimmed });
-      persistCurrentSession(trimmed);
+      const userVisibleText = trimmed
+        || (hasUiContext ? 'Applied queued interactive edits for this request.' : 'Added attachment context for this request.');
+      const modelMessage = buildMessageWithUiContext(trimmed, pendingUiContextEvents);
+      appendBubble('user', userVisibleText);
+      addChatMessage('user', userVisibleText);
+      chatHistory.push({ role: 'user', content: modelMessage || userVisibleText });
+      persistCurrentSession(userVisibleText);
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
@@ -249,26 +435,86 @@ export function aiChatScreen() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       try {
-        const response = await processChatMessage(trimmed, formData, chatHistory);
+        const attachmentPayload = [];
+        pendingTextSnippets.forEach((entry) => {
+          attachmentPayload.push({
+            type: 'text_snippet',
+            name: entry.label,
+            text: entry.text,
+          });
+        });
+
+        if (pendingImages.length) {
+          try {
+            const vision = await extractVisionContext({
+              surface: AI_SURFACES.AI_CHAT,
+              images: pendingImages.map((entry) => entry.dataUrl),
+              prompt: trimmed,
+              formTitle: formData?.title || '',
+              activeFieldText: '',
+            });
+
+            const fieldPreview = Array.isArray(vision.detectedFields)
+              ? vision.detectedFields
+                .slice(0, 6)
+                .map((entry) => {
+                  const label = String(entry?.label || '').trim();
+                  const typeHint = String(entry?.typeHint || '').trim();
+                  return label ? `${label}${typeHint ? ` (${typeHint})` : ''}` : '';
+                })
+                .filter(Boolean)
+              : [];
+
+            const combined = [
+              vision.summary ? `Screenshot summary: ${vision.summary}` : '',
+              fieldPreview.length ? `Detected fields: ${fieldPreview.join('; ')}` : '',
+            ].filter(Boolean).join('\n');
+            if (combined) {
+              attachmentPayload.push({
+                type: 'screenshot_summary',
+                name: 'Screenshot context',
+                text: combined,
+              });
+            }
+          } catch (visionError) {
+            toast.warning(getAiErrorMessage(visionError, 'Could not extract screenshot context.'));
+          }
+        }
+
+        const response = await processChatMessage(modelMessage || userVisibleText, formData, chatHistory, null, {
+          surface: AI_SURFACES.AI_CHAT,
+          attachments: attachmentPayload,
+        });
         const clean = String(response || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim() || 'I did not generate a response.';
+        const displayResponse = stripFollowUpTags(clean);
+        followUpSuggestions = buildNextFollowUps({
+          surface: AI_SURFACES.AI_CHAT,
+          responseText: clean,
+          formTitle: formData?.title || '',
+        });
+        renderFollowUps();
         typingEl.remove();
-        appendBubble('assistant', clean);
-        addChatMessage('assistant', clean);
-        chatHistory.push({ role: 'assistant', content: clean });
+        appendBubble('assistant', displayResponse);
+        addChatMessage('assistant', displayResponse);
+        chatHistory.push({ role: 'assistant', content: displayResponse });
+        clearPendingAttachments();
+        clearUiContextQueue();
       } catch (error) {
         typingEl.remove();
         const msg = getAiErrorMessage(error, 'AI service is unavailable right now.');
         appendErrorBubble(msg);
       } finally {
-        btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;
+        btnAttach && (btnAttach.disabled = false);
+        btnVoice && (btnVoice.disabled = false);
         isChatPending = false;
+        syncSendButton();
         chatInput.focus();
       }
     }
 
     chatInput?.addEventListener('input', () => {
-      btnSend.disabled = !chatInput.value.trim();
+      syncSendButton();
     });
 
     chatInput?.addEventListener('keydown', (e) => {
@@ -282,6 +528,74 @@ export function aiChatScreen() {
       sendMessage(chatInput.value);
     });
 
+    btnAttach?.addEventListener('click', () => attachInput?.click());
+    attachInput?.addEventListener('change', async () => {
+      const files = Array.from(attachInput.files || []);
+      await addImageFiles(files);
+      await addTextFiles(files);
+      attachInput.value = '';
+    });
+
+    chatInput?.addEventListener('paste', async (event) => {
+      const items = Array.from(event?.clipboardData?.items || []);
+      const imageFiles = items
+        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+
+      if (imageFiles.length) {
+        event.preventDefault();
+        await addImageFiles(imageFiles);
+        return;
+      }
+
+      const pastedText = event?.clipboardData?.getData('text/plain') || '';
+      if (pastedText.length > 180 && /\n/.test(pastedText)) {
+        event.preventDefault();
+        if (addTextSnippet('Pasted snippet', pastedText)) {
+          toast.info('Attached pasted text snippet.');
+        }
+      }
+    });
+
+    btnVoice?.addEventListener('click', async () => {
+      if (!isVoiceSupported()) {
+        toast.error('Voice input is not supported in this browser.');
+        return;
+      }
+
+      try {
+        if (getRecordingState().isRecording) {
+          const transcript = await stopAndTranscribe(AI_SURFACES.AI_CHAT);
+          if (transcript) {
+            chatInput.value = chatInput.value ? `${chatInput.value.trim()} ${transcript}` : transcript;
+            syncSendButton();
+          }
+        } else {
+          await startRecording();
+        }
+      } catch (error) {
+        toast.error(getAiErrorMessage(error, 'Voice transcription failed.'));
+      } finally {
+        syncVoiceButton();
+      }
+    });
+
+    followUpsWrap?.addEventListener('click', (event) => {
+      const chip = event.target?.closest?.('.chat-followup-chip[data-followup-msg]');
+      if (!chip || !followUpsWrap.contains(chip)) return;
+      const prompt = String(chip.dataset.followupMsg || '').trim();
+      if (!prompt) return;
+      pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, createFollowUpClickEvent(prompt));
+      renderAttachmentState();
+      sendMessage(prompt);
+    });
+
+    renderFollowUps();
+    syncVoiceButton();
+    renderAttachmentState();
+    syncSendButton();
+
     wrapper.querySelectorAll('.chat-suggestion').forEach((btn) => {
       btn.addEventListener('click', () => {
         sendMessage(btn.dataset.msg || '');
@@ -292,6 +606,9 @@ export function aiChatScreen() {
       chatHistory = [];
       sessionList = [];
       saveSessions(sessionList);
+      followUpSuggestions = getDefaultFollowUps(AI_SURFACES.AI_CHAT, formData?.title || '');
+      clearUiContextQueue();
+      renderFollowUps();
       chatMessages.replaceChildren();
       chatMessages.style.justifyContent = 'center';
       chatMessages.style.alignItems = 'center';
@@ -299,6 +616,7 @@ export function aiChatScreen() {
     });
 
     return () => {
+      if (getRecordingState().isRecording) cancelRecording();
       cleanupRichActions?.();
       cleanupLayout?.();
     };

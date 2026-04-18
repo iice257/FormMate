@@ -7,7 +7,7 @@
 // prompts using user profile, vault, and settings.
 // ═══════════════════════════════════════════
 
-import { generateText, generateJson, getAiErrorMessage, isRetryableAiError, normalizeAiError } from './ai-service';
+import { AI_SURFACES, generateText, generateJson, getAiErrorMessage, isRetryableAiError, normalizeAiError } from './ai-service';
 import { getState } from '../state';
 import { categorizeField } from './field-classifier';
 import { buildSystemPrompt } from './system-prompts';
@@ -56,6 +56,7 @@ Extraction Rules:
   try {
     const parsed = await generateJson({
       task: 'form_parsing',
+      surface: AI_SURFACES.ANALYZING,
       messages,
       temperature: 0.2, // Low temperature for high accuracy
       maxTokens: 3000,
@@ -177,6 +178,7 @@ Options: ${q.options && q.options.length ? q.options.join(', ') : 'None'}`
     try {
       const responseText = await generateText({
         task: 'answer_generation',
+        surface: AI_SURFACES.ANALYZING,
         messages,
         temperature: settings?.ai?.temperature || 0.7,
         maxTokens: 500,
@@ -223,7 +225,7 @@ Options: ${q.options && q.options.length ? q.options.join(', ') : 'None'}`
 
 // ─── Custom Rewrite (Quick Edit) ─────────────
 
-export async function quickEditAnswer(question, currentAnswer, instruction) {
+export async function quickEditAnswer(question, currentAnswer, instruction, { surface = AI_SURFACES.WORKSPACE } = {}) {
   const { settings } = getState();
 
   const messages = [
@@ -240,6 +242,7 @@ export async function quickEditAnswer(question, currentAnswer, instruction) {
   try {
     const text = await generateText({
       task: 'quick_edit',
+      surface,
       messages,
       temperature: 0.5,
       maxTokens: 1024,
@@ -265,7 +268,7 @@ export async function quickEditAnswer(question, currentAnswer, instruction) {
 
 // ─── Answer Regeneration ─────────────────────
 
-export async function regenerateAnswer(question, currentAnswer) {
+export async function regenerateAnswer(question, currentAnswer, { surface = AI_SURFACES.WORKSPACE } = {}) {
   const { settings } = getState();
 
   const messages = [
@@ -282,6 +285,7 @@ export async function regenerateAnswer(question, currentAnswer) {
   try {
     const text = await generateText({
       task: 'regeneration',
+      surface,
       messages,
       temperature: 0.85,
       maxTokens: 1024,
@@ -307,15 +311,19 @@ export async function regenerateAnswer(question, currentAnswer) {
 
 // ─── Copilot Chat ────────────────────────────
 
-export async function processChatMessage(userMessage, formContext, history = [], activeFieldId = null) {
+export async function processChatMessage(userMessage, formContext, history = [], activeFieldId = null, options = {}) {
   const { settings, answers, userProfile, personality } = getState();
+  const surface = options.surface || AI_SURFACES.WORKSPACE;
+  const attachments = Array.isArray(options.attachments) ? options.attachments : [];
+  const safeFormContext = formContext && typeof formContext === 'object' ? formContext : {};
+  const formQuestions = Array.isArray(safeFormContext.questions) ? safeFormContext.questions : [];
 
   const formattedHistory = history.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
     content: msg.content
   }));
 
-  const schemaContext = formContext.questions ? formContext.questions.map(q =>
+  const schemaContext = formQuestions.length ? formQuestions.map(q =>
     `- [ID: ${q.id}] ${q.text} (Type: ${q.type}, Current Answer: ${answers?.[q.id]?.text || 'None'})`
   ).join('\n') : '';
 
@@ -334,7 +342,7 @@ Currently Selected Field Focus:
 The user is currently focused on the field with ID: ${activeFieldId}.
 If they ask about "this field", they are referring to this one.` : '';
 
-  const systemPromptContent = `You are FormMate's chat copilot. You assist the user with filling out the form titled "${formContext.title}".
+  const systemPromptContent = `You are FormMate's chat copilot. You assist the user with filling out the form titled "${safeFormContext.title || 'Current form'}".
 
 Full Form Schema & Current Answers:
 ${schemaContext}
@@ -357,10 +365,18 @@ Be helpful, provide concrete suggestions, and answer questions clearly, adapting
   try {
     const responseText = await generateText({
       task: 'copilot_chat',
+      surface,
       messages,
       temperature: 0.7,
       maxTokens: 1024,
       useCache: false,
+      context: {
+        formTitle: formContext?.title || '',
+        activeFieldId: activeFieldId || '',
+        activeFieldText: formQuestions.find((entry) => String(entry?.id) === String(activeFieldId))?.text || '',
+        formQuestions: formQuestions.map((entry) => ({ id: entry.id, text: entry.text, type: entry.type })),
+      },
+      attachments,
     });
 
     return responseText;

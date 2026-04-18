@@ -1,20 +1,23 @@
 // @ts-nocheck
 import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import {
+  buildServerSystemPrompt,
+  getSurfaceRateLimit,
+  getTaskPolicy,
+  isBalancedAdjacentScopeAllowed,
+  isTaskAllowedForSurface,
+  sanitizeMessages,
+} from '../_shared/ai-policy.js';
 
 export const config = {
   maxDuration: 10,
 };
 
-const RATE_LIMIT = { max: 30, windowMs: 60_000 };
 const buckets = new Map();
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const REQUEST_TIMEOUT_MS = 9000;
-const ALLOWED_MODELS = new Set([
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'openai/gpt-oss-20b',
-  'openai/gpt-oss-120b',
-]);
+const MAX_ATTACHMENTS = 8;
+const MAX_ATTACHMENT_CHARS = 10_000;
 
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -22,15 +25,17 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown';
 }
 
-function rateLimit(req) {
+function rateLimit(req, surface) {
+  const limit = getSurfaceRateLimit(surface);
   const ip = getClientIp(req);
+  const key = `${ip}:${surface || 'unknown'}`;
   const now = Date.now();
-  const entry = buckets.get(ip);
+  const entry = buckets.get(key);
   if (!entry || now >= entry.resetAt) {
-    buckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    buckets.set(key, { count: 1, resetAt: now + limit.windowMs });
     return { allowed: true };
   }
-  if (entry.count >= RATE_LIMIT.max) {
+  if (entry.count >= limit.max) {
     return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
   }
   entry.count++;
@@ -121,6 +126,42 @@ function mapUpstreamError(status) {
   };
 }
 
+function normalizeAttachmentSummaries(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  return attachments
+    .slice(0, MAX_ATTACHMENTS)
+    .map((entry, index) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const type = String(entry.type || 'attachment').toLowerCase();
+      const name = String(entry.name || '').trim();
+      const text = String(entry.text || entry.summary || '').trim();
+      const summary = [name ? `${name}:` : `Attachment ${index + 1}:`, text]
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, MAX_ATTACHMENT_CHARS);
+      return summary || `${type} attachment provided.`;
+    })
+    .filter(Boolean);
+}
+
+function normalizeContext(formContext, activeFieldId, attachments) {
+  const context = (formContext && typeof formContext === 'object') ? formContext : {};
+  const output = {
+    formTitle: String(context.formTitle || context.title || '').trim().slice(0, 220),
+    activeFieldId: String(activeFieldId || context.activeFieldId || '').trim().slice(0, 80),
+    activeFieldText: String(context.activeFieldText || '').trim().slice(0, 900),
+    formQuestions: Array.isArray(context.formQuestions)
+      ? context.formQuestions.slice(0, 50).map((entry) => ({
+        id: String(entry?.id || '').slice(0, 40),
+        text: String(entry?.text || '').slice(0, 240),
+        type: String(entry?.type || '').slice(0, 48),
+      }))
+      : [],
+    attachmentSummaries: normalizeAttachmentSummaries(attachments),
+  };
+  return output;
+}
+
 export default async function handler(req, res) {
   const allowedOrigin = getAllowedOrigin(req);
   if (allowedOrigin) {
@@ -136,9 +177,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return sendError(res, 405, {
-      code: 'METHOD_NOT_ALLOWED',
-      message: 'Method not allowed.',
+      return sendError(res, 405, {
+        code: 'METHOD_NOT_ALLOWED',
+        message: 'Method not allowed.',
       retryable: false,
     });
   }
@@ -148,7 +189,48 @@ export default async function handler(req, res) {
       return;
     }
 
-    const rl = rateLimit(req);
+    const {
+      task,
+      surface,
+      messages,
+      formContext,
+      activeFieldId,
+      attachments,
+      temperature,
+      max_tokens,
+      response_format,
+      expectJson,
+    } = req.body || {};
+
+    const normalizedTask = String(task || '').trim();
+    const normalizedSurface = String(surface || '').trim();
+    const policy = getTaskPolicy(normalizedTask);
+
+    if (!normalizedTask || !normalizedSurface) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: 'task and surface are required.',
+        retryable: false,
+      });
+    }
+
+    if (!policy) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: `Unknown task "${normalizedTask}".`,
+        retryable: false,
+      });
+    }
+
+    if (!isTaskAllowedForSurface(normalizedTask, normalizedSurface)) {
+      return sendError(res, 403, {
+        code: 'TASK_SURFACE_MISMATCH',
+        message: 'This AI task is not allowed from the current surface.',
+        retryable: false,
+      });
+    }
+
+    const rl = rateLimit(req, normalizedSurface);
     if (!rl.allowed) {
       return sendError(res, 429, {
         code: 'RATE_LIMITED',
@@ -175,16 +257,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const { model, messages, temperature, max_tokens, response_format } = req.body || {};
-
-    if (!model || !messages) {
-      return sendError(res, 400, {
-        code: 'BAD_REQUEST',
-        message: 'model and messages are required.',
-        retryable: false,
-      });
-    }
-
     if (!Array.isArray(messages) || messages.length === 0) {
       return sendError(res, 400, {
         code: 'BAD_REQUEST',
@@ -193,7 +265,16 @@ export default async function handler(req, res) {
       });
     }
 
-    if (messages.length > 64) {
+    const sanitizedMessages = sanitizeMessages(messages, 42);
+    if (!sanitizedMessages.length) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: 'messages must include user or assistant content.',
+        retryable: false,
+      });
+    }
+
+    if (sanitizedMessages.length > 42) {
       return sendError(res, 400, {
         code: 'BAD_REQUEST',
         message: 'Too many messages.',
@@ -201,52 +282,89 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!ALLOWED_MODELS.has(model)) {
-      return sendError(res, 400, {
-        code: 'BAD_REQUEST',
-        message: 'Model not allowed.',
+    const context = normalizeContext(formContext, activeFieldId, attachments);
+    if (!isBalancedAdjacentScopeAllowed(normalizedTask, sanitizedMessages, context)) {
+      return sendError(res, 403, {
+        code: 'SCOPE_NOT_ALLOWED',
+        message: 'This request is outside FormMate assistant scope.',
         retryable: false,
       });
     }
 
-    const totalChars = messages.reduce((sum, message) => sum + (typeof message?.content === 'string' ? message.content.length : 0), 0);
-    if (totalChars > 20_000) {
+    const totalChars = sanitizedMessages.reduce((sum, message) => sum + (typeof message?.content === 'string' ? message.content.length : 0), 0);
+    if (totalChars > policy.maxMessageChars) {
       return sendError(res, 400, {
         code: 'INPUT_TOO_LONG',
         message: 'Input too long.',
         retryable: false,
-        details: { totalChars, maxChars: 20_000 },
+        details: { totalChars, maxChars: policy.maxMessageChars },
       });
     }
 
-    const temp = typeof temperature === 'number' ? temperature : 0.7;
-    const body = { model, messages, temperature: Math.max(0, Math.min(temp, 2)), max_tokens: max_tokens || 1024 };
-    if (response_format) body.response_format = response_format;
+    const attachmentCount = Array.isArray(attachments) ? attachments.length : 0;
+    if (attachmentCount > MAX_ATTACHMENTS) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: `Too many attachments. Maximum ${MAX_ATTACHMENTS}.`,
+        retryable: false,
+      });
+    }
 
-    const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: getAbortSignal(REQUEST_TIMEOUT_MS),
+    const temp = typeof temperature === 'number' ? temperature : policy.defaultTemperature;
+    const maxTokens = Math.max(128, Math.min(4096, Number(max_tokens) || policy.maxTokens));
+    const systemPrompt = buildServerSystemPrompt(normalizedTask, context);
+    const modelChain = [policy.model, ...(Array.isArray(policy.fallback) ? policy.fallback : [])];
+    let lastStatus = 500;
+    let lastMessage = 'The AI request failed across all providers.';
+
+    for (const model of modelChain) {
+      const requestBody = {
+        model,
+        messages: [{ role: 'system', content: systemPrompt }, ...sanitizedMessages],
+        temperature: Math.max(0, Math.min(temp, 1.5)),
+        max_tokens: maxTokens,
+      };
+
+      if (expectJson === true || response_format?.type === 'json_object') {
+        requestBody.response_format = { type: 'json_object' };
+      }
+
+      const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: getAbortSignal(REQUEST_TIMEOUT_MS),
+      });
+
+      const responseText = await groqRes.text();
+      const payload = safeJsonParse(responseText);
+
+      if (groqRes.ok) {
+        return sendJson(res, groqRes.status, payload || { message: responseText });
+      }
+
+      lastStatus = groqRes.status;
+      lastMessage = payload?.error?.message || responseText.slice(0, 240) || lastMessage;
+      const isRetryable = groqRes.status === 429 || groqRes.status >= 500 || groqRes.status === 408 || groqRes.status === 504;
+      if (!isRetryable) {
+        const retryAfter = Number.parseInt(groqRes.headers.get('retry-after') || '', 10);
+        const upstream = mapUpstreamError(groqRes.status);
+        return sendError(res, groqRes.status, {
+          ...upstream,
+          retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+          details: { model },
+        });
+      }
+    }
+
+    const upstream = mapUpstreamError(lastStatus);
+    return sendError(res, lastStatus, {
+      ...upstream,
+      details: { message: lastMessage },
     });
-
-    const responseText = await groqRes.text();
-    const payload = safeJsonParse(responseText);
-
-    if (!groqRes.ok) {
-      const retryAfter = Number.parseInt(groqRes.headers.get('retry-after') || '', 10);
-      console.error('[Proxy] Chat upstream error:', groqRes.status, payload?.error?.message || responseText.slice(0, 200));
-      const upstream = mapUpstreamError(groqRes.status);
-      return sendError(res, groqRes.status, {
-        ...upstream,
-        retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
-      });
-    }
-
-    return sendJson(res, groqRes.status, payload || { message: responseText });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[Proxy] Chat error:', message);

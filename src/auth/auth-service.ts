@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { save, load, remove, saveProfile, saveSettings, saveVault, getDefaultSettings } from '../storage/local-store';
+import { load, remove, clearSensitiveSessionCache } from '../storage/local-store';
 import { ensureAccountData, deleteRemoteUserData, hydrateFromRemote, isSupabaseStorageConfigured } from '../storage/storage-provider';
 import { getAuthRedirectUrl, getSupabaseClient, isSupabaseConfigured } from './supabase-client';
 
@@ -163,20 +163,16 @@ function notifyListeners(session) {
 }
 
 function clearLocalAccountCache() {
-  saveProfile({
-    name: '',
-    email: '',
-    phone: '',
-    occupation: '',
-    bio: '',
-    experience: '',
-    avatar: '',
-    preferredTone: 'professional',
-    commonInfo: {},
-  });
-  saveSettings(getDefaultSettings());
-  saveVault({});
-  save('form_history', []);
+  clearSensitiveSessionCache();
+  const sessionStorageRef = getSessionStorage();
+  if (sessionStorageRef) {
+    try {
+      sessionStorageRef.removeItem('fm_chat_sessions');
+      sessionStorageRef.removeItem('formmate_docs_chat_state');
+    } catch {
+      // Ignore storage failures while clearing cache.
+    }
+  }
 }
 
 function normalizeSession(session) {
@@ -457,6 +453,7 @@ export async function signInWithApple() {
 export async function signOut() {
   const session = getSession();
   writeStoredSession(null);
+  clearSensitiveSessionCache();
   clearLocalAccountCache();
   notifyListeners(null);
 
@@ -520,7 +517,8 @@ export async function deleteAccount() {
     });
   }
 
-  remove(AUTH_KEY);
+  writeStoredSession(null);
+  clearSensitiveSessionCache();
   clearLocalAccountCache();
   notifyListeners(null);
 }
@@ -540,7 +538,7 @@ export async function refreshSupabaseSession() {
     return normalized;
   }
 
-  remove(AUTH_KEY);
+  writeStoredSession(null);
   notifyListeners(null);
   return null;
 }

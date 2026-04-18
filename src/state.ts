@@ -101,6 +101,16 @@ const state = {
 
   // Subscription tier
   tier: 'free',
+
+  // Runtime health and degraded-mode truth for UX
+  appHealth: {
+    loaded: false,
+    groqConfigured: false,
+    supabaseConfigured: false,
+    storageMode: 'local',
+    imageParserConfigured: false,
+    degradedMode: false,
+  },
 };
 
 // ─── State Access ────────────────────────
@@ -323,4 +333,13 @@ export function updateProfile(updates) {
 
 export function updateVault(key, value) {
   setState({ vault: { ...state.vault, [key]: value } });
+}
+
+export function setRuntimeHealth(health) {
+  setState({
+    appHealth: {
+      ...state.appHealth,
+      ...(health || {}),
+    },
+  });
 }

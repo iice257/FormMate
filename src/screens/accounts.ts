@@ -476,16 +476,6 @@ export function accountsScreen() {
         authUser: null,
         tier: 'free',
         currentScreen: 'auth',
-        userProfile: {
-          name: '',
-          email: '',
-          phone: '',
-          occupation: '',
-          bio: '',
-          experience: '',
-          preferredTone: 'professional',
-          avatar: ''
-        }
       });
       toast.info('Signed out.');
       navigateTo('auth');
@@ -500,16 +490,6 @@ export function accountsScreen() {
           authUser: null,
           tier: 'free',
           currentScreen: 'auth',
-          userProfile: {
-            name: '',
-            email: '',
-            phone: '',
-            occupation: '',
-            bio: '',
-            experience: '',
-            preferredTone: 'professional',
-            avatar: ''
-          }
         });
         toast.warning('Account deleted.');
         navigateTo('auth');

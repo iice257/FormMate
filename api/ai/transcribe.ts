@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { AI_MODELS } from '../_shared/ai-policy.js';
 
 export const config = {
   maxDuration: 10,
@@ -13,6 +14,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const buckets = new Map();
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const REQUEST_TIMEOUT_MS = 9000;
+const ALLOWED_SURFACES = new Set(['workspace', 'ai-chat']);
 
 function getClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
@@ -203,6 +205,23 @@ export default async function handler(req, res) {
       });
     }
 
+    const surface = String(req.headers['x-formmate-surface'] || '').trim();
+    const languageHint = String(req.headers['x-formmate-language'] || '').trim();
+    if (!ALLOWED_SURFACES.has(surface)) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: 'Voice transcription is only available from workspace and ai-chat surfaces.',
+        retryable: false,
+      });
+    }
+    if (languageHint && languageHint.length > 24) {
+      return sendError(res, 400, {
+        code: 'BAD_REQUEST',
+        message: 'Invalid language hint.',
+        retryable: false,
+      });
+    }
+
     const buffer = await readRequestBuffer(req, MAX_UPLOAD_BYTES);
     const groqRes = await fetch(`${GROQ_BASE_URL}/audio/transcriptions`, {
       method: 'POST',
@@ -227,7 +246,15 @@ export default async function handler(req, res) {
       });
     }
 
-    return sendJson(res, groqRes.status, payload || { message: responseText });
+    const transcript = String(payload?.text || payload?.message || responseText || '').trim();
+    return sendJson(res, groqRes.status, {
+      text: transcript,
+      meta: {
+        surface,
+        language: languageHint || null,
+        model: AI_MODELS.WHISPER,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[Proxy] Transcribe error:', message);

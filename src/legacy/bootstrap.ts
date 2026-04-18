@@ -3,6 +3,7 @@ import { registerScreen, initRouter } from '../router';
 import { registerAccountModalOpener } from '../components/layout';
 import { initAccountModal } from '../components/account-modal';
 import { applyTheme } from '../theme';
+import { toast } from '../components/toast';
 import { authScreen } from '../screens/auth';
 import { onboardingScreen } from '../screens/onboarding';
 import { landingScreen } from '../screens/landing';
@@ -22,6 +23,8 @@ import { aiChatScreen } from '../screens/ai-chat';
 import { historyScreen } from '../screens/history';
 import { vaultScreen } from '../screens/vault';
 import { captureScreen } from '../screens/capture';
+import { initSessionLifecycle } from '../auth/session-lifecycle';
+import { loadRuntimeHealth } from '../app/runtime-health';
 
 let booted = false;
 let screensRegistered = false;
@@ -172,6 +175,34 @@ async function boot() {
     }
 
     initRouter();
+    initSessionLifecycle();
+
+    try {
+      const { setRuntimeHealth } = await import('../state');
+      const runtimeHealth = await loadRuntimeHealth();
+      setRuntimeHealth(runtimeHealth);
+
+      if (runtimeHealth.degradedMode) {
+        const noticeKey = 'formmate_degraded_notice_shown';
+        let alreadyShown = false;
+        try {
+          alreadyShown = window.sessionStorage?.getItem(noticeKey) === '1';
+        } catch {
+          alreadyShown = false;
+        }
+        if (!alreadyShown) {
+          try {
+            window.sessionStorage?.setItem(noticeKey, '1');
+          } catch {
+            // Ignore storage write failures.
+          }
+          toast.warning('Cloud sync is unavailable right now. FormMate is running in local session mode.');
+        }
+      }
+    } catch (runtimeError) {
+      console.warn('[boot] Runtime health check failed; continuing with local assumptions.', runtimeError);
+    }
+
     initHidingHeader();
   } catch (error) {
     console.error('[boot] Fatal startup error:', error);
