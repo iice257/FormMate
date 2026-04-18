@@ -200,7 +200,10 @@ function authError(message, code = 'AUTH_UNAVAILABLE') {
 function getClientOrThrow() {
   const client = getSupabaseClient();
   if (!client) {
-    throw authError('Supabase auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    throw authError(
+      'Authentication is unavailable because Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then restart the app.',
+      'SUPABASE_NOT_CONFIGURED',
+    );
   }
   return client;
 }

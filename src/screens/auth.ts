@@ -3,12 +3,19 @@
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
 import { getDevTestUsers, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signUp } from '../auth/auth-service';
+import { isSupabaseConfigured } from '../auth/supabase-client';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
 
 export function authScreen() {
+  const supabaseConfigured = isSupabaseConfigured();
   const devTestUsers = getDevTestUsers();
+  const supabaseNoticeHtml = !supabaseConfigured ? `
+            <div class="mb-4 rounded-xl px-4 py-3 text-xs font-medium" style="border: 1px solid var(--fm-warning-light); background: #fff8e7; color: #8a5b00;">
+              Cloud authentication is currently unavailable in this environment. Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>, then restart.
+            </div>
+          ` : '';
   const devAccessHtml = devTestUsers.length ? `
             <div class="mt-5 rounded-2xl p-4" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated);">
               <div class="flex items-start justify-between gap-3">
@@ -62,6 +69,7 @@ export function authScreen() {
           <form id="login-form" novalidate>
             <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Continue to FormMate</h2>
             <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Please sign in or register to proceed.</p>
+            ${supabaseNoticeHtml}
 
             <div class="space-y-4">
               <div>
@@ -176,9 +184,21 @@ export function authScreen() {
       forgotForm.classList.toggle('hidden', targetForm !== forgotForm);
     };
 
-    wrapper.querySelector('#btn-to-signup').addEventListener('click', () => showForm(signupForm));
+    wrapper.querySelector('#btn-to-signup').addEventListener('click', () => {
+      if (!supabaseConfigured) {
+        showError(wrapper.querySelector('#login-error'), 'Supabase is not configured yet for sign-up in this environment.');
+        return;
+      }
+      showForm(signupForm);
+    });
     wrapper.querySelector('#btn-to-login').addEventListener('click', () => showForm(loginForm));
-    wrapper.querySelector('#btn-forgot').addEventListener('click', () => showForm(forgotForm));
+    wrapper.querySelector('#btn-forgot').addEventListener('click', () => {
+      if (!supabaseConfigured) {
+        showError(wrapper.querySelector('#login-error'), 'Supabase is not configured yet for password reset in this environment.');
+        return;
+      }
+      showForm(forgotForm);
+    });
     wrapper.querySelector('#btn-back-login').addEventListener('click', () => showForm(loginForm));
 
     const applySessionState = (session) => {
@@ -208,6 +228,11 @@ export function authScreen() {
       const errorEl = wrapper.querySelector('#login-error');
       const btn = wrapper.querySelector('#btn-login');
 
+      if (!supabaseConfigured) {
+        showError(errorEl, 'Supabase is not configured yet for email sign-in in this environment.');
+        return;
+      }
+
       if (!email || !password) {
         showError(errorEl, 'Please fill in all fields.');
         return;
@@ -233,6 +258,11 @@ export function authScreen() {
       const password = wrapper.querySelector('#signup-password').value;
       const errorEl = wrapper.querySelector('#signup-error');
       const btn = wrapper.querySelector('#btn-signup');
+
+      if (!supabaseConfigured) {
+        showError(errorEl, 'Supabase is not configured yet for account creation in this environment.');
+        return;
+      }
 
       if (!email || !password) {
         showError(errorEl, 'Please fill in all fields.');
@@ -261,6 +291,14 @@ export function authScreen() {
       const email = wrapper.querySelector('#forgot-email').value.trim();
       const msgEl = wrapper.querySelector('#forgot-message');
 
+      if (!supabaseConfigured) {
+        msgEl.style.background = 'var(--fm-warning-light)';
+        msgEl.style.color = '#8a5b00';
+        msgEl.textContent = 'Supabase is not configured yet for password reset in this environment.';
+        msgEl.classList.remove('hidden');
+        return;
+      }
+
       if (!email) {
         msgEl.style.background = 'var(--fm-error-light)';
         msgEl.style.color = 'var(--fm-error)';
@@ -287,6 +325,12 @@ export function authScreen() {
       const errorEl = wrapper.querySelector('#login-error');
       const btn = wrapper.querySelector('#btn-google');
       const originalHtml = btn.innerHTML;
+
+      if (!supabaseConfigured) {
+        showError(errorEl, 'Supabase is not configured yet for Google sign-in in this environment.');
+        return;
+      }
+
       try {
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Redirecting...';
