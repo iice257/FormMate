@@ -876,7 +876,8 @@ export function workspaceScreen() {
               });
             }
           } catch (visionError) {
-            toast.warning(getAiErrorMessage(visionError, 'Could not extract screenshot context.'));
+            console.warn('[Workspace Chat] Screenshot context unavailable:', visionError);
+            toast.info('Screenshot context was unavailable for this message. I continued without it.');
           }
         }
 
@@ -902,7 +903,6 @@ export function workspaceScreen() {
         typingEl.remove();
         const message = getAiErrorMessage(error, 'AI service is unavailable right now.');
         appendChatBubble('assistant', message);
-        toast.error(message);
       } finally {
         chatInput.disabled = false;
         btnAttach && (btnAttach.disabled = false);

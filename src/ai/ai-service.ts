@@ -16,6 +16,7 @@ export const AI_SURFACES = Object.freeze({
 
 export const AI_ERROR_CODES = {
   AUTH_REQUIRED: 'AUTH_REQUIRED',
+  BACKEND_INCOMPATIBLE: 'BACKEND_INCOMPATIBLE',
   BAD_REQUEST: 'BAD_REQUEST',
   CLIENT_RATE_LIMITED: 'CLIENT_RATE_LIMITED',
   CONFIG_MISSING: 'CONFIG_MISSING',
@@ -205,7 +206,16 @@ function extractProxyError(response, parsedBody, responseText) {
     || (typeof parsedBody?.error === 'string' ? parsedBody.error : '')
     || parsedBody?.message
     || `AI request failed with status ${response.status}.`;
-  const code = mapLegacyCode(payloadError?.code, response.status);
+  let code = mapLegacyCode(payloadError?.code, response.status);
+  const normalizedMessage = String(message || '').toLowerCase();
+  const rawErrorCode = String(parsedBody?.error || '').toUpperCase();
+  if (
+    rawErrorCode === 'NOT_FOUND'
+    || normalizedMessage.includes('unknown local api route')
+    || normalizedMessage.includes('model and messages are required')
+  ) {
+    code = AI_ERROR_CODES.BACKEND_INCOMPATIBLE;
+  }
   const retryAfter = payloadError?.retryAfter ?? parseRetryAfter(response.headers.get('retry-after'), undefined);
 
   return createAiError({
@@ -525,8 +535,11 @@ export function isRetryableAiError(error) {
 export function getAiErrorMessage(error, fallback = 'AI service is unavailable right now.') {
   const normalized = normalizeAiError(error, { message: fallback });
 
+  if (normalized.code === AI_ERROR_CODES.BACKEND_INCOMPATIBLE) {
+    return 'Local AI backend is out of sync. Restart the dev stack and try again.';
+  }
   if (normalized.code === AI_ERROR_CODES.CONFIG_MISSING) {
-    return 'AI is not configured on the server. Pull Vercel envs with `npm run env:pull`, then restart `npm run dev:stack`.';
+    return 'AI is not configured on the server right now.';
   }
   if (normalized.code === AI_ERROR_CODES.AUTH_REQUIRED) {
     return 'Your session expired or you are signed out. Sign in again, then retry the AI action.';
@@ -535,13 +548,13 @@ export function getAiErrorMessage(error, fallback = 'AI service is unavailable r
     return `The AI is busy right now. Wait ${normalized.retryAfter || 2}s and try again.`;
   }
   if (normalized.code === AI_ERROR_CODES.NETWORK_ERROR) {
-    return 'Unable to reach the AI API. Start the full local stack with `npm run dev:stack` and try again.';
+    return 'Unable to reach the AI service. Check your network and try again.';
   }
   if (normalized.code === AI_ERROR_CODES.TIMEOUT_ERROR) {
     return 'The AI service timed out. Please try again.';
   }
   if (normalized.code === AI_ERROR_CODES.UPSTREAM_AUTH_ERROR) {
-    return 'The server-side AI credentials were rejected. Update `GROQ_API_KEY` in Vercel and re-pull envs locally.';
+    return 'AI credentials are currently invalid on the server.';
   }
   if (normalized.code === AI_ERROR_CODES.UPSTREAM_ERROR) {
     return 'The AI provider is temporarily unavailable. Please retry shortly.';

@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { getRequestOrigin, isAllowedOrigin } from './_shared/request-security.js';
 
+export const FORM_MATE_API_VERSION = '2026-04-18.1';
+
 function getStorageMode() {
   const raw = String(process.env.VITE_STORAGE_PROVIDER || '').trim().toLowerCase();
   const supabaseConfigured = Boolean(
@@ -47,6 +49,7 @@ export default function handler(req, res) {
   res.status(200).json({
     status: 'ok',
     uptime: 'ready',
+    apiVersion: FORM_MATE_API_VERSION,
     config: buildConfigHealth(),
   });
 }

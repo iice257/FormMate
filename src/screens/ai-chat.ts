@@ -477,7 +477,8 @@ export function aiChatScreen() {
               });
             }
           } catch (visionError) {
-            toast.warning(getAiErrorMessage(visionError, 'Could not extract screenshot context.'));
+            console.warn('[AI Chat] Screenshot context unavailable:', visionError);
+            toast.info('Screenshot context was unavailable for this message. I continued without it.');
           }
         }
 

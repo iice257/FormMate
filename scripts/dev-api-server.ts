@@ -9,8 +9,9 @@ import scrapeHandler from '../api/proxy/scrape.ts';
 import googleFormHandler from '../api/proxy/google-form.ts';
 import healthHandler from '../api/health.ts';
 
-const HOST = '127.0.0.1';
-const PORT = 3000;
+const HOST = String(process.env.FORMMATE_API_HOST || '127.0.0.1').trim() || '127.0.0.1';
+const parsedPort = Number.parseInt(String(process.env.FORMMATE_API_PORT || ''), 10);
+const PORT = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 
 // Local API server should mirror Vercel env pulls used by frontend proxy flows.
 loadDotenv({ path: '.env.local' });
