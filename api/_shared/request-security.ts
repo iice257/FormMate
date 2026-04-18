@@ -72,7 +72,15 @@ export function getRequestOrigin(req) {
 
 export function isAllowedOrigin(origin) {
   if (!origin) return false;
-  return buildAllowedOrigins().has(origin);
+  if (buildAllowedOrigins().has(origin)) return true;
+
+  // During local development, allow localhost/loopback origins on any port so Vite
+  // strict-port fallback or parallel sessions don't break trusted requests.
+  if (isDevAuthEnabled()) {
+    return isLocalOrigin(origin);
+  }
+
+  return false;
 }
 
 function getBearerToken(req) {

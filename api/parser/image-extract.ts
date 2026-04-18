@@ -76,7 +76,9 @@ function getAllowedOrigin(req) {
 }
 
 function sendJson(res, status, payload) {
-  return res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
+  res.status(status);
+  res.setHeader('Content-Type', 'application/json');
+  return res.send(JSON.stringify(payload));
 }
 
 function sendError(res, status, { code, message, retryable, retryAfter, details }) {

@@ -12,3 +12,7 @@
 - Commit and push after major tasks/changes.
 - Keep this memory file updated when new critical preferences or decisions are introduced.
 - Treat API keys/secrets as local-only runtime config; never commit or expose them in plaintext.
+
+## Operational Notes
+- On this workstation/network, `vercel dev` can fail with `self-signed certificate in certificate chain` until local TLS trust is configured for Vercel CLI auth endpoints.
+- Local AI proxy relies on `npm run dev:stack` to boot `vercel dev` on `127.0.0.1:3000` before Vite starts.

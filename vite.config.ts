@@ -10,6 +10,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: process.env.VITE_STRICT_PORT === '1',
     open: false,
     proxy: {
       '/api': {
