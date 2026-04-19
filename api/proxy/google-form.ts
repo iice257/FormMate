@@ -61,7 +61,12 @@ function normalizeGoogleFormUrl(rawUrl, formId) {
   }
 
   const parsed = new URL(String(rawUrl || ''));
-  if (parsed.hostname === 'forms.gle') {
+  const host = String(parsed.hostname || '').toLowerCase();
+  if (!GOOGLE_FORM_HOSTS.has(host)) {
+    return null;
+  }
+
+  if (host === 'forms.gle') {
     return parsed.toString();
   }
 
@@ -203,6 +208,9 @@ export default async function handler(req, res) {
     }
 
     const normalizedUrl = normalizeGoogleFormUrl(rawUrl, formId);
+    if (!normalizedUrl) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'Only Google Forms URLs are allowed.', authRequired: false });
+    }
     const checkedUrl = validateGoogleFormUrl(normalizedUrl);
     if (!checkedUrl.ok) {
       return res.status(400).json({ error: 'BAD_REQUEST', message: checkedUrl.reason, authRequired: false });
