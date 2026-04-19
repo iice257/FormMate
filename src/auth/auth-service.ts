@@ -90,6 +90,7 @@ function writeStoredSession(session) {
     try {
       if (!session) {
         sessionStorageRef.removeItem(sessionStorageKey);
+        remove(AUTH_KEY);
       } else {
         sessionStorageRef.setItem(sessionStorageKey, JSON.stringify({
           value: session,

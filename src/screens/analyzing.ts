@@ -470,8 +470,14 @@ export function analyzingScreen() {
         }
         if (cancelled) return;
 
-        const parseOutcome = parseResult?.outcome || {};
-        const formData = parseResult?.compatibility || null;
+        const parseOutcome = parseResult?.outcome
+          || {
+            status: parseResult?.parseStatus,
+            nextAction: parseResult?.nextAction,
+            nextStepHint: parseResult?.nextStepHint,
+            warnings: parseResult?.warnings,
+          };
+        const formData = parseResult?.compatibility || parseResult?.legacyFormData || null;
         const questionCount = Array.isArray(formData?.questions) ? formData.questions.length : 0;
 
         if (!formData || questionCount === 0 || ['blocked', 'unsupported', 'no_form', 'error'].includes(parseOutcome.status)) {
@@ -594,8 +600,14 @@ export function analyzingScreen() {
     }
 
     function handleOutcomeFailure(parseResult) {
-      const outcome = parseResult?.outcome || {};
-      const fallbackMessage = parseResult?.outcome?.warnings?.[0]?.message
+      const outcome = parseResult?.outcome
+        || {
+          status: parseResult?.parseStatus,
+          nextAction: parseResult?.nextAction,
+          nextStepHint: parseResult?.nextStepHint,
+          warnings: parseResult?.warnings,
+        };
+      const fallbackMessage = outcome?.warnings?.[0]?.message
         || parseResult?.diagnostics?.extractionWarnings?.[0]
         || 'Could not map inputs from this form.';
 
