@@ -134,7 +134,7 @@ export function workspaceScreen() {
   const workspaceContent = `
     <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
-      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll">
+      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll" data-fm-transition-main="true" data-fm-scroll-region="main">
           <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
           
           <!-- Breadcrumb & Actions Bar -->
@@ -181,7 +181,7 @@ export function workspaceScreen() {
       </div>
 
       <!-- Right Panel: AI Chat / AI Actions (Toggle) -->
-      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
+      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" data-fm-transition-panel="true" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
         
         <!-- Panel Toggle Tabs -->
         <div class="workspace-zen-panel-tabs" role="tablist" aria-label="Workspace AI panels" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">

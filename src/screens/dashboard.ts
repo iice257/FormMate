@@ -105,7 +105,7 @@ export function dashboardScreen() {
     `;
 
   const dashboardContent = `
-    <div class="app-page-scroll no-scrollbar scroll-smooth dashboard-page">
+    <div class="app-page-scroll no-scrollbar scroll-smooth dashboard-page" data-fm-transition-main="true" data-fm-scroll-region="main">
       <div class="app-page-inner dashboard-page-inner">
         <div class="app-page-stack">
           <section class="dashboard-hero">

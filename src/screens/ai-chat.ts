@@ -93,7 +93,7 @@ export function aiChatScreen() {
 
   const chatContent = `
     <div class="flex-1 flex overflow-hidden zen-chat-shell">
-      <div class="zen-chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <div class="zen-chat-main" data-fm-transition-main="true" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
         <div class="zen-chat-header" data-zen-hide="always" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <h2 style="font-size: 1.1rem; font-weight: 800; color: var(--fm-text);">FormMate AI</h2>
@@ -109,7 +109,7 @@ export function aiChatScreen() {
           </div>
         </div>
 
-        <div id="chat-messages" class="no-scrollbar zen-chat-messages" style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div id="chat-messages" class="no-scrollbar zen-chat-messages" data-fm-scroll-region="main" style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
           <div id="chat-empty-state" style="text-align: center; max-width: 420px;">
             <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--fm-primary-50); color: var(--fm-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
               <span class="material-symbols-outlined" style="font-size: 32px;">auto_awesome</span>
@@ -152,7 +152,7 @@ export function aiChatScreen() {
         </div>
       </div>
 
-      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
+      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-fm-transition-panel="true" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${escapeAttr(avatarSrc)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>

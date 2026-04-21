@@ -30,6 +30,7 @@
 - Degraded sync warning UI (banner/toast) is dev-only; do not show this notice in live production.
 - Account modal settings/profile edits should be draft-only until explicit save, with discard confirmation on close/tab-switch/cancel.
 - Product should operate as a free offering for now: remove pricing/tier/billing surfaces and references sitewide until billing is intentionally scaffolded later.
+- Global motion should feel premium and native-like: full-page forward/back route changes use fast directional slide + fade + light blur, while sidebar section switches keep the shell anchored and animate only the content region with subtle upward refresh motion plus softer right-panel fade/blur.
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.

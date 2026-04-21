@@ -320,7 +320,11 @@ export function bindZenModeControls(wrapper, zenMode) {
       }
       setZenModeEnabled(zenScreenId, true);
       closeZenMenu();
-      navigateTo(targetScreen, false, 'forward');
+      navigateTo(targetScreen, {
+        direction: 'forward',
+        source: 'shell',
+        transition: 'shell',
+      });
     });
   });
   document.addEventListener('keydown', handleEscape);
@@ -395,7 +399,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
   }).join('');
 
   return `
-    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
+    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-fm-shell="app" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
       <!-- Header -->
       <header data-fm-hide-on-scroll="true" class="layout-header">
@@ -501,7 +505,10 @@ export function initLayout(wrapper, options = {}) {
 
   links.forEach(link => {
     wrapper.querySelector(`#${link.id}`)?.addEventListener('click', () => {
-      navigateTo(link.route);
+      navigateTo(link.route, {
+        source: 'sidebar',
+        transition: 'shell',
+      });
     });
   });
 
