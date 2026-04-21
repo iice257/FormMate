@@ -377,6 +377,7 @@ export function aiChatScreen() {
         body.textContent = text;
         body.style.whiteSpace = 'pre-wrap';
       } else {
+        body.classList.add('ai-message-rich');
         replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
       }
       bubble.appendChild(body);

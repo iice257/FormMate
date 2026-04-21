@@ -84,10 +84,10 @@ export function getDefaultFollowUps(surface, formTitle = '') {
     ];
   }
   return [
-    'Improve my latest draft.',
+    'Improve my latest form response.',
     title
-      ? `What should I fix in ${title}?`
-      : 'What should I fix next?',
+      ? `What should I fix in ${title} form?`
+      : 'What should I fix in this application form?',
   ];
 }
 

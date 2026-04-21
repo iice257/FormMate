@@ -780,7 +780,7 @@ export function docsScreen() {
           row.className = 'flex flex-col gap-1 animate-message-in';
           const body = document.createElement('div');
           body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
-          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse, { interactive: false }));
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse, { interactive: false, markdown: false }));
           row.appendChild(body);
           chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -794,7 +794,7 @@ export function docsScreen() {
           row.className = 'flex flex-col gap-1 animate-message-in';
           const body = document.createElement('div');
           body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
-          replaceChildrenWithSafeHtml(body, renderAssistantRichText(message, { interactive: false }));
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(message, { interactive: false, markdown: false }));
           row.appendChild(body);
           chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;

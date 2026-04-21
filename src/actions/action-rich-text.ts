@@ -2,14 +2,202 @@
 import { executeAction, getActionById } from './action-index';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { parseAssistantResponse } from '../ai/chat-interactions';
+import { createSafeHtmlString } from '../utils/safe-html';
 
 const ACTION_TAG_PATTERN = /\[fm-action\s+id=(?:"([^"]+)"|'([^']+)')\](.*?)\[\/fm-action\]/gi;
 const INTERACTIVE_ITEM_PATTERN = /\[fm-item([^\]]*)\]([\s\S]*?)\[\/fm-item\]/gi;
 const ATTR_PATTERN = /([a-zA-Z0-9_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"']+))/g;
 const LEGACY_ITEM_LINE_PATTERN = /^\s*\[\s*([^\]\n]{1,32})\s*\]\s*([^|\n]{2,220}?)\s*\|\s*(.+?)\s*$/;
 
-function renderTextChunk(text) {
-  return escapeHtml(text).replace(/\n/g, '<br>');
+const RICH_ALLOWED_TAGS = new Set([
+  'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'blockquote',
+  'ul', 'ol', 'li',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'hr', 'a',
+]);
+
+const RICH_ALLOWED_ATTRS = {
+  a: new Set(['href', 'title', 'target', 'rel']),
+  code: new Set(['class']),
+  th: new Set(['colspan', 'rowspan', 'align']),
+  td: new Set(['colspan', 'rowspan', 'align']),
+};
+
+const TABLE_SEPARATOR_PATTERN = /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
+const TABLE_ROW_PATTERN = /^\s*\|.+\|\s*$/;
+const UNORDERED_ITEM_PATTERN = /^\s*[-*+]\s+/;
+const ORDERED_ITEM_PATTERN = /^\s*\d+\.\s+/;
+const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
+const HR_PATTERN = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+
+function sanitizeRichHtml(html) {
+  return createSafeHtmlString(html, {
+    allowedTags: RICH_ALLOWED_TAGS,
+    allowedAttributes: RICH_ALLOWED_ATTRS,
+  });
+}
+
+function applyUnderlineAlias(text) {
+  return String(text || '').replace(
+    /(^|[\s([{"'])-([^\n-](?:.*?[^\n-])?)-(?=($|[\s)\]}",.!?:;']))/gm,
+    (_, prefix, inner) => `${prefix}<u>${inner}</u>`,
+  );
+}
+
+function renderInlineMarkdown(rawText) {
+  const codeTokens = [];
+  let text = escapeHtml(rawText).replace(/`([^`\n]+)`/g, (_, code) => {
+    const token = `%%FM_CODE_${codeTokens.length}%%`;
+    codeTokens.push(`<code>${escapeHtml(code)}</code>`);
+    return token;
+  });
+
+  text = applyUnderlineAlias(text);
+  text = text.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+  text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, href) => {
+    const safeHref = escapeAttr(String(href).trim());
+    return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
+
+  codeTokens.forEach((tokenHtml, index) => {
+    text = text.replaceAll(`%%FM_CODE_${index}%%`, tokenHtml);
+  });
+
+  return text;
+}
+
+function splitTableRow(line) {
+  return String(line || '')
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function renderMarkdownLike(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const htmlParts = [];
+  let index = 0;
+
+  const readParagraph = () => {
+    const paragraph = [];
+    while (index < lines.length) {
+      const line = lines[index];
+      if (!line.trim()) break;
+      if (
+        line.startsWith('```')
+        || TABLE_ROW_PATTERN.test(line)
+        || UNORDERED_ITEM_PATTERN.test(line)
+        || ORDERED_ITEM_PATTERN.test(line)
+        || line.trimStart().startsWith('>')
+        || HEADING_PATTERN.test(line.trim())
+        || HR_PATTERN.test(line.trim())
+      ) {
+        break;
+      }
+      paragraph.push(line);
+      index += 1;
+    }
+    if (!paragraph.length) return;
+    htmlParts.push(`<p>${renderInlineMarkdown(paragraph.join('<br>'))}</p>`);
+  };
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith('```')) {
+      const language = String(line.slice(3).trim());
+      const codeLines = [];
+      index += 1;
+      while (index < lines.length && !lines[index].startsWith('```')) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length && lines[index].startsWith('```')) index += 1;
+      const languageClass = language ? ` class="language-${escapeAttr(language)}"` : '';
+      htmlParts.push(`<pre><code${languageClass}>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+      continue;
+    }
+
+    if (TABLE_ROW_PATTERN.test(line) && index + 1 < lines.length && TABLE_SEPARATOR_PATTERN.test(lines[index + 1])) {
+      const headerCells = splitTableRow(line);
+      const bodyRows = [];
+      index += 2;
+      while (index < lines.length && TABLE_ROW_PATTERN.test(lines[index])) {
+        bodyRows.push(splitTableRow(lines[index]));
+        index += 1;
+      }
+      const headerHtml = headerCells.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('');
+      const bodyHtml = bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('');
+      htmlParts.push(`<table><thead><tr>${headerHtml}</tr></thead>${bodyHtml ? `<tbody>${bodyHtml}</tbody>` : ''}</table>`);
+      continue;
+    }
+
+    const headingMatch = trimmed.match(HEADING_PATTERN);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      htmlParts.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+      index += 1;
+      continue;
+    }
+
+    if (HR_PATTERN.test(trimmed)) {
+      htmlParts.push('<hr>');
+      index += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith('>')) {
+      const quoteLines = [];
+      while (index < lines.length && lines[index].trimStart().startsWith('>')) {
+        quoteLines.push(lines[index].trimStart().replace(/^>\s?/, ''));
+        index += 1;
+      }
+      htmlParts.push(`<blockquote>${renderInlineMarkdown(quoteLines.join('<br>'))}</blockquote>`);
+      continue;
+    }
+
+    if (UNORDERED_ITEM_PATTERN.test(line)) {
+      const items = [];
+      while (index < lines.length && UNORDERED_ITEM_PATTERN.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*[-*+]\s+/, ''));
+        index += 1;
+      }
+      htmlParts.push(`<ul>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</ul>`);
+      continue;
+    }
+
+    if (ORDERED_ITEM_PATTERN.test(line)) {
+      const items = [];
+      while (index < lines.length && ORDERED_ITEM_PATTERN.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*\d+\.\s+/, ''));
+        index += 1;
+      }
+      htmlParts.push(`<ol>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</ol>`);
+      continue;
+    }
+
+    readParagraph();
+  }
+
+  return sanitizeRichHtml(htmlParts.join(''));
+}
+
+function renderTextChunk(text, options = {}) {
+  if (options?.markdown === false) {
+    return escapeHtml(String(text || '')).replace(/\n/g, '<br>');
+  }
+  return renderMarkdownLike(text);
 }
 
 function normalizeLegacyInteractiveLines(text) {
@@ -236,11 +424,11 @@ export function renderAssistantRichText(text, options = {}) {
   while (lastIndex < source.length) {
     const next = nextTagMatch(source, lastIndex, actionRegex, interactiveRegex);
     if (!next) {
-      html += renderTextChunk(source.slice(lastIndex));
+      html += renderTextChunk(source.slice(lastIndex), options);
       break;
     }
 
-    html += renderTextChunk(source.slice(lastIndex, next.match.index));
+    html += renderTextChunk(source.slice(lastIndex, next.match.index), options);
 
     if (next.type === 'action') {
       const id = (next.match[1] || next.match[2] || '').trim().toLowerCase();

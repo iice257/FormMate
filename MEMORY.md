@@ -33,5 +33,6 @@
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.
 - Main chat and workspace now use a hybrid response contract: natural language first, then an optional `<fm-ui>...</fm-ui>` block, then short `[fm-suggest]...[/fm-suggest]` follow-up hints.
 - Docs chat stays text-first and should ignore `<fm-ui>` blocks if they appear.
+- Assistant rich text for main chat/workspace should render markdown-style formatting (bold, lists, tables, code, etc.) instead of showing raw symbols; single-hyphen wrappers (`-text-`) are treated as underline alias in rendered assistant prose.
 - Legacy answer-list lines in the format `[id] label | value` should be treated as interactive/editable items in the UI.
 - User clicks/edits on interactive items or follow-up chips must be sent in the next request via a tagged context block: `[fm-ui-context] ... [/fm-ui-context]`.
