@@ -16,10 +16,11 @@
 ## Operational Notes
 - On this workstation/network, outbound TLS to some hosts can fail with `self-signed certificate in certificate chain` until local trust is configured.
 - Local development uses an internal API server (`scripts/dev-api-server.ts`) on `127.0.0.1:3000` via `npm run dev`/`npm run dev:stack`; this avoids `vercel dev` proxy drift for `/api/*`.
-- Local stack defaults `NODE_TLS_REJECT_UNAUTHORIZED=0` when unset so Groq calls can run behind the current corporate/self-signed TLS chain.
+- Local API now forces insecure TLS mode by default for this environment unless `FORMMATE_STRICT_TLS=1`, so Groq calls remain stable behind the current corporate/self-signed TLS chain.
 - Local API health now exposes `apiVersion` (`2026-04-18.1`), and `dev:stack` validates compatibility before wiring Vite proxy.
 - `dev:stack` can now auto-select fallback API ports (`3001-3003`) if `3000` is occupied/incompatible, preventing silent frontend/backend contract drift.
 - Active Supabase project ref for FormMate is `chrrljkxnpuqdhhptntc` (URL base: `https://chrrljkxnpuqdhhptntc.supabase.co`).
+- Current Vercel `development` env is missing `VITE_SUPABASE_ANON_KEY`; env pulls will keep local Supabase auth/sync degraded until this key is added in Vercel project settings.
 
 ## Security and UX Hardening Decisions
 - AI scope policy is enforced server-side as `Balanced adjacent`; unrelated general-purpose inference should be rejected.

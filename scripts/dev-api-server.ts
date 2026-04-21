@@ -17,9 +17,13 @@ const PORT = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 loadDotenv({ path: '.env.local' });
 loadDotenv();
 
-if (typeof process.env.NODE_TLS_REJECT_UNAUTHORIZED === 'undefined') {
+const strictTls = String(process.env.FORMMATE_STRICT_TLS || '').trim() === '1';
+if (!strictTls) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  console.warn('[local-api] NODE_TLS_REJECT_UNAUTHORIZED is not set; defaulting to 0 for local TLS compatibility.');
+  console.warn('[local-api] TLS certificate verification disabled for local API compatibility. Set FORMMATE_STRICT_TLS=1 to enforce strict TLS.');
+} else {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
+  console.log('[local-api] Strict TLS enabled (FORMMATE_STRICT_TLS=1).');
 }
 
 const ROUTES = new Map([
