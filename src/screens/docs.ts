@@ -11,7 +11,7 @@ import {
   buildMessageWithUiContext,
   buildNextFollowUps,
   createFollowUpClickEvent,
-  createInteractiveEditEvent,
+  createUiContextEvent,
   enqueueUiContextEvent,
   getDefaultFollowUps,
   stripFollowUpTags,
@@ -490,7 +490,7 @@ export function docsScreen() {
               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
             </div>
 
-            <div id="docs-chat-followups" class="chat-followups mb-2"></div>
+            <div id="docs-chat-followups" class="chat-followups chat-followups-docs mb-2"></div>
             <div class="relative group">
               <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
               <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
@@ -653,11 +653,7 @@ export function docsScreen() {
     const initialDocsChatMarkup = chatMessages?.innerHTML || '';
     const cleanupRichActions = bindRichActionClicks(chatMessages, {
       onInteractiveCommit: (payload) => {
-        const event = createInteractiveEditEvent({
-          id: payload?.id,
-          label: payload?.label,
-          value: payload?.value,
-        });
+        const event = createUiContextEvent(payload);
         pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
         if (chatInput && !chatInput.value.trim()) {
           chatInput.value = 'Apply the queued docs assistant edits.';
@@ -689,7 +685,7 @@ export function docsScreen() {
           items.map((prompt) => `
             <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
               <span class="material-symbols-outlined">tips_and_updates</span>
-              <span>${escapeHtml(prompt)}</span>
+              <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
             </button>
           `).join('')
         );
@@ -784,7 +780,7 @@ export function docsScreen() {
           row.className = 'flex flex-col gap-1 animate-message-in';
           const body = document.createElement('div');
           body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
-          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse));
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse, { interactive: false }));
           row.appendChild(body);
           chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -794,15 +790,13 @@ export function docsScreen() {
           const typingEl = wrapper.querySelector('#' + typingId);
           if (typingEl) typingEl.remove();
           const message = getAiErrorMessage(e, 'AI service is currently unavailable. Please try again.');
-
-          chatMessages.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[85%] bg-red-50 text-red-600 border border-red-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs leading-relaxed">
-                <div class="flex items-center gap-1.5 font-bold mb-1"><span class="material-symbols-outlined text-[14px]">error</span> AI assistant unavailable</div>
-                ${escapeHtml(message)}
-              </div>
-            </div>
-          `);
+          const row = document.createElement('div');
+          row.className = 'flex flex-col gap-1 animate-message-in';
+          const body = document.createElement('div');
+          body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(message, { interactive: false }));
+          row.appendChild(body);
+          chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
         } finally {
           isChatPending = false;
@@ -860,7 +854,7 @@ export function docsScreen() {
           followUpSuggestions.slice(0, 2).map((prompt) => `
             <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
               <span class="material-symbols-outlined">tips_and_updates</span>
-              <span>${escapeHtml(prompt)}</span>
+              <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
             </button>
           `).join('')
         );

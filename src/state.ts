@@ -102,8 +102,11 @@ const state = {
   // Runtime health and degraded-mode truth for UX
   appHealth: {
     loaded: false,
+    apiReachable: false,
     groqConfigured: false,
     supabaseConfigured: false,
+    authAvailable: false,
+    syncAvailable: false,
     storageMode: 'local',
     imageParserConfigured: false,
     degradedMode: false,

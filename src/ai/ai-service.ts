@@ -264,9 +264,9 @@ async function fetchProxy(endpoint, init = {}, { timeoutMs = REQUEST_TIMEOUT_MS 
     }
     throw createAiError({
       code: AI_ERROR_CODES.NETWORK_ERROR,
-      message: 'Unable to reach the AI API. Run `npm run dev:stack` so Vite can proxy `/api/*` to `vercel dev`.',
+      message: 'Unable to reach FormMate services right now.',
       retryable: true,
-      details: { originalMessage: error?.message || 'Unknown network error' },
+      details: { endpoint, originalMessage: error?.message || 'Unknown network error' },
       cause: error,
     });
   } finally {
@@ -536,13 +536,13 @@ export function getAiErrorMessage(error, fallback = 'AI service is unavailable r
   const normalized = normalizeAiError(error, { message: fallback });
 
   if (normalized.code === AI_ERROR_CODES.BACKEND_INCOMPATIBLE) {
-    return 'Local AI backend is out of sync. Restart the dev stack and try again.';
+    return 'FormMate services need a refresh before AI is available. Please try again in a moment.';
   }
   if (normalized.code === AI_ERROR_CODES.CONFIG_MISSING) {
-    return 'AI is not configured on the server right now.';
+    return 'AI is temporarily unavailable right now.';
   }
   if (normalized.code === AI_ERROR_CODES.AUTH_REQUIRED) {
-    return 'Your session expired or you are signed out. Sign in again, then retry the AI action.';
+    return 'Your session expired. Sign in again, then retry.';
   }
   if ([AI_ERROR_CODES.RATE_LIMITED, AI_ERROR_CODES.CLIENT_RATE_LIMITED].includes(normalized.code)) {
     return `The AI is busy right now. Wait ${normalized.retryAfter || 2}s and try again.`;
@@ -554,7 +554,7 @@ export function getAiErrorMessage(error, fallback = 'AI service is unavailable r
     return 'The AI service timed out. Please try again.';
   }
   if (normalized.code === AI_ERROR_CODES.UPSTREAM_AUTH_ERROR) {
-    return 'AI credentials are currently invalid on the server.';
+    return 'AI is temporarily unavailable right now.';
   }
   if (normalized.code === AI_ERROR_CODES.UPSTREAM_ERROR) {
     return 'The AI provider is temporarily unavailable. Please retry shortly.';

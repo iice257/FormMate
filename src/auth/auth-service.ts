@@ -202,7 +202,7 @@ function getClientOrThrow() {
   const client = getSupabaseClient();
   if (!client) {
     throw authError(
-      'Authentication is unavailable because Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then restart the app.',
+      'Cloud sign-in is temporarily unavailable. Please try again shortly.',
       'SUPABASE_NOT_CONFIGURED',
     );
   }

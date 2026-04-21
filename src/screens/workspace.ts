@@ -18,7 +18,7 @@ import {
   buildMessageWithUiContext,
   buildNextFollowUps,
   createFollowUpClickEvent,
-  createInteractiveEditEvent,
+  createUiContextEvent,
   enqueueUiContextEvent,
   getDefaultFollowUps,
   stripFollowUpTags,
@@ -215,7 +215,7 @@ export function workspaceScreen() {
 
           <!-- Chat Input -->
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
-            <div id="workspace-chat-followups" class="chat-followups"></div>
+          <div id="workspace-chat-followups" class="chat-followups chat-followups-sidebar"></div>
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
                 <button id="btn-workspace-chat-attach" type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
@@ -333,11 +333,7 @@ export function workspaceScreen() {
     const cleanupRichActions = bindRichActionClicks(chatMessages, {
       openAccountModal,
       onInteractiveCommit: (payload) => {
-        const event = createInteractiveEditEvent({
-          id: payload?.id,
-          label: payload?.label,
-          value: payload?.value,
-        });
+        const event = createUiContextEvent(payload);
         pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
         renderAttachmentState();
         if (chatInput && !chatInput.value.trim()) {
@@ -679,13 +675,13 @@ export function workspaceScreen() {
       if (!followUpsWrap) return;
       const items = (Array.isArray(followUpSuggestions) ? followUpSuggestions : [])
         .filter(Boolean)
-        .slice(0, 2);
+        .slice(0, 1);
       replaceChildrenWithSafeHtml(
         followUpsWrap,
         items.map((prompt) => `
           <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
             <span class="material-symbols-outlined">tips_and_updates</span>
-            <span>${escapeHtml(prompt)}</span>
+            <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
           </button>
         `).join('')
       );
@@ -702,7 +698,7 @@ export function workspaceScreen() {
         const parts = [];
         if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
         if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
-        if (uiContextCount) parts.push(`${uiContextCount} queued edit${uiContextCount === 1 ? '' : 's'}`);
+        if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
         attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
       }
       syncSendButton();
@@ -877,7 +873,6 @@ export function workspaceScreen() {
             }
           } catch (visionError) {
             console.warn('[Workspace Chat] Screenshot context unavailable:', visionError);
-            toast.info('Screenshot context was unavailable for this message. I continued without it.');
           }
         }
 
@@ -900,6 +895,7 @@ export function workspaceScreen() {
         clearPendingAttachments();
         clearUiContextQueue();
       } catch (error) {
+        console.error('[Workspace Chat] Message failed:', error);
         typingEl.remove();
         const message = getAiErrorMessage(error, 'AI service is unavailable right now.');
         appendChatBubble('assistant', message);

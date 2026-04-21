@@ -317,6 +317,7 @@ export async function processChatMessage(userMessage, formContext, history = [],
   const attachments = Array.isArray(options.attachments) ? options.attachments : [];
   const safeFormContext = formContext && typeof formContext === 'object' ? formContext : {};
   const formQuestions = Array.isArray(safeFormContext.questions) ? safeFormContext.questions : [];
+  const currentUserMessage = String(userMessage || '').trim();
 
   const formattedHistory = history.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
@@ -342,25 +343,20 @@ Currently Selected Field Focus:
 The user is currently focused on the field with ID: ${activeFieldId}.
 If they ask about "this field", they are referring to this one.` : '';
 
-  const systemPromptContent = `You are FormMate's chat copilot. You assist the user with filling out the form titled "${safeFormContext.title || 'Current form'}".
+  const contextHints = [
+    schemaContext ? `Form Schema:\n${schemaContext}` : '',
+    profileContext,
+    activeFieldContext,
+    `Writing Style: ${writingStyle}`,
+  ].filter(Boolean).join('\n\n');
 
-Full Form Schema & Current Answers:
-${schemaContext}
-
-${profileContext}
-${activeFieldContext}
-
-Writing Style: ${writingStyle}
-
-Be helpful, provide concrete suggestions, and answer questions clearly, adapting to the specified writing style.`;
-
-  const messages = [
-    {
-      role: 'system',
-      content: buildSystemPrompt('copilot_chat', systemPromptContent)
-    },
-    ...formattedHistory
-  ];
+  const messages = [...formattedHistory];
+  if (currentUserMessage && (messages[messages.length - 1]?.role !== 'user' || messages[messages.length - 1]?.content !== currentUserMessage)) {
+    messages.push({
+      role: 'user',
+      content: currentUserMessage,
+    });
+  }
 
   try {
     const responseText = await generateText({
@@ -375,6 +371,7 @@ Be helpful, provide concrete suggestions, and answer questions clearly, adapting
         activeFieldId: activeFieldId || '',
         activeFieldText: formQuestions.find((entry) => String(entry?.id) === String(activeFieldId))?.text || '',
         formQuestions: formQuestions.map((entry) => ({ id: entry.id, text: entry.text, type: entry.type })),
+        conversationHints: contextHints,
       },
       attachments,
     });

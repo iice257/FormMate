@@ -180,7 +180,7 @@ async function boot() {
       const runtimeHealth = await loadRuntimeHealth();
       setRuntimeHealth(runtimeHealth);
 
-      if (runtimeHealth.degradedMode) {
+      if (runtimeHealth.apiReachable && runtimeHealth.degradedMode && !runtimeHealth.syncAvailable) {
         const noticeKey = 'formmate_degraded_notice_shown';
         let alreadyShown = false;
         try {
@@ -194,7 +194,7 @@ async function boot() {
           } catch {
             // Ignore storage write failures.
           }
-          toast.warning('Cloud sync is unavailable right now. FormMate is running in local session mode.');
+          toast.warning('Cloud sync is temporarily unavailable. FormMate is running in secure local session mode.');
         }
       }
     } catch (runtimeError) {

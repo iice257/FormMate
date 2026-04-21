@@ -4,13 +4,19 @@ import { isSupabaseStorageConfigured } from '../storage/storage-provider';
 
 function fallbackHealth() {
   const supabaseConfigured = isSupabaseStorageConfigured();
+  const storageMode = supabaseConfigured ? 'supabase' : 'local';
+  const authAvailable = supabaseConfigured;
+  const syncAvailable = storageMode === 'supabase' && supabaseConfigured;
   return {
-    loaded: false,
+    loaded: true,
+    apiReachable: false,
     groqConfigured: false,
     supabaseConfigured,
-    storageMode: supabaseConfigured ? 'supabase' : 'local',
+    authAvailable,
+    syncAvailable,
+    storageMode,
     imageParserConfigured: false,
-    degradedMode: !supabaseConfigured,
+    degradedMode: false,
   };
 }
 
@@ -32,11 +38,14 @@ export async function loadRuntimeHealth() {
 
     return {
       loaded: true,
-      groqConfigured: Boolean(config.groqConfigured),
-      supabaseConfigured: Boolean(config.supabaseConfigured),
+      apiReachable: Boolean(payload?.apiReachable ?? config.apiReachable ?? true),
+      groqConfigured: Boolean(payload?.groqConfigured ?? config.groqConfigured),
+      supabaseConfigured: Boolean(payload?.supabaseConfigured ?? config.supabaseConfigured),
+      authAvailable: Boolean(payload?.authAvailable ?? config.authAvailable),
+      syncAvailable: Boolean(payload?.syncAvailable ?? config.syncAvailable),
       storageMode: String(config.storageMode || fallback.storageMode),
-      imageParserConfigured: Boolean(config.imageParserConfigured),
-      degradedMode: Boolean(config.degradedMode),
+      imageParserConfigured: Boolean(payload?.imageParserConfigured ?? config.imageParserConfigured),
+      degradedMode: Boolean(payload?.degradedMode ?? config.degradedMode),
     };
   } catch {
     return fallback;

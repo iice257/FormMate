@@ -22,10 +22,15 @@ function buildConfigHealth() {
   );
   const storageMode = getStorageMode();
   const imageParserConfigured = groqConfigured;
-  const degradedMode = !supabaseConfigured;
+  const authAvailable = supabaseConfigured;
+  const syncAvailable = storageMode === 'supabase' && supabaseConfigured;
+  const degradedMode = storageMode === 'supabase' && !syncAvailable;
   return {
+    apiReachable: true,
     groqConfigured,
     supabaseConfigured,
+    authAvailable,
+    syncAvailable,
     storageMode,
     imageParserConfigured,
     degradedMode,
@@ -49,6 +54,7 @@ export default function handler(req, res) {
   res.status(200).json({
     status: 'ok',
     uptime: 'ready',
+    apiReachable: true,
     apiVersion: FORM_MATE_API_VERSION,
     config: buildConfigHealth(),
   });

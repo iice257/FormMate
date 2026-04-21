@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { executeAction, getActionById } from './action-index';
 import { escapeAttr, escapeHtml } from '../utils/escape';
-import { stripFollowUpTags } from '../ai/chat-interactions';
+import { parseAssistantResponse } from '../ai/chat-interactions';
 
 const ACTION_TAG_PATTERN = /\[fm-action\s+id=(?:"([^"]+)"|'([^']+)')\](.*?)\[\/fm-action\]/gi;
 const INTERACTIVE_ITEM_PATTERN = /\[fm-item([^\]]*)\]([\s\S]*?)\[\/fm-item\]/gi;
@@ -85,6 +85,93 @@ function renderInteractiveItem(rawAttrs, rawBody) {
   `;
 }
 
+function renderStructuredInteractivePart(part) {
+  if (!part || typeof part !== 'object') return '';
+  const itemId = String(part.id || '').trim();
+  const label = String(part.label || itemId || 'Suggested field').trim();
+  const displayId = itemId ? `#${itemId}` : '';
+  const kind = String(part.kind || '').trim().toLowerCase();
+
+  if (kind === 'text') {
+    return `
+      <div class="ai-interactive-item" data-item-id="${escapeAttr(itemId)}" data-item-label="${escapeAttr(label)}" data-item-kind="interactive_text_edit">
+        <div class="ai-interactive-item-header">
+          <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
+          <span class="ai-interactive-item-badge">Editable</span>
+        </div>
+        <input type="text" class="ai-interactive-input ai-interactive-input-single" value="${escapeAttr(String(part.value || ''))}" />
+        <button type="button" class="ai-interactive-commit" aria-label="Queue this edit for your next message">
+          <span class="material-symbols-outlined">add_task</span>
+          <span>Use in next message</span>
+        </button>
+      </div>
+    `;
+  }
+
+  if (kind === 'textarea') {
+    return `
+      <div class="ai-interactive-item" data-item-id="${escapeAttr(itemId)}" data-item-label="${escapeAttr(label)}" data-item-kind="interactive_text_edit">
+        <div class="ai-interactive-item-header">
+          <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
+          <span class="ai-interactive-item-badge">Editable</span>
+        </div>
+        <textarea class="ai-interactive-input" rows="3">${escapeHtml(String(part.value || ''))}</textarea>
+        <button type="button" class="ai-interactive-commit" aria-label="Queue this edit for your next message">
+          <span class="material-symbols-outlined">add_task</span>
+          <span>Use in next message</span>
+        </button>
+      </div>
+    `;
+  }
+
+  if (kind === 'select') {
+    const options = Array.isArray(part.options) ? part.options : [];
+    const selected = Array.isArray(part.selections) ? String(part.selections[0] || '') : '';
+    return `
+      <div class="ai-interactive-item ai-interactive-selection" data-item-id="${escapeAttr(itemId)}" data-item-label="${escapeAttr(label)}" data-item-kind="interactive_selection_change" data-control-kind="select" data-selection-values="${escapeAttr(JSON.stringify(selected ? [selected] : []))}">
+        <div class="ai-interactive-item-header">
+          <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
+          <span class="ai-interactive-item-badge">Select</span>
+        </div>
+        <select class="ai-interactive-select" aria-label="${escapeAttr(label)}">
+          <option value="">Choose one</option>
+          ${options.map((option) => `<option value="${escapeAttr(option)}"${option === selected ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+        </select>
+        <div class="ai-interactive-selection-note">${selected ? `Queued selection: ${escapeHtml(selected)}` : 'Choose an option to queue it for the next message.'}</div>
+      </div>
+    `;
+  }
+
+  if (!['radio', 'checkbox'].includes(kind)) return '';
+
+  const options = Array.isArray(part.options) ? part.options : [];
+  const selectedValues = Array.isArray(part.selections) ? part.selections.map((entry) => String(entry || '')) : [];
+  return `
+    <div class="ai-interactive-item ai-interactive-selection" data-item-id="${escapeAttr(itemId)}" data-item-label="${escapeAttr(label)}" data-item-kind="interactive_selection_change" data-control-kind="${escapeAttr(kind)}" data-selection-values="${escapeAttr(JSON.stringify(selectedValues))}">
+      <div class="ai-interactive-item-header">
+        <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
+        <span class="ai-interactive-item-badge">${escapeHtml(kind)}</span>
+      </div>
+      <div class="ai-interactive-options" role="${kind === 'radio' ? 'radiogroup' : 'group'}" aria-label="${escapeAttr(label)}">
+        ${options.map((option) => {
+          const selected = selectedValues.includes(option);
+          return `
+            <button
+              type="button"
+              class="ai-interactive-option-btn ${selected ? 'is-selected' : ''}"
+              data-option-value="${escapeAttr(option)}"
+              aria-pressed="${selected ? 'true' : 'false'}"
+            >
+              ${escapeHtml(option)}
+            </button>
+          `;
+        }).join('')}
+      </div>
+      <div class="ai-interactive-selection-note">${selectedValues.length ? `Queued selection: ${escapeHtml(selectedValues.join(', '))}` : 'Select option(s) to queue them for the next message.'}</div>
+    </div>
+  `;
+}
+
 function nextTagMatch(source, fromIndex, actionRegex, interactiveRegex) {
   actionRegex.lastIndex = fromIndex;
   interactiveRegex.lastIndex = fromIndex;
@@ -105,8 +192,42 @@ function nextTagMatch(source, fromIndex, actionRegex, interactiveRegex) {
   return { type: 'interactive', match: interactiveMatch, end: interactiveRegex.lastIndex };
 }
 
-export function renderAssistantRichText(text) {
-  const source = normalizeLegacyInteractiveLines(stripFollowUpTags(String(text || '')));
+function readSelectionValues(card) {
+  try {
+    const parsed = JSON.parse(String(card?.dataset?.selectionValues || '[]'));
+    return Array.isArray(parsed)
+      ? parsed.map((entry) => String(entry || '').trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSelectionValues(card, values) {
+  card.dataset.selectionValues = JSON.stringify(Array.isArray(values) ? values : []);
+  const note = card.querySelector('.ai-interactive-selection-note');
+  if (note) {
+    note.textContent = values.length
+      ? `Queued selection: ${values.join(', ')}`
+      : 'Select option(s) to queue them for the next message.';
+  }
+}
+
+function syncOptionButtons(card, values) {
+  const controlKind = String(card?.dataset?.controlKind || '');
+  card.querySelectorAll('.ai-interactive-option-btn[data-option-value]').forEach((button) => {
+    const selected = values.includes(String(button.dataset.optionValue || ''));
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    if (controlKind === 'radio') {
+      button.setAttribute('aria-checked', selected ? 'true' : 'false');
+    }
+  });
+}
+
+export function renderAssistantRichText(text, options = {}) {
+  const parsed = parseAssistantResponse(text, { interactive: options.interactive !== false });
+  const source = normalizeLegacyInteractiveLines(parsed.text);
   let html = '';
   let lastIndex = 0;
   const actionRegex = new RegExp(ACTION_TAG_PATTERN.source, 'gi');
@@ -142,6 +263,10 @@ export function renderAssistantRichText(text) {
 
     lastIndex = next.end;
   }
+
+  if (options.interactive !== false && Array.isArray(parsed.interactiveParts) && parsed.interactiveParts.length) {
+    html += parsed.interactiveParts.map((part) => renderStructuredInteractivePart(part)).join('');
+  }
   return html;
 }
 
@@ -164,6 +289,7 @@ export function bindRichActionClicks(root, options = {}) {
     if (!card) return;
     const input = card.querySelector('.ai-interactive-input');
     const payload = {
+      kind: 'interactive_text_edit',
       id: String(card.dataset.itemId || '').trim(),
       label: String(card.dataset.itemLabel || '').trim(),
       value: String(input ? input.value : card.dataset.itemValue || '').trim(),
@@ -180,10 +306,87 @@ export function bindRichActionClicks(root, options = {}) {
     card.classList.add('is-queued');
   };
 
+  const handleSelectionClick = (event) => {
+    const trigger = event.target?.closest?.('.ai-interactive-option-btn[data-option-value]');
+    if (!trigger || !root.contains(trigger)) return;
+    event.preventDefault();
+
+    const card = trigger.closest('.ai-interactive-item[data-item-kind="interactive_selection_change"]');
+    if (!card) return;
+
+    const controlKind = String(card.dataset.controlKind || 'radio');
+    const optionValue = String(trigger.dataset.optionValue || '').trim();
+    if (!optionValue) return;
+
+    let values = readSelectionValues(card);
+    if (controlKind === 'checkbox') {
+      values = values.includes(optionValue)
+        ? values.filter((entry) => entry !== optionValue)
+        : [...values, optionValue];
+    } else {
+      values = [optionValue];
+    }
+
+    writeSelectionValues(card, values);
+    syncOptionButtons(card, values);
+
+    const payload = {
+      kind: 'interactive_selection_change',
+      id: String(card.dataset.itemId || '').trim(),
+      label: String(card.dataset.itemLabel || '').trim(),
+      controlKind,
+      selections: values,
+    };
+
+    if (typeof options.onInteractiveCommit === 'function') {
+      const accepted = options.onInteractiveCommit(payload);
+      if (accepted !== false) {
+        card.classList.add('is-queued');
+      }
+      return;
+    }
+
+    card.classList.add('is-queued');
+  };
+
+  const handleSelectionChange = (event) => {
+    const select = event.target?.closest?.('.ai-interactive-select');
+    if (!select || !root.contains(select)) return;
+
+    const card = select.closest('.ai-interactive-item[data-item-kind="interactive_selection_change"]');
+    if (!card) return;
+
+    const value = String(select.value || '').trim();
+    const values = value ? [value] : [];
+    writeSelectionValues(card, values);
+
+    const payload = {
+      kind: 'interactive_selection_change',
+      id: String(card.dataset.itemId || '').trim(),
+      label: String(card.dataset.itemLabel || '').trim(),
+      controlKind: String(card.dataset.controlKind || 'select'),
+      selections: values,
+    };
+
+    if (typeof options.onInteractiveCommit === 'function') {
+      const accepted = options.onInteractiveCommit(payload);
+      if (accepted !== false) {
+        card.classList.add('is-queued');
+      }
+      return;
+    }
+
+    card.classList.add('is-queued');
+  };
+
   root.addEventListener('click', handleClick);
   root.addEventListener('click', handleInteractiveClick);
+  root.addEventListener('click', handleSelectionClick);
+  root.addEventListener('change', handleSelectionChange);
   return () => {
     root.removeEventListener('click', handleClick);
     root.removeEventListener('click', handleInteractiveClick);
+    root.removeEventListener('click', handleSelectionClick);
+    root.removeEventListener('change', handleSelectionChange);
   };
 }

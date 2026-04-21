@@ -2898,12 +2898,28 @@ input[type="range"]:active::-moz-range-thumb {
   gap: 0.45rem;
   margin-bottom: 0.55rem;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.chat-followups-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.chat-followups-sidebar,
+.chat-followups-docs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .chat-followup-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  width: 100%;
+  min-width: 0;
   min-height: 1.85rem;
   padding: 0 0.7rem;
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -2929,6 +2945,86 @@ input[type="range"]:active::-moz-range-thumb {
 .chat-followup-chip .material-symbols-outlined {
   font-size: 14px;
   color: var(--fm-primary);
+  flex-shrink: 0;
+}
+
+.chat-followup-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-interactive-input-single {
+  min-height: 2.9rem;
+  resize: none;
+}
+
+.ai-interactive-selection {
+  gap: 0.55rem;
+}
+
+.ai-interactive-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ai-interactive-option-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0 0.72rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.96);
+  color: #334155;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color var(--fm-transition-fast),
+    background-color var(--fm-transition-fast),
+    color var(--fm-transition-fast),
+    transform var(--fm-transition-fast);
+}
+
+.ai-interactive-option-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--fm-primary-rgb), 0.32);
+  background: rgba(var(--fm-primary-rgb), 0.08);
+}
+
+.ai-interactive-option-btn.is-selected {
+  border-color: rgba(var(--fm-primary-rgb), 0.36);
+  background: rgba(var(--fm-primary-rgb), 0.12);
+  color: var(--fm-primary-dark);
+}
+
+.ai-interactive-select {
+  width: 100%;
+  min-height: 2.8rem;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 0.7rem;
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--fm-text);
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 0 0.75rem;
+}
+
+.ai-interactive-selection-note {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+@media (max-width: 760px) {
+  .chat-followups-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ai-interactive-item {

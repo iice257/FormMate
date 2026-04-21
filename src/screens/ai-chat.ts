@@ -14,7 +14,7 @@ import {
   buildMessageWithUiContext,
   buildNextFollowUps,
   createFollowUpClickEvent,
-  createInteractiveEditEvent,
+  createUiContextEvent,
   enqueueUiContextEvent,
   getDefaultFollowUps,
   stripFollowUpTags,
@@ -130,7 +130,7 @@ export function aiChatScreen() {
         </div>
 
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
-          <div id="chat-followups" class="chat-followups"></div>
+          <div id="chat-followups" class="chat-followups chat-followups-main"></div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <button id="btn-chat-attach" type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
@@ -212,11 +212,7 @@ export function aiChatScreen() {
     const cleanupRichActions = bindRichActionClicks(chatMessages, {
       openAccountModal,
       onInteractiveCommit: (payload) => {
-        const event = createInteractiveEditEvent({
-          id: payload?.id,
-          label: payload?.label,
-          value: payload?.value,
-        });
+        const event = createUiContextEvent(payload);
         pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
         renderAttachmentState();
         if (chatInput && !chatInput.value.trim()) {
@@ -245,7 +241,7 @@ export function aiChatScreen() {
         items.map((prompt) => `
           <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
             <span class="material-symbols-outlined">tips_and_updates</span>
-            <span>${escapeHtml(prompt)}</span>
+            <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
           </button>
         `).join('')
       );
@@ -258,15 +254,15 @@ export function aiChatScreen() {
       if (!attachmentState) return;
       if (!imageCount && !textCount && !uiContextCount) {
         attachmentState.textContent = 'No attachments';
-      } else {
-        const parts = [];
-        if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
-        if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
-        if (uiContextCount) parts.push(`${uiContextCount} queued edit${uiContextCount === 1 ? '' : 's'}`);
-        attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
-      }
-      syncSendButton();
-    };
+        } else {
+          const parts = [];
+          if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
+          if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
+          if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
+          attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
+        }
+        syncSendButton();
+      };
 
     const syncVoiceButton = () => {
       if (!btnVoice) return;
@@ -388,26 +384,6 @@ export function aiChatScreen() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function appendErrorBubble(text) {
-      if (emptyState && emptyState.parentElement === chatMessages) {
-        emptyState.remove();
-        chatMessages.style.justifyContent = 'flex-start';
-        chatMessages.style.alignItems = 'stretch';
-      }
-
-      const bubble = document.createElement('div');
-      bubble.className = 'animate-message-in';
-      bubble.style.cssText = 'display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.75rem;';
-      bubble.appendChild(buildChatAvatar('error', '#ef4444'));
-
-      const body = document.createElement('div');
-      body.style.cssText = 'background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 0 var(--fm-radius-lg) var(--fm-radius-lg) var(--fm-radius-lg); padding: 0.85rem 1rem; font-size: 0.85rem; line-height: 1.55; max-width: 75%; white-space: pre-wrap;';
-      body.textContent = text;
-      bubble.appendChild(body);
-      chatMessages.appendChild(bubble);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
     async function sendMessage(text) {
       const trimmed = text.trim();
       const hasUiContext = pendingUiContextEvents.length > 0;
@@ -478,7 +454,6 @@ export function aiChatScreen() {
             }
           } catch (visionError) {
             console.warn('[AI Chat] Screenshot context unavailable:', visionError);
-            toast.info('Screenshot context was unavailable for this message. I continued without it.');
           }
         }
 
@@ -501,9 +476,10 @@ export function aiChatScreen() {
         clearPendingAttachments();
         clearUiContextQueue();
       } catch (error) {
+        console.error('[AI Chat] Message failed:', error);
         typingEl.remove();
         const msg = getAiErrorMessage(error, 'AI service is unavailable right now.');
-        appendErrorBubble(msg);
+        appendBubble('assistant', msg);
       } finally {
         chatInput.disabled = false;
         btnAttach && (btnAttach.disabled = false);

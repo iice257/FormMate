@@ -4,13 +4,13 @@
 // ═══════════════════════════════════════════
 
 import { getState, updateAnswer } from '../state';
-import { navigateTo } from '../router';
+import { navigateTo, goBack } from '../router';
 
 export function reviewScreen() {
   const { formData, answers } = getState();
 
   if (!formData) {
-    navigateTo('landing');
+    navigateTo('dashboard');
     return { html: '', init: () => { } };
   }
 
@@ -159,7 +159,7 @@ export function reviewScreen() {
     const btnBackWorkspace = wrapper.querySelector('#btn-back-workspace');
 
     btnBack.addEventListener('click', () => goBack());
-    btnClose.addEventListener('click', () => navigateTo('landing'));
+    btnClose.addEventListener('click', () => navigateTo('dashboard'));
     btnBackWorkspace.addEventListener('click', () => goBack());
 
     // Inline edit

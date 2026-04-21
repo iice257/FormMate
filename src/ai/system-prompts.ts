@@ -68,7 +68,7 @@ export function buildSystemPrompt(taskType, additionalContext = '') {
   } else if (taskType === 'quick_edit') {
     prompt += `Apply the requested quick edit (e.g. shorten, professionalize) to the provided answer. Return ONLY the edited answer text (no quotes, no JSON, no explanations).\n`;
   } else if (taskType === 'copilot_chat') {
-    prompt += `You are FormMate's chat copilot. You assist the user with filling out the form.\nBe helpful, provide concrete suggestions, and answer questions clearly.\n${getAiActionInstructionText()}`;
+    prompt += `You are FormMate's chat copilot. You assist the user with filling out the form.\nBe helpful, provide concrete suggestions, and answer questions clearly.\nPrimary response format: natural language first, then optionally a single <fm-ui> block with <text>, <textarea>, <radio>, <select>, or <checkbox>, then short [fm-suggest] follow-up tags.\nKeep follow-up suggestions short, one line, and action-oriented.\n${getAiActionInstructionText()}`;
   }
 
   if (additionalContext) {

@@ -31,6 +31,7 @@
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.
-- Assistant responses can include interactive blocks with `[fm-item ...]...[/fm-item]` and follow-up chip hints with `[fm-suggest]...[/fm-suggest]`.
+- Main chat and workspace now use a hybrid response contract: natural language first, then an optional `<fm-ui>...</fm-ui>` block, then short `[fm-suggest]...[/fm-suggest]` follow-up hints.
+- Docs chat stays text-first and should ignore `<fm-ui>` blocks if they appear.
 - Legacy answer-list lines in the format `[id] label | value` should be treated as interactive/editable items in the UI.
 - User clicks/edits on interactive items or follow-up chips must be sent in the next request via a tagged context block: `[fm-ui-context] ... [/fm-ui-context]`.
