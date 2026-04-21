@@ -359,6 +359,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
   const avatarSrc = avatarFromProfile || fallbackAvatar;
   const showSyncDegradedBanner = Boolean(
+    import.meta.env.DEV &&
     appHealth?.loaded &&
     appHealth?.apiReachable &&
     appHealth?.degradedMode &&

@@ -180,7 +180,7 @@ async function boot() {
       const runtimeHealth = await loadRuntimeHealth();
       setRuntimeHealth(runtimeHealth);
 
-      if (runtimeHealth.apiReachable && runtimeHealth.degradedMode && !runtimeHealth.syncAvailable) {
+      if (import.meta.env.DEV && runtimeHealth.apiReachable && runtimeHealth.degradedMode && !runtimeHealth.syncAvailable) {
         const noticeKey = 'formmate_degraded_notice_shown';
         let alreadyShown = false;
         try {

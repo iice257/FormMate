@@ -26,6 +26,7 @@
 - Sensitive browser data (profile, vault, answers, parse/form states, history) is session-scoped and should be purged on sign-out/idle expiry.
 - Session lifecycle target is a 15-minute inactivity timeout with explicit session-expired UX and cleanup.
 - Runtime degraded mode (Supabase unavailable) must be explicit in UX; do not imply cloud sync when backend config is missing.
+- Degraded sync warning UI (banner/toast) is dev-only; do not show this notice in live production.
 - Account modal settings/profile edits should be draft-only until explicit save, with discard confirmation on close/tab-switch/cancel.
 - Product should operate as a free offering for now: remove pricing/tier/billing surfaces and references sitewide until billing is intentionally scaffolded later.
 
