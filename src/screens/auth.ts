@@ -65,6 +65,13 @@ export function authScreen() {
 
       <div class="flex-1 flex items-center justify-center px-6 py-12">
         <div class="w-full max-w-[420px]">
+          <div class="lg:hidden relative mb-6 h-40 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
+            <div class="absolute inset-0 bg-black/40"></div>
+            <div class="relative z-10 h-full flex items-end p-4">
+              <p class="text-white text-lg font-bold tracking-tight">Fill forms with AI magic.</p>
+            </div>
+          </div>
           <div class="lg:hidden flex items-center gap-3 mb-10">
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
