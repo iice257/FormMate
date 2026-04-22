@@ -413,6 +413,10 @@ export function withLayout(pageId, contentHtml, options = {}) {
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
           <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" aria-label="Search pages, actions, or support" />
+          <button type="button" id="btn-layout-search-shortcut" class="layout-search-kbd" aria-label="Open quick search (Command K)">
+            <span class="layout-search-kbd-key">⌘</span>
+            <span class="layout-search-kbd-key">K</span>
+          </button>
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -559,6 +563,7 @@ export function initLayout(wrapper, options = {}) {
   syncSidebarUi(isSidebarExpanded());
 
   const searchInput = wrapper.querySelector('#layout-search');
+  const searchShortcut = wrapper.querySelector('#btn-layout-search-shortcut');
   const searchClear = wrapper.querySelector('#btn-layout-search-clear');
   const searchResults = wrapper.querySelector('#layout-search-results');
   const searchResultsList = wrapper.querySelector('#layout-search-results-list');
@@ -580,7 +585,9 @@ export function initLayout(wrapper, options = {}) {
 
     activeSearchResults = searchActions(query, { limit: 8 });
     activeSearchIndex = 0;
-    if (searchClear) searchClear.hidden = !query.trim();
+    const hasQuery = Boolean(query.trim());
+    if (searchClear) searchClear.hidden = !hasQuery;
+    if (searchShortcut) searchShortcut.hidden = hasQuery;
 
     if (!activeSearchResults.length) {
       replaceChildrenWithSafeHtml(searchResultsList, `
@@ -608,6 +615,12 @@ export function initLayout(wrapper, options = {}) {
     `).join(''));
 
     searchResults.hidden = false;
+  };
+
+  const openSearchPalette = () => {
+    if (!searchInput) return;
+    searchInput.focus();
+    renderSearchResults(searchInput.value || '');
   };
 
   const syncActiveSearchItem = () => {
@@ -672,13 +685,38 @@ export function initLayout(wrapper, options = {}) {
     searchInput.focus();
   });
 
+  searchShortcut?.addEventListener('click', () => {
+    openSearchPalette();
+  });
+
   searchResultsList?.addEventListener('click', (event) => {
     const target = event.target.closest('.layout-search-result[data-action-id]');
     if (!target) return;
     runSearchAction(target.dataset.actionId);
   });
 
+  const handleSearchShortcut = (event) => {
+    const isShortcut = (event.metaKey || event.ctrlKey) && String(event.key || '').toLowerCase() === 'k';
+    if (!isShortcut) return;
+
+    const target = event.target;
+    const isTextEntryTarget = target instanceof HTMLElement
+      && (
+        target.tagName === 'INPUT'
+        || target.tagName === 'TEXTAREA'
+        || target.isContentEditable
+      );
+
+    if (isTextEntryTarget && target !== searchInput) {
+      return;
+    }
+
+    event.preventDefault();
+    openSearchPalette();
+  };
+
   document.addEventListener('click', handleDocumentClick);
+  document.addEventListener('keydown', handleSearchShortcut);
 
   // Sidebar user card -> account modal (profile tab)
   wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
@@ -699,6 +737,7 @@ export function initLayout(wrapper, options = {}) {
     return () => {
       sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
       document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', handleSearchShortcut);
       document.body.classList.remove('fm-zen-mode');
     };
   }
@@ -706,6 +745,7 @@ export function initLayout(wrapper, options = {}) {
   return () => {
     sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
     document.removeEventListener('click', handleDocumentClick);
+    document.removeEventListener('keydown', handleSearchShortcut);
     cleanupZen?.();
   };
 }
