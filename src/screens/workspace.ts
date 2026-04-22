@@ -134,45 +134,47 @@ export function workspaceScreen() {
   const workspaceContent = `
     <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
-      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll" data-fm-transition-main="true" data-fm-scroll-region="main">
-          <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
+      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor workspace-editor-stage" id="editor-scroll" data-fm-transition-main="true" data-fm-scroll-region="main">
+          <div class="zen-workspace-editor-inner workspace-editor-inner">
           
           <!-- Breadcrumb & Actions Bar -->
-          <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
-            <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
+          <div class="zen-workspace-toolbar app-surface-soft workspace-toolbar-card">
+            <div class="workspace-zen-hide workspace-topline">
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
               <span style="font-size: 0.65rem; color: #cbd5e1;">&gt;</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
-              <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
+            <div class="workspace-progress-actions">
+              <span class="app-pill workspace-answered-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
+              <button id="btn-review-bottom" class="btn-press workspace-submit-btn">Submit Application</button>
             </div>
           </div>
 
           ${aiDiagnosticsBanner}
 
-          <h1 class="workspace-title" style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
+          <div class="workspace-title-block">
+            <h1 class="workspace-title">${escapeHtml(formData.title)}</h1>
+          </div>
 
           <!-- Filter Tabs -->
-          <div class="workspace-zen-hide app-surface-soft workspace-filter-row" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div class="workspace-zen-hide app-surface-soft workspace-filter-row workspace-filter-shell">
             <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
             ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
             ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
             ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
-            <div data-zen-hide="always" style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
+            <div data-zen-hide="always" class="workspace-sort-chip">
               <span class="material-symbols-outlined" style="font-size: 16px;">sort</span> Sort
             </div>
           </div>
 
           <!-- Question Cards -->
-          <div id="questions-container" class="space-y-6 stagger-children workspace-question-list">
+          <div id="questions-container" class="space-y-6 stagger-children workspace-question-list workspace-question-stack">
             ${questionsHtml}
           </div>
 
           <!-- Bottom Review CTA -->
-          <div data-zen-hide="always" style="margin-top: 2.5rem; display: flex; justify-content: center;">
-            <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+          <div data-zen-hide="always" class="workspace-bottom-cta">
+            <button id="btn-review-bottom-2" class="btn-press workspace-bottom-submit">
               <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
               Review & Submit
             </button>

@@ -31,9 +31,9 @@ export function vaultScreen() {
   ];
 
   const vaultContent = `
-    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth" data-fm-transition-main="true" data-fm-scroll-region="main">
-      <div class="max-w-5xl mx-auto px-6 py-10">
-        <div class="flex items-center justify-between mb-10">
+    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth vault-page" data-fm-transition-main="true" data-fm-scroll-region="main">
+      <div class="max-w-5xl mx-auto px-6 py-10 vault-page-inner">
+        <div class="flex items-center justify-between mb-10 vault-page-header">
           <div>
             <h1 class="text-3xl font-black text-slate-900 tracking-tight">Your Data Vault</h1>
             <p class="text-sm text-slate-500 mt-1">Manage information used to intelligently fill your forms.</p>
@@ -43,19 +43,19 @@ export function vaultScreen() {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 vault-grid">
           ${sections.map(section => `
-            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 lg:p-8">
-              <div class="flex items-center gap-3 mb-6">
-                 <div class="size-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center">
+            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 lg:p-8 vault-card">
+              <div class="flex items-center gap-3 mb-6 vault-card-header">
+                 <div class="size-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center vault-card-icon">
                     <span class="material-symbols-outlined">${section.icon}</span>
                  </div>
                  <h3 class="font-bold text-slate-900">${section.title}</h3>
               </div>
               
-              <div class="space-y-5">
+              <div class="space-y-5 vault-card-fields">
                 ${section.fields.map(field => `
-                  <div class="space-y-1.5">
+                  <div class="space-y-1.5 vault-field">
                     <label for="vault-${field.key}" class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">${field.label}</label>
                     <input aria-label="${escapeAttr(field.label)}"
                       id="vault-${field.key}"
@@ -71,13 +71,27 @@ export function vaultScreen() {
             </div>
           `).join('')}
 
-          <div class="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">
-             <div class="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
-                <span class="material-symbols-outlined text-3xl">auto_awesome</span>
+          <div class="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center vault-card vault-card-highlight">
+             <div class="vault-orbit" aria-hidden="true">
+                <div class="vault-orbit-ring vault-orbit-ring-1"></div>
+                <div class="vault-orbit-ring vault-orbit-ring-2"></div>
+                <div class="vault-orbit-ring vault-orbit-ring-3"></div>
+                <div class="vault-orbit-core">
+                  <span class="material-symbols-outlined text-3xl">auto_awesome</span>
+                </div>
+                <div class="vault-orbit-node vault-orbit-node-1"><span class="material-symbols-outlined">person</span></div>
+                <div class="vault-orbit-node vault-orbit-node-2"><span class="material-symbols-outlined">mail</span></div>
+                <div class="vault-orbit-node vault-orbit-node-3"><span class="material-symbols-outlined">work</span></div>
              </div>
              <h3 class="text-lg font-bold text-slate-900 mb-2">Smart Auto-Detection</h3>
-             <p class="text-xs text-slate-500 leading-relaxed max-w-xs">The vault learns as you fill forms. If you correct a field during review, we'll ask to save it here for next time.</p>
-             <button type="button" class="mt-6 text-[11px] font-black uppercase tracking-widest text-primary/70 cursor-default" aria-disabled="true" title="Auto-sync is not available in this release">Auto-Sync Coming Later</button>
+             <p class="text-xs text-slate-500 leading-relaxed max-w-xs">The vault learns as you fill forms. If you correct a field, we will use that context to improve future suggestions.</p>
+             <div class="vault-highlight-note">
+               <span class="material-symbols-outlined">verified</span>
+               <div>
+                 <strong>Always improving accuracy</strong>
+                 <p>Your data stays private and secure.</p>
+               </div>
+             </div>
           </div>
         </div>
       </div>

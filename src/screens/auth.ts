@@ -48,23 +48,38 @@ export function authScreen() {
           ` : '';
 
   const html = `
-    <div class="relative flex min-h-screen w-full bg-mesh">
-      <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017]">
+    <div class="relative flex min-h-screen w-full bg-mesh auth-shell">
+      <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017] auth-hero-panel">
         <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div class="w-[110%] h-[50%] bg-black/40 blur-[80px] rounded-[100%] rounded-full"></div>
         </div>
 
-        <div class="relative z-20 flex w-full items-center justify-center px-4">
-          <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.1] tracking-tight text-center">
-            Fill forms with<br/>AI magic.
-          </h1>
+        <div class="relative z-20 flex w-full flex-col justify-between h-full auth-hero-copy">
+          <div class="flex items-center gap-3 self-start">
+            <div class="size-10 flex shrink-0 items-center justify-center">
+              <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
+            </div>
+            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="text-primary-300">Mate</span></h2>
+          </div>
+
+          <div class="w-full max-w-[28rem] px-4">
+            <span class="material-symbols-outlined text-primary-200 mb-6 text-4xl">auto_awesome</span>
+            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
+              Fill forms with<br/>AI magic.
+            </h1>
+            <p class="mt-8 text-[1.35rem] leading-8 text-slate-200 max-w-md">
+              FormMate's AI understands your forms so you don't have to. Save time. Reduce errors. Get things done.
+            </p>
+          </div>
+
+          <div></div>
         </div>
       </div>
 
-      <div class="flex-1 flex items-center justify-center px-6 py-12">
-        <div class="w-full max-w-[420px]">
+      <div class="flex-1 flex items-center justify-center px-6 py-12 auth-form-shell">
+        <div class="w-full max-w-[420px] auth-form-panel">
           <div class="lg:hidden relative mb-6 h-40 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
             <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
             <div class="absolute inset-0 bg-black/40"></div>

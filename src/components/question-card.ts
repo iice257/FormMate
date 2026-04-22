@@ -42,11 +42,11 @@ export function renderQuestionCard(question, answer, index) {
 
   const confidenceHtml = (source === 'ai' || source === 'autofill') && confidence > 0
     ? `
-      <div class="question-card-confidence" style="display: flex; align-items: center; gap: 0.65rem; margin-top: 1rem; padding-top: 0.95rem; border-top: 1px solid var(--fm-border-light);">
-        <div style="flex: 1; max-width: 130px; height: 0.45rem; border-radius: 999px; overflow: hidden; background: var(--fm-bg-sunken);">
-          <div style="height: 100%; width: ${confidence * 100}%; border-radius: 999px; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
+      <div class="question-card-confidence">
+        <div class="question-card-confidence-bar">
+          <div class="question-card-confidence-fill" style="width: ${confidence * 100}%; background: ${confidence > 0.85 ? 'var(--fm-success)' : confidence > 0.7 ? 'var(--fm-warning)' : 'var(--fm-error)'};"></div>
         </div>
-        <span style="font-size: 0.67rem; font-weight: 700; color: #94a3b8;">${Math.round(confidence * 100)}% Match</span>
+        <span class="question-card-confidence-label">${Math.round(confidence * 100)}% Match</span>
       </div>
     `
     : '';

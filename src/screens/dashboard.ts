@@ -120,20 +120,47 @@ export function dashboardScreen() {
                   <p class="dashboard-hero-meta">${workspaceLabel}</p>
                 </div>
                 <div class="dashboard-hero-actions">
-                  <button id="btn-dashboard-open-history" class="app-button-secondary dashboard-secondary-action btn-press">
-                    <span class="material-symbols-outlined">schedule</span>
-                    <span>Open History</span>
-                  </button>
                   <button id="btn-dashboard-open-workspace" class="app-button-primary dashboard-primary-action btn-press">
                     <span class="material-symbols-outlined">${workspaceActionIcon}</span>
                     <span>${workspaceActionLabel}</span>
                   </button>
+                  <button id="btn-dashboard-open-history" class="app-button-secondary dashboard-secondary-action btn-press">
+                    <span class="material-symbols-outlined">schedule</span>
+                    <span>Open History</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="dashboard-hero-visual" aria-hidden="true">
+                <div class="dashboard-hero-visual-stage">
+                  <div class="dashboard-hero-visual-glow"></div>
+                  <div class="dashboard-hero-device dashboard-hero-device-back"></div>
+                  <div class="dashboard-hero-device dashboard-hero-device-front">
+                    <div class="dashboard-hero-device-ring"></div>
+                    <div class="dashboard-hero-device-header">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div class="dashboard-hero-chart">
+                      <div class="dashboard-hero-chart-line"></div>
+                      <div class="dashboard-hero-chart-bars">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div class="dashboard-hero-aside">
                 <div class="dashboard-hero-aside-top">
-                  <div class="app-eyebrow">At A Glance</div>
+                  <div class="dashboard-glance-label">
+                    <span class="app-eyebrow">At A Glance</span>
+                    <span class="material-symbols-outlined">info</span>
+                  </div>
                   <p class="dashboard-panel-copy">Track your recent form activity and workspace status in one place.</p>
                 </div>
                 <div class="dashboard-hero-metrics">
