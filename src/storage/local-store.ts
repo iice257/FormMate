@@ -252,7 +252,6 @@ export function getDefaultSettings() {
       modelPreferences: {},
     },
     ui: {
-      theme: 'light',
       compactMode: false,
       sidebarDefault: true,
       chatPanelDefault: true,

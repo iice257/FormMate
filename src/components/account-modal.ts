@@ -7,7 +7,6 @@ import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { logSettingsChanged } from '../storage/activity-logger';
 import { isZenModeEnabled, isZenModeSupported, updateZenMode } from './layout';
-import { applyTheme, normalizeTheme } from '../theme';
 
 let modalRoot = null;
 let activeTab = 'profile';
@@ -259,7 +258,6 @@ function renderSettingsTab(settings) {
   const temp = settings?.ai?.temperature ?? 0.7;
   const verbosity = settings?.ai?.verbosity || 'balanced';
   const personality = settings?.ai?.defaultPersonality || 'professional';
-  const theme = normalizeTheme(settings?.ui?.theme);
   const currentScreen = getState().currentScreen;
   const zenSupported = isZenModeSupported(currentScreen);
   const zenEnabled = zenSupported
@@ -311,31 +309,6 @@ function renderSettingsTab(settings) {
               return `<button class="modal-personality-btn ${active ? 'is-active' : ''}" data-value="${value}" type="button" style="padding:0.6rem 0.5rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.85rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.78rem; font-weight:${active ? '700' : '600'}; cursor:pointer;">${label}</button>`;
             }).join('')}
           </div>
-        </div>
-      </section>
-
-      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
-        <div>
-          <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">Theme</h3>
-          <p style="font-size:0.77rem; color:#64748b;">Pick a single app theme. Light stays the default.</p>
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group" aria-label="Theme selection">
-          ${['light', 'dark'].map((value) => {
-            const active = value === theme;
-            const label = value.charAt(0).toUpperCase() + value.slice(1);
-            const icon = value === 'light' ? 'light_mode' : 'dark_mode';
-            return `
-              <button
-                class="modal-theme-btn ${active ? 'is-active' : ''}"
-                data-theme="${value}"
-                type="button"
-                style="display:flex; align-items:center; justify-content:center; gap:0.45rem; min-height:44px; padding:0.72rem 0.9rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.9rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.82rem; font-weight:${active ? '700' : '600'}; cursor:pointer;"
-              >
-                <span class="material-symbols-outlined" style="font-size:18px;">${icon}</span>
-                <span>${label}</span>
-              </button>
-            `;
-          }).join('')}
         </div>
       </section>
 
@@ -588,28 +561,10 @@ function wireSettingsEvents() {
     });
   });
 
-  document.querySelectorAll('.modal-theme-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.modal-theme-btn').forEach((candidate) => {
-        const active = candidate === button;
-        candidate.classList.toggle('is-active', active);
-        candidate.style.borderColor = active ? 'var(--fm-primary)' : 'var(--fm-border)';
-        candidate.style.background = active ? 'var(--fm-primary-50)' : '#fff';
-        candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
-        candidate.style.fontWeight = active ? '700' : '600';
-      });
-
-      const nextTheme = normalizeTheme(button.dataset.theme || 'light');
-      setNestedValue(settingsDraft, 'ui.theme', nextTheme);
-      markDirty();
-    });
-  });
-
   document.getElementById('modal-save-settings')?.addEventListener('click', () => {
     ensureDraftState();
     const nextSettings = cloneDeep(settingsDraft || {});
     setState({ settings: nextSettings });
-    applyTheme(nextSettings?.ui?.theme || 'light');
 
     const currentScreen = getState().currentScreen;
     if (isZenModeSupported(currentScreen)) {

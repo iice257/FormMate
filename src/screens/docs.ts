@@ -305,7 +305,7 @@ export function docsScreen() {
                </p>
                
                <div class="mb-6">
-                  <h4 class="font-bold text-slate-900 text-base mb-2">Preferences & Theme</h4>
+                  <h4 class="font-bold text-slate-900 text-base mb-2">Preferences</h4>
                   <p class="text-sm text-slate-600">Under the <strong>Preferences</strong> tab, you can fundamentally change how FormMate interacts with you. Change the default AI Temperature to be more "Creative" or more "Precise". Adjust the default verbosity level, and toggle UI animations or compact mode to fit your visual preference.</p>
                </div>
             </article>
