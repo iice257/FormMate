@@ -53,7 +53,7 @@ export function authScreen() {
         <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-hero-bg.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div class="w-[110%] h-[50%] bg-black/40 blur-[80px] rounded-[100%] rounded-full"></div>
+          <div class="w-[110%] h-[46%] bg-black/14 blur-[68px] rounded-[100%] rounded-full"></div>
         </div>
 
         <div class="relative z-20 flex w-full flex-col justify-between h-full auth-hero-copy">
@@ -61,12 +61,12 @@ export function authScreen() {
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="text-primary-300">Mate</span></h2>
+            <h2 class="text-[2rem] font-black tracking-tighter auth-hero-gradient-text auth-hero-subtle-shadow">FormMate</h2>
           </div>
 
           <div class="w-full max-w-[28rem] px-4">
-            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
-              Fill forms with<br/>AI magic.
+            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight auth-hero-subtle-shadow">
+              Fill forms with<br/><span class="auth-hero-gradient-text">AI magic.</span>
             </h1>
           </div>
 

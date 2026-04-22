@@ -4540,6 +4540,18 @@ button#btn-back-login .material-symbols-outlined,
   gap: 2rem;
 }
 
+.auth-hero-gradient-text {
+  background: linear-gradient(120deg, #f5fbff 0%, #b8d6ff 46%, #7cb8f5 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.auth-hero-subtle-shadow {
+  text-shadow: 0 1px 3px rgba(9, 30, 62, 0.28);
+}
+
 .auth-form-shell {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(249, 251, 255, 0.92));
 }
