@@ -241,7 +241,7 @@ html[data-fm-nav-transition^="shell"]::view-transition-new(fm-shell-panel) {
   to {
     opacity: 0;
     filter: blur(var(--fm-motion-blur-soft));
-    transform: translate3d(0, calc(var(--fm-motion-shell-lift) * -0.45), 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -269,7 +269,7 @@ html[data-fm-nav-transition^="shell"]::view-transition-new(fm-shell-panel) {
   to {
     opacity: 0;
     filter: blur(var(--fm-motion-blur-soft));
-    transform: translate3d(0, var(--fm-motion-shell-lift), 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
