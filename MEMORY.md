@@ -32,6 +32,7 @@
 - Account modal settings/profile edits should be draft-only until explicit save, with discard confirmation on close/tab-switch/cancel.
 - Product should operate as a free offering for now: remove pricing/tier/billing surfaces and references sitewide until billing is intentionally scaffolded later.
 - Global motion should feel premium and native-like: full-page forward/back route changes use fast directional slide + fade + light blur, while sidebar section switches keep the shell anchored and animate only the content region with subtle upward refresh motion plus softer right-panel fade/blur.
+- Sidebar menu page transitions should be direction-true and consistent: forward sidebar navigation uses zoom-in + slight slide-up, and back to the immediate previous sidebar page uses the reverse motion (no mixed zoom directions).
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.

@@ -140,7 +140,11 @@ function resolveTransitionKind(
     return options.transition;
   }
 
-  if ((options.source === 'sidebar' || options.source === 'shell') && isAppShellScreen(currentScreen) && isAppShellScreen(nextScreen)) {
+  if (
+    (options.source === 'sidebar' || options.source === 'shell' || options.source === 'browser')
+    && isAppShellScreen(currentScreen)
+    && isAppShellScreen(nextScreen)
+  ) {
     return 'shell';
   }
 

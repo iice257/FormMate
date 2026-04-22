@@ -54,7 +54,7 @@ function getPrimaryScrollRegion(scope: ParentNode | null) {
 function setTransitionDataset(kind: NavigationTransitionKind, direction: NavigationDirection) {
   activeTransitionToken += 1;
   const html = getHtmlRoot();
-  html.dataset.fmNavTransition = kind === 'shell' ? 'shell' : `page-${direction}`;
+  html.dataset.fmNavTransition = kind === 'shell' ? `shell-${direction}` : `page-${direction}`;
   return activeTransitionToken;
 }
 
@@ -119,21 +119,38 @@ function playFallbackAnimation(
 
   const main = root.querySelector('[data-fm-transition-main="true"]');
   const panel = root.querySelector('[data-fm-transition-panel="true"]');
+  const shellLift = '12px';
+  const backLift = '-10px';
 
-  animateElement(
-    main,
-    [
+  const mainInKeyframes = direction === 'back'
+    ? [
       {
         opacity: 0,
-        filter: 'blur(8px)',
-        transform: 'translate3d(0, 14px, 0)',
+        filter: 'blur(7px)',
+        transform: `translate3d(0, ${backLift}, 0) scale(1.012)`,
       },
       {
         opacity: 1,
         filter: 'blur(0px)',
-        transform: 'translate3d(0, 0, 0)',
+        transform: 'translate3d(0, 0, 0) scale(1)',
       },
-    ],
+    ]
+    : [
+      {
+        opacity: 0,
+        filter: 'blur(7px)',
+        transform: `translate3d(0, ${shellLift}, 0) scale(0.985)`,
+      },
+      {
+        opacity: 1,
+        filter: 'blur(0px)',
+        transform: 'translate3d(0, 0, 0) scale(1)',
+      },
+    ];
+
+  animateElement(
+    main,
+    mainInKeyframes,
     SHELL_TRANSITION_MS,
   );
 
