@@ -56,26 +56,30 @@ function detectGuardSignals(html, doc) {
   };
 }
 
-function detectStepSignals(doc) {
+function detectStepSignals(doc, parsed) {
+  const meta = parsed?.meta || {};
   if (!doc) {
     return {
-      nextStepRequired: false,
-      nextStepHint: '',
-      hasHiddenSegments: false,
+      nextStepRequired: Boolean(meta.nextStepRequired),
+      nextStepHint: meta.nextStepHint || '',
+      hasHiddenSegments: Boolean(meta.hiddenControlCount || meta.hiddenSectionCount),
     };
   }
 
   const text = normalizeWhitespace(doc.body?.textContent || '').toLowerCase();
-  const nextButton = doc.querySelector('button, [role="button"], input[type="button"], input[type="submit"]');
-  const hasNextKeyword = /(next|continue|step\s+\d+\s+of\s+\d+|page\s+\d+\s+of\s+\d+)/i.test(text);
-  const hasHiddenSegments = Boolean(doc.querySelector('[hidden], [aria-hidden="true"], [data-hidden="true"], [style*="display:none"]'));
+  const buttonTexts = Array.from(doc.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'))
+    .map((element) => normalizeWhitespace(element.textContent || element.getAttribute?.('value') || '').toLowerCase())
+    .filter(Boolean)
+    .join(' ');
+  const hasNextKeyword = /(next|continue|step\s+\d+\s+of\s+\d+|page\s+\d+\s+of\s+\d+|save and continue)/i.test(`${text} ${buttonTexts}`);
+  const hasHiddenSegments = Boolean(meta.hiddenControlCount || meta.hiddenSectionCount || doc.querySelector('[hidden], [aria-hidden="true"], [data-hidden="true"], [style*="display:none"]'));
 
-  if (hasNextKeyword || hasHiddenSegments || nextButton) {
+  if (hasNextKeyword || hasHiddenSegments || meta.nextStepRequired) {
     return {
-      nextStepRequired: hasNextKeyword || hasHiddenSegments,
-      nextStepHint: hasNextKeyword
+      nextStepRequired: true,
+      nextStepHint: meta.nextStepHint || (hasNextKeyword
         ? 'This form appears to have additional steps that are not fully visible yet.'
-        : (hasHiddenSegments ? 'Some sections appear hidden or conditional.' : ''),
+        : (hasHiddenSegments ? 'Some sections appear hidden or conditional.' : '')),
       hasHiddenSegments,
     };
   }
@@ -112,6 +116,75 @@ function computeFieldConfidence(legacyFormData) {
   return Math.max(0, Math.min(1, qualityScore / questions.length));
 }
 
+function getMeta(parsed) {
+  return parsed?.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
+}
+
+function assessStructuralQuality(parsed) {
+  const questions = Array.isArray(parsed?.questions) ? parsed.questions : [];
+  const meta = getMeta(parsed);
+  const questionCount = questions.length;
+  const visibleControlCount = Math.max(Number(meta.visibleControlCount || 0), questionCount);
+  const groupedChoiceCount = Math.max(Number(meta.groupedChoiceCount || 0), 0);
+  const effectiveControlCount = Math.max(1, visibleControlCount - groupedChoiceCount);
+  const generatedLabelCount = questions.filter((question) => question?.parserHints?.generatedLabel || /^question \d+$/i.test(String(question?.text || '').trim())).length;
+  const placeholderLabelCount = questions.filter((question) => question?.parserHints?.placeholderLabel).length;
+  const unknownTypeCount = questions.filter((question) => String(question?.type || '').toLowerCase() === 'unknown_type').length;
+  const fileUploadCount = questions.filter((question) => String(question?.type || '').toLowerCase() === 'file_upload').length;
+
+  const coverage = questionCount ? Math.min(1, questionCount / effectiveControlCount) : 0;
+  const labelQuality = questionCount
+    ? Math.max(0, 1 - ((generatedLabelCount + (placeholderLabelCount * 0.45)) / questionCount))
+    : 0;
+  const typeQuality = questionCount
+    ? Math.max(0, 1 - (unknownTypeCount / questionCount))
+    : 0;
+  const overall = questionCount
+    ? Math.min(1, ((coverage * 0.4) + (labelQuality * 0.35) + (typeQuality * 0.25)))
+    : 0;
+
+  return {
+    questionCount,
+    visibleControlCount,
+    groupedChoiceCount,
+    generatedLabelCount,
+    placeholderLabelCount,
+    unknownTypeCount,
+    fileUploadCount,
+    coverage,
+    labelQuality,
+    typeQuality,
+    overall,
+  };
+}
+
+function shouldUseAiFallback(parsed) {
+  const quality = assessStructuralQuality(parsed);
+  if (!quality.questionCount) return true;
+  if (quality.overall < 0.72) return true;
+  if (quality.coverage < 0.68) return true;
+  if (quality.labelQuality < 0.72) return true;
+  if (quality.typeQuality < 0.72) return true;
+  return false;
+}
+
+function choosePreferredParse(primary, fallback) {
+  const primaryQuality = assessStructuralQuality(primary);
+  const fallbackQuality = assessStructuralQuality(fallback);
+  if (!fallbackQuality.questionCount) {
+    return { parsed: primary, usedFallback: false };
+  }
+
+  const fallbackWins = (
+    fallbackQuality.overall > (primaryQuality.overall + 0.08)
+    || (fallbackQuality.questionCount > primaryQuality.questionCount && fallbackQuality.overall >= (primaryQuality.overall - 0.03))
+  );
+
+  return fallbackWins
+    ? { parsed: fallback, usedFallback: true }
+    : { parsed: primary, usedFallback: false };
+}
+
 export async function runPlainHtmlAdapter({
   html,
   url,
@@ -121,7 +194,6 @@ export async function runPlainHtmlAdapter({
 }) {
   const doc = parseHtmlDocument(html);
   const guardSignals = detectGuardSignals(html, doc);
-  const stepSignals = detectStepSignals(doc);
   const warnings = [];
   let workingStrategy = parseStrategy;
 
@@ -214,6 +286,7 @@ export async function runPlainHtmlAdapter({
 
   let parsed = parseDOM(html || '');
   const renderRequired = Boolean(parsed?.requiresRender);
+  const initialQuality = assessStructuralQuality(parsed);
   if (renderRequired && (!Array.isArray(parsed?.questions) || parsed.questions.length < MIN_CONFIDENT_FIELDS)) {
     return {
       parseStatus: PARSE_STATUS.BLOCKED,
@@ -244,43 +317,53 @@ export async function runPlainHtmlAdapter({
   }
 
   let aiFallbackUsed = false;
-  if ((!parsed?.questions || parsed.questions.length === 0) && typeof parseWithAiHtml === 'function') {
+  if (typeof parseWithAiHtml === 'function' && shouldUseAiFallback(parsed)) {
     try {
-      parsed = await parseWithAiHtml(html, url);
-      aiFallbackUsed = true;
-      warnings.push(createParserMessage('AI_HTML_FALLBACK', 'info', 'AI-based HTML parsing fallback was used.'));
-      workingStrategy = 'ai_html_parse';
+      const aiParsed = await parseWithAiHtml(html, url);
+      const choice = choosePreferredParse(parsed, aiParsed);
+      parsed = choice.parsed;
+      aiFallbackUsed = choice.usedFallback;
+      if (choice.usedFallback) {
+        warnings.push(createParserMessage('AI_HTML_FALLBACK', 'info', 'AI-based HTML parsing fallback was used.'));
+        workingStrategy = 'ai_html_parse';
+      } else {
+        warnings.push(createParserMessage('AI_HTML_FALLBACK_SKIPPED', 'info', 'AI fallback ran but deterministic parsing remained the stronger result.'));
+      }
     } catch (error) {
       warnings.push(createParserMessage('AI_HTML_FALLBACK_FAILED', 'warning', `AI fallback failed: ${error?.message || 'unknown error'}`));
     }
   }
 
   const questionCount = Array.isArray(parsed?.questions) ? parsed.questions.length : 0;
+  const stepSignals = detectStepSignals(doc, parsed);
+  const structuralQuality = assessStructuralQuality(parsed);
+  const meta = getMeta(parsed);
   if (!questionCount) {
+    const noFormDetected = Number(meta.visibleControlCount || 0) === 0 && Number(meta.formElementCount || 0) === 0;
     return {
-      parseStatus: PARSE_STATUS.UNSUPPORTED,
-      completeness: COMPLETENESS_STATUS.PARTIAL_STRUCTURE,
+      parseStatus: noFormDetected ? PARSE_STATUS.NO_FORM : PARSE_STATUS.UNSUPPORTED,
+      completeness: noFormDetected ? COMPLETENESS_STATUS.EMPTY : COMPLETENESS_STATUS.PARTIAL_STRUCTURE,
       blockedReason: undefined,
-      unsupportedReasons: [UNSUPPORTED_REASON.INSUFFICIENT_STRUCTURE],
-      nextAction: NEXT_ACTION.UPLOAD_SCREENSHOTS,
+      unsupportedReasons: noFormDetected ? [] : [UNSUPPORTED_REASON.INSUFFICIENT_STRUCTURE],
+      nextAction: noFormDetected ? NEXT_ACTION.MANUAL_REVIEW : NEXT_ACTION.UPLOAD_SCREENSHOTS,
       nextStepRequired: false,
-      nextStepHint: 'No form fields were extracted from page structure.',
-      warnings: warnings.concat(createParserMessage('NO_FIELDS_DETECTED', 'warning', 'No form fields were detected from URL parsing.')),
+      nextStepHint: noFormDetected ? 'No form structure was detected on this page.' : 'No form fields were extracted from page structure.',
+      warnings: warnings.concat(createParserMessage(noFormDetected ? 'NO_FORM_DETECTED' : 'NO_FIELDS_DETECTED', 'warning', noFormDetected ? 'No form structure was detected on the page.' : 'No form fields were detected from URL parsing.')),
       legacyFormData: null,
       canonicalForm: null,
       diagnostics: {
         authSignal: false,
         renderSignal: renderRequired,
         aiFallbackUsed,
-        extractionWarnings: ['No fields detected after deterministic and fallback parsing.'],
+        extractionWarnings: [noFormDetected ? 'No form structure detected.' : 'No fields detected after deterministic and fallback parsing.'],
       },
       confidence: {
-        overall: 0.15,
-        fieldDetection: 0.12,
-        uiClassification: 0.12,
-        semanticClassification: 0.12,
-        fillPolicy: 0.12,
-        completeness: 0.2,
+        overall: noFormDetected ? 0.08 : 0.15,
+        fieldDetection: noFormDetected ? 0.06 : 0.12,
+        uiClassification: noFormDetected ? 0.06 : 0.12,
+        semanticClassification: noFormDetected ? 0.06 : 0.12,
+        fillPolicy: noFormDetected ? 0.06 : 0.12,
+        completeness: noFormDetected ? 0.08 : 0.2,
       },
     };
   }
@@ -295,13 +378,24 @@ export async function runPlainHtmlAdapter({
   });
 
   const fieldConfidence = computeFieldConfidence(legacyFormData);
-  const parseStatus = stepSignals.nextStepRequired ? PARSE_STATUS.PARTIAL : PARSE_STATUS.SUCCESS;
-  const completeness = stepSignals.nextStepRequired
+  const hasWeakCoverage = structuralQuality.overall < 0.68 || structuralQuality.coverage < 0.68 || structuralQuality.labelQuality < 0.72 || structuralQuality.typeQuality < 0.72;
+  const parseStatus = (stepSignals.nextStepRequired || hasWeakCoverage) ? PARSE_STATUS.PARTIAL : PARSE_STATUS.SUCCESS;
+  const completeness = stepSignals.nextStepRequired || hasWeakCoverage
     ? COMPLETENESS_STATUS.VISIBLE_STEP_ONLY
     : COMPLETENESS_STATUS.COMPLETE;
-  const nextAction = stepSignals.nextStepRequired ? NEXT_ACTION.CONTINUE_TO_NEXT_STEP : NEXT_ACTION.NONE;
+  const nextAction = stepSignals.nextStepRequired
+    ? NEXT_ACTION.CONTINUE_TO_NEXT_STEP
+    : hasWeakCoverage
+      ? NEXT_ACTION.USE_CAPTURE
+      : NEXT_ACTION.NONE;
   if (stepSignals.hasHiddenSegments) {
     warnings.push(createParserMessage('HIDDEN_SECTIONS_DETECTED', 'info', 'Conditional or hidden segments were detected.'));
+  }
+  if (hasWeakCoverage) {
+    warnings.push(createParserMessage('LOW_CONFIDENCE_STRUCTURE', 'warning', 'URL parsing found fields, but structural confidence is too weak to treat this as a complete parse.'));
+  }
+  if (structuralQuality.fileUploadCount > 0) {
+    warnings.push(createParserMessage('FILE_UPLOAD_DETECTED', 'info', 'File upload fields were detected and will require explicit user files.'));
   }
 
   return {
@@ -319,16 +413,20 @@ export async function runPlainHtmlAdapter({
       authSignal: false,
       renderSignal: renderRequired,
       aiFallbackUsed,
-      extractionWarnings: warnings.map((warning) => warning.message),
+      extractionWarnings: warnings.map((warning) => warning.message).concat(
+        `quality=${structuralQuality.overall.toFixed(2)}`,
+        `coverage=${structuralQuality.coverage.toFixed(2)}`,
+      ),
     },
     confidence: {
-      fieldDetection: fieldConfidence,
-      uiClassification: Math.min(1, fieldConfidence + 0.03),
-      semanticClassification: Math.max(0.5, fieldConfidence - 0.08),
-      fillPolicy: Math.max(0.55, fieldConfidence - 0.05),
-      completeness: parseStatus === PARSE_STATUS.PARTIAL ? 0.62 : 0.88,
+      fieldDetection: Math.min(1, ((fieldConfidence * 0.7) + (structuralQuality.coverage * 0.3))),
+      uiClassification: Math.min(1, ((fieldConfidence * 0.65) + (structuralQuality.typeQuality * 0.35))),
+      semanticClassification: Math.max(0.42, Math.min(1, structuralQuality.labelQuality - 0.04)),
+      fillPolicy: Math.max(0.46, Math.min(1, structuralQuality.overall - 0.02)),
+      completeness: parseStatus === PARSE_STATUS.PARTIAL
+        ? Math.max(0.48, Math.min(0.74, structuralQuality.overall))
+        : Math.max(0.82, Math.min(0.94, structuralQuality.overall + 0.12)),
     },
     parseStrategy: workingStrategy,
   };
 }
-

@@ -37,3 +37,4 @@ Supabase auth/storage is enabled only when both `VITE_SUPABASE_URL` and `VITE_SU
 - Do not create any `VITE_GROQ_API_KEY` or browser-exposed secret.
 - Do not commit `.env.local` or `.vercel`.
 - Deployment reads `GROQ_API_KEY` from Vercel runtime envs, not from client code.
+- Preview and production deployments now hard-fail during build when `GROQ_API_KEY`, `VITE_SUPABASE_URL`, or `VITE_SUPABASE_ANON_KEY` is missing.

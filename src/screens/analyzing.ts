@@ -5,8 +5,7 @@
 
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
-import { parseFormUrl, detectFormPlatform, parseCapturePayload, isGoogleFormUrl } from '../parser/form-parser';
-import { requestImageParse } from '../parser/adapters/image';
+import { parseFormUrl, detectFormPlatform, parseCapturePayload, parseImageArtifacts, isGoogleFormUrl } from '../parser/form-parser';
 import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
@@ -460,7 +459,7 @@ export function analyzingScreen() {
           updateProgress(40, 'Extracting from screenshots', 'Step 1 of 3', 'Running image parser...');
           await delay(250);
           if (cancelled) return;
-          parseResult = await requestImageParse({
+          parseResult = await parseImageArtifacts({
             imageArtifacts,
             sourceUrl: formUrl,
           });

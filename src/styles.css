@@ -1849,6 +1849,10 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 @media (max-width: 767px) {
+  #btn-fab-ai {
+    display: flex !important;
+  }
+
   .layout-header {
     margin: 0.75rem 0.75rem 0;
     padding: 0 0.9rem;
@@ -1875,6 +1879,12 @@ input[type="range"]:active::-moz-range-thumb {
 
   .layout-content {
     border-radius: 1.4rem;
+  }
+}
+
+@media (min-width: 768px) {
+  #btn-fab-ai {
+    display: none !important;
   }
 }
 

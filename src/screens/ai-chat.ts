@@ -378,7 +378,13 @@ export function aiChatScreen() {
         body.style.whiteSpace = 'pre-wrap';
       } else {
         body.classList.add('ai-message-rich');
-        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text, {
+          onDiagnostics: (diagnostics) => {
+            if (diagnostics.length) {
+              console.warn('[AI Chat] Assistant message diagnostics:', diagnostics);
+            }
+          },
+        }));
       }
       bubble.appendChild(body);
       chatMessages.appendChild(bubble);

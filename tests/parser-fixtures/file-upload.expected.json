@@ -1,0 +1,44 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "success",
+    "completeness": "complete",
+    "blockedReason": null,
+    "unsupportedReasons": [],
+    "nextAction": "none",
+    "nextStepRequired": false,
+    "nextStepHint": "",
+    "warningCodes": [
+      "FILE_UPLOAD_DETECTED"
+    ]
+  },
+  "compatibility": {
+    "title": "Application Upload",
+    "questionCount": 2,
+    "questions": [
+      {
+        "text": "Resume",
+        "type": "file_upload",
+        "required": true,
+        "options": []
+      },
+      {
+        "text": "Portfolio URL",
+        "type": "short_text",
+        "required": false,
+        "options": []
+      }
+    ]
+  },
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": false,
+    "renderSignal": false,
+    "aiFallbackUsed": false
+  }
+}

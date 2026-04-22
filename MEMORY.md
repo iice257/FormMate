@@ -21,6 +21,7 @@
 - `dev:stack` can now auto-select fallback API ports (`3001-3003`) if `3000` is occupied/incompatible, preventing silent frontend/backend contract drift.
 - Active Supabase project ref for FormMate is `chrrljkxnpuqdhhptntc` (URL base: `https://chrrljkxnpuqdhhptntc.supabase.co`).
 - Current Vercel `development` env is missing `VITE_SUPABASE_ANON_KEY`; env pulls will keep local Supabase auth/sync degraded until this key is added in Vercel project settings.
+- Vercel preview/production builds now enforce an env gate (`scripts/check-required-env.mjs`) for `GROQ_API_KEY`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`.
 
 ## Security and UX Hardening Decisions
 - AI scope policy is enforced server-side as `Balanced adjacent`; unrelated general-purpose inference should be rejected.

@@ -233,7 +233,6 @@ export function workspaceScreen() {
                 </button>
               </div>
             </div>
-            <div id="workspace-chat-attachment-state" style="text-align:center; font-size:0.6rem; color:#94a3b8; margin-top:0.25rem;">No attachments</div>
             <div style="text-align: center; font-size: 0.6rem; color: #cbd5e1; margin-top: 0.35rem;">AI can make mistakes. Check important info.</div>
           </div>
         </div>
@@ -680,7 +679,6 @@ export function workspaceScreen() {
         followUpsWrap,
         items.map((prompt) => `
           <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
-            <span class="material-symbols-outlined">tips_and_updates</span>
             <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
           </button>
         `).join('')
@@ -688,18 +686,19 @@ export function workspaceScreen() {
     };
 
     const renderAttachmentState = () => {
-      if (!attachmentState) return;
       const imageCount = pendingImages.length;
       const textCount = pendingTextSnippets.length;
       const uiContextCount = pendingUiContextEvents.length;
-      if (!imageCount && !textCount && !uiContextCount) {
-        attachmentState.textContent = 'No attachments';
-      } else {
-        const parts = [];
-        if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
-        if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
-        if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
-        attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
+      if (attachmentState) {
+        if (!imageCount && !textCount && !uiContextCount) {
+          attachmentState.textContent = 'No attachments';
+        } else {
+          const parts = [];
+          if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
+          if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
+          if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
+          attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
+        }
       }
       syncSendButton();
     };
@@ -801,7 +800,13 @@ export function workspaceScreen() {
         body.style.whiteSpace = 'pre-wrap';
       } else {
         body.classList.add('ai-message-rich');
-        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text, {
+          onDiagnostics: (diagnostics) => {
+            if (diagnostics.length) {
+              console.warn('[Workspace Chat] Assistant message diagnostics:', diagnostics);
+            }
+          },
+        }));
       }
       bubble.appendChild(body);
       chatMessages.appendChild(bubble);

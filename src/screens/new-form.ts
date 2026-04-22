@@ -106,11 +106,6 @@ export function newFormScreen() {
         </div>
       </main>
 
-      <div class="fixed bottom-10 right-10 size-12 text-slate-300 opacity-40 pointer-events-none zen-new-form-decor">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,0 L14,10 L24,12 L14,14 L12,24 L10,14 L0,12 L10,10 Z" />
-        </svg>
-      </div>
     </div>
   `;
 

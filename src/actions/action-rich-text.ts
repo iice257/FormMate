@@ -1,4 +1,5 @@
 // @ts-nocheck
+import MarkdownIt from 'markdown-it';
 import { executeAction, getActionById } from './action-index';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { parseAssistantResponse } from '../ai/chat-interactions';
@@ -24,12 +25,19 @@ const RICH_ALLOWED_ATTRS = {
   td: new Set(['colspan', 'rowspan', 'align']),
 };
 
+const FENCED_CODE_PATTERN = /^\s*```/;
 const TABLE_SEPARATOR_PATTERN = /^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/;
 const TABLE_ROW_PATTERN = /^\s*\|.+\|\s*$/;
-const UNORDERED_ITEM_PATTERN = /^\s*[-*+]\s+/;
-const ORDERED_ITEM_PATTERN = /^\s*\d+\.\s+/;
-const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
+const BLOCKQUOTE_PATTERN = /^\s*>/;
+const LIST_ITEM_PATTERN = /^\s*(?:[-*+]|\d+\.)\s+/;
+const HEADING_PATTERN = /^\s*#{1,6}\s+/;
 const HR_PATTERN = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
+
+const markdownRenderer = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: false,
+});
 
 function sanitizeRichHtml(html) {
   return createSafeHtmlString(html, {
@@ -38,159 +46,46 @@ function sanitizeRichHtml(html) {
   });
 }
 
-function applyUnderlineAlias(text) {
+function underlineAliasPattern() {
+  return /(^|[\s([{"'])-([^\n-](?:.*?[^\n-])?)-(?=($|[\s)\]}",.!?:;']))/gm;
+}
+
+function applyUnderlineAliasToTextNode(text) {
   return String(text || '').replace(
     /(^|[\s([{"'])-([^\n-](?:.*?[^\n-])?)-(?=($|[\s)\]}",.!?:;']))/gm,
     (_, prefix, inner) => `${prefix}<u>${inner}</u>`,
   );
 }
 
-function renderInlineMarkdown(rawText) {
-  const codeTokens = [];
-  let text = escapeHtml(rawText).replace(/`([^`\n]+)`/g, (_, code) => {
-    const token = `%%FM_CODE_${codeTokens.length}%%`;
-    codeTokens.push(`<code>${escapeHtml(code)}</code>`);
-    return token;
-  });
-
-  text = applyUnderlineAlias(text);
-  text = text.replace(/~~([^~]+)~~/g, '<s>$1</s>');
-  text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-  text = text.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label, href) => {
-    const safeHref = escapeAttr(String(href).trim());
-    return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-  });
-
-  codeTokens.forEach((tokenHtml, index) => {
-    text = text.replaceAll(`%%FM_CODE_${index}%%`, tokenHtml);
-  });
-
-  return text;
-}
-
-function splitTableRow(line) {
-  return String(line || '')
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
-}
-
 function renderMarkdownLike(text) {
-  const lines = String(text || '').replace(/\r/g, '').split('\n');
-  const htmlParts = [];
-  let index = 0;
+  const renderedHtml = markdownRenderer.render(String(text || ''));
+  const template = document.createElement('template');
+  template.innerHTML = renderedHtml;
 
-  const readParagraph = () => {
-    const paragraph = [];
-    while (index < lines.length) {
-      const line = lines[index];
-      if (!line.trim()) break;
-      if (
-        line.startsWith('```')
-        || TABLE_ROW_PATTERN.test(line)
-        || UNORDERED_ITEM_PATTERN.test(line)
-        || ORDERED_ITEM_PATTERN.test(line)
-        || line.trimStart().startsWith('>')
-        || HEADING_PATTERN.test(line.trim())
-        || HR_PATTERN.test(line.trim())
-      ) {
-        break;
-      }
-      paragraph.push(line);
-      index += 1;
-    }
-    if (!paragraph.length) return;
-    htmlParts.push(`<p>${renderInlineMarkdown(paragraph.join('<br>'))}</p>`);
-  };
+  template.content.querySelectorAll('a[href]').forEach((anchor) => {
+    anchor.setAttribute('target', '_blank');
+    anchor.setAttribute('rel', 'noopener noreferrer');
+  });
 
-  while (index < lines.length) {
-    const line = lines[index];
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      index += 1;
-      continue;
-    }
-
-    if (line.startsWith('```')) {
-      const language = String(line.slice(3).trim());
-      const codeLines = [];
-      index += 1;
-      while (index < lines.length && !lines[index].startsWith('```')) {
-        codeLines.push(lines[index]);
-        index += 1;
-      }
-      if (index < lines.length && lines[index].startsWith('```')) index += 1;
-      const languageClass = language ? ` class="language-${escapeAttr(language)}"` : '';
-      htmlParts.push(`<pre><code${languageClass}>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-      continue;
-    }
-
-    if (TABLE_ROW_PATTERN.test(line) && index + 1 < lines.length && TABLE_SEPARATOR_PATTERN.test(lines[index + 1])) {
-      const headerCells = splitTableRow(line);
-      const bodyRows = [];
-      index += 2;
-      while (index < lines.length && TABLE_ROW_PATTERN.test(lines[index])) {
-        bodyRows.push(splitTableRow(lines[index]));
-        index += 1;
-      }
-      const headerHtml = headerCells.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('');
-      const bodyHtml = bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('');
-      htmlParts.push(`<table><thead><tr>${headerHtml}</tr></thead>${bodyHtml ? `<tbody>${bodyHtml}</tbody>` : ''}</table>`);
-      continue;
-    }
-
-    const headingMatch = trimmed.match(HEADING_PATTERN);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      htmlParts.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
-      index += 1;
-      continue;
-    }
-
-    if (HR_PATTERN.test(trimmed)) {
-      htmlParts.push('<hr>');
-      index += 1;
-      continue;
-    }
-
-    if (trimmed.startsWith('>')) {
-      const quoteLines = [];
-      while (index < lines.length && lines[index].trimStart().startsWith('>')) {
-        quoteLines.push(lines[index].trimStart().replace(/^>\s?/, ''));
-        index += 1;
-      }
-      htmlParts.push(`<blockquote>${renderInlineMarkdown(quoteLines.join('<br>'))}</blockquote>`);
-      continue;
-    }
-
-    if (UNORDERED_ITEM_PATTERN.test(line)) {
-      const items = [];
-      while (index < lines.length && UNORDERED_ITEM_PATTERN.test(lines[index])) {
-        items.push(lines[index].replace(/^\s*[-*+]\s+/, ''));
-        index += 1;
-      }
-      htmlParts.push(`<ul>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</ul>`);
-      continue;
-    }
-
-    if (ORDERED_ITEM_PATTERN.test(line)) {
-      const items = [];
-      while (index < lines.length && ORDERED_ITEM_PATTERN.test(lines[index])) {
-        items.push(lines[index].replace(/^\s*\d+\.\s+/, ''));
-        index += 1;
-      }
-      htmlParts.push(`<ol>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</ol>`);
-      continue;
-    }
-
-    readParagraph();
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let currentNode = walker.nextNode();
+  while (currentNode) {
+    textNodes.push(currentNode);
+    currentNode = walker.nextNode();
   }
 
-  return sanitizeRichHtml(htmlParts.join(''));
+  textNodes.forEach((node) => {
+    const parentTag = String(node?.parentElement?.tagName || '').toLowerCase();
+    if (!node?.textContent || ['code', 'pre'].includes(parentTag)) return;
+    if (!underlineAliasPattern().test(node.textContent)) return;
+    underlineAliasPattern().lastIndex = 0;
+    const wrapper = document.createElement('span');
+    wrapper.innerHTML = applyUnderlineAliasToTextNode(escapeHtml(node.textContent));
+    node.parentNode?.replaceChild(wrapper, node);
+  });
+
+  return sanitizeRichHtml(template.innerHTML);
 }
 
 function renderTextChunk(text, options = {}) {
@@ -201,18 +96,38 @@ function renderTextChunk(text, options = {}) {
 }
 
 function normalizeLegacyInteractiveLines(text) {
-  return String(text || '')
-    .split('\n')
-    .map((line) => {
-      const match = line.match(LEGACY_ITEM_LINE_PATTERN);
-      if (!match) return line;
-      const id = String(match[1] || '').trim();
-      const label = String(match[2] || '').trim();
-      const value = String(match[3] || '').trim();
-      if (!label || !value) return line;
-      return `[fm-item id="${id}" label="${label}" editable="true"]${value}[/fm-item]`;
-    })
-    .join('\n');
+  const lines = String(text || '').split('\n');
+  let inFence = false;
+
+  return lines.map((line) => {
+    if (FENCED_CODE_PATTERN.test(line)) {
+      inFence = !inFence;
+      return line;
+    }
+
+    if (inFence) return line;
+    if (
+      TABLE_ROW_PATTERN.test(line)
+      || TABLE_SEPARATOR_PATTERN.test(line)
+      || BLOCKQUOTE_PATTERN.test(line)
+      || LIST_ITEM_PATTERN.test(line)
+      || HEADING_PATTERN.test(line)
+      || HR_PATTERN.test(line)
+      || line.includes('[fm-item')
+      || /<\/?fm-ui>/i.test(line)
+    ) {
+      return line;
+    }
+
+    const match = line.match(LEGACY_ITEM_LINE_PATTERN);
+    if (!match) return line;
+
+    const id = String(match[1] || '').trim();
+    const label = String(match[2] || '').trim();
+    const value = String(match[3] || '').trim();
+    if (!label || !value) return line;
+    return `[fm-item id="${id}" label="${label}" editable="true"]${value}[/fm-item]`;
+  }).join('\n');
 }
 
 function parseTagAttrs(rawAttrs) {
@@ -415,6 +330,9 @@ function syncOptionButtons(card, values) {
 
 export function renderAssistantRichText(text, options = {}) {
   const parsed = parseAssistantResponse(text, { interactive: options.interactive !== false });
+  if (typeof options.onDiagnostics === 'function' && Array.isArray(parsed.diagnostics) && parsed.diagnostics.length) {
+    options.onDiagnostics(parsed.diagnostics);
+  }
   const source = normalizeLegacyInteractiveLines(parsed.text);
   let html = '';
   let lastIndex = 0;

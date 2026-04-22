@@ -1,0 +1,77 @@
+{
+  "parseStatus": "partial",
+  "completeness": "visible_step_only",
+  "unsupportedReasons": [],
+  "nextAction": "upload_screenshots",
+  "nextStepRequired": true,
+  "nextStepHint": "Additional form steps were inferred. Upload screenshots for remaining steps.",
+  "warnings": [
+    {
+      "code": "IMAGE_WARNING_1",
+      "level": "warning",
+      "message": "Only the current visible step was provided."
+    }
+  ],
+  "confidence": {
+    "overall": 0.61,
+    "fieldDetection": 0.64,
+    "uiClassification": 0.6,
+    "semanticClassification": 0.54,
+    "fillPolicy": 0.56,
+    "completeness": 0.5
+  },
+  "legacyFormData": {
+    "title": "Parsed Screenshot Form",
+    "description": "Visible step captured from uploaded screenshots.",
+    "url": "https://example.com/screenshot-flow",
+    "source": "Image Upload",
+    "parseStrategy": "image_llm_extract",
+    "authRequired": false,
+    "supportState": "partial",
+    "diagnostics": {
+      "authSignal": false,
+      "renderSignal": true,
+      "aiFallbackUsed": true,
+      "extractionWarnings": [
+        "Only the current visible step was provided."
+      ],
+      "parseStrategy": "image_llm_extract",
+      "modelUsed": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "attemptedModels": [
+        "meta-llama/llama-4-scout-17b-16e-instruct"
+      ],
+      "imageCount": 1
+    },
+    "questions": [
+      {
+        "id": "1",
+        "text": "Full Name",
+        "type": "short_text",
+        "required": true,
+        "options": []
+      },
+      {
+        "id": "2",
+        "text": "Portfolio URL",
+        "type": "short_text",
+        "required": false,
+        "options": []
+      }
+    ]
+  },
+  "diagnostics": {
+    "authSignal": false,
+    "renderSignal": true,
+    "aiFallbackUsed": true,
+    "extractionWarnings": [
+      "Only the current visible step was provided."
+    ],
+    "parseStrategy": "image_llm_extract",
+    "modelUsed": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "attemptedModels": [
+      "meta-llama/llama-4-scout-17b-16e-instruct"
+    ],
+    "imageCount": 1
+  },
+  "parseStrategy": "image_llm_extract"
+}

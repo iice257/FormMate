@@ -1,0 +1,48 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "success",
+    "completeness": "complete",
+    "blockedReason": null,
+    "unsupportedReasons": [],
+    "nextAction": "none",
+    "nextStepRequired": false,
+    "nextStepHint": "",
+    "warningCodes": []
+  },
+  "compatibility": {
+    "title": "Grouped Inputs Fixture",
+    "questionCount": 2,
+    "questions": [
+      {
+        "text": "Preferred Contact Method",
+        "type": "radio",
+        "required": true,
+        "options": [
+          "Email",
+          "Phone"
+        ]
+      },
+      {
+        "text": "Skills",
+        "type": "checkbox",
+        "required": false,
+        "options": [
+          "JavaScript",
+          "Python"
+        ]
+      }
+    ]
+  },
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": false,
+    "renderSignal": false,
+    "aiFallbackUsed": false
+  }
+}
