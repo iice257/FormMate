@@ -508,13 +508,17 @@ export function initLayout(wrapper, options = {}) {
       navigateTo(link.route, {
         source: 'sidebar',
         transition: 'shell',
+        direction: 'forward',
       });
     });
   });
 
   // Help Center -> docs
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
-    navigateTo('docs');
+    navigateTo('docs', {
+      source: 'sidebar',
+      direction: 'forward',
+    });
   });
 
   // Logo -> home
