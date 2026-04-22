@@ -36,6 +36,7 @@
 - Dark mode is fully removed by product decision; do not add dark-theme colors, selectors, toggles, or runtime theme hooks back into the app.
 - Content redesign passes should preserve the existing sidebar and top-bar shell unless the user explicitly asks to change shell chrome; focus redesign work on the main content area.
 - Back buttons sitewide should use the softer white outlined treatment while preserving each screen's existing corner roundness.
+- Mobile app shell should expose a hamburger beside `New Form` that opens a full-screen left menu with push-style page motion; account modal should also be full-screen on mobile.
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.

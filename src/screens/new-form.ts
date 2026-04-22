@@ -63,13 +63,14 @@ export function newFormScreen() {
       </header>
 
       <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 zen-new-form-main">
+        <div class="zen-new-form-bg-overlay" aria-hidden="true"></div>
         <div class="zen-new-form-wave" aria-hidden="true"></div>
         <div class="max-w-[800px] w-full text-center space-y-10 relative z-10 zen-new-form-panel">
           <div class="new-form-hero-copy">
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
               Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
             </h1>
-            <p class="new-form-hero-subtitle">Paste a form link to instantly analyze fields, structure, and performance.</p>
+            <p class="new-form-hero-subtitle">Paste form link to analyze</p>
           </div>
 
           <div class="w-full max-w-2xl mx-auto relative z-20 zen-new-form-form">

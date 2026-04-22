@@ -50,7 +50,7 @@ export function authScreen() {
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh auth-shell">
       <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017] auth-hero-panel">
-        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-hero-bg.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div class="w-[110%] h-[50%] bg-black/40 blur-[80px] rounded-[100%] rounded-full"></div>
@@ -65,13 +65,9 @@ export function authScreen() {
           </div>
 
           <div class="w-full max-w-[28rem] px-4">
-            <span class="material-symbols-outlined text-primary-200 mb-6 text-4xl">auto_awesome</span>
             <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
               Fill forms with<br/>AI magic.
             </h1>
-            <p class="mt-8 text-[1.35rem] leading-8 text-slate-200 max-w-md">
-              FormMate's AI understands your forms so you don't have to. Save time. Reduce errors. Get things done.
-            </p>
           </div>
 
           <div></div>
@@ -81,7 +77,7 @@ export function authScreen() {
       <div class="flex-1 flex items-center justify-center px-6 py-12 auth-form-shell">
         <div class="w-full max-w-[420px] auth-form-panel">
           <div class="lg:hidden relative mb-6 h-40 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/login-bg.png');"></div>
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-hero-bg.png');"></div>
             <div class="absolute inset-0 bg-black/40"></div>
             <div class="relative z-10 h-full flex items-end p-4">
               <p class="text-white text-lg font-bold tracking-tight">Fill forms with AI magic.</p>

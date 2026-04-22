@@ -398,6 +398,17 @@ export function withLayout(pageId, contentHtml, options = {}) {
     `;
   }).join('');
 
+  const mobileSidebarLinksHtml = sidebarLinks.map(link => {
+    const isActive = pageId === link.id;
+    return `
+      <button id="nav-mobile-${link.id}" class="layout-sidebar-link ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
+        ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
+        <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
+        <span class="layout-sidebar-label">${link.label}</span>
+      </button>
+    `;
+  }).join('');
+
   return `
     <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-fm-shell="app" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
@@ -413,8 +424,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
           <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" aria-label="Search pages, actions, or support" />
-          <button type="button" id="btn-layout-search-shortcut" class="layout-search-kbd" aria-label="Open quick search (Command K)">
-            <span class="layout-search-kbd-key">⌘</span>
+          <button type="button" id="btn-layout-search-shortcut" class="layout-search-kbd" aria-label="Open quick search (Control K)">
+            <span class="layout-search-kbd-key">Ctrl</span>
+            <span class="layout-search-kbd-plus">+</span>
             <span class="layout-search-kbd-key">K</span>
           </button>
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
@@ -426,6 +438,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
         </div>
 
         <div class="layout-header-actions">
+          <button type="button" id="btn-mobile-menu" class="layout-mobile-menu-toggle" aria-label="Open menu" aria-controls="mobile-sidebar" aria-expanded="false">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
           ${isAuthenticated ? `
           <button class="layout-header-primary-action" id="btn-header-new-form" aria-label="New Form">
             <span class="material-symbols-outlined">add_circle</span>
@@ -436,6 +451,41 @@ export function withLayout(pageId, contentHtml, options = {}) {
           `}
         </div>
       </header>
+
+      <aside id="mobile-sidebar" class="layout-mobile-sidebar" aria-hidden="true">
+        <div class="layout-mobile-sidebar-header">
+          <button type="button" class="layout-brand" id="btn-logo-home-mobile" aria-label="Go to home">
+            <div class="layout-brand-icon">
+              <img src="/logo.png" alt="FormMate Logo" />
+            </div>
+            <span class="layout-brand-text">Form<span class="text-primary">Mate</span></span>
+          </button>
+          <button type="button" id="btn-mobile-menu-close" class="layout-mobile-menu-close" aria-label="Close menu">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <nav class="layout-mobile-sidebar-nav">
+          ${mobileSidebarLinksHtml}
+          <div class="layout-sidebar-divider"></div>
+          <button id="nav-mobile-support" class="layout-sidebar-link" aria-label="Open Help Center">
+            <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
+            <span class="layout-sidebar-label">Help Center</span>
+          </button>
+        </nav>
+        <div class="layout-mobile-sidebar-footer">
+          <button id="nav-mobile-profile" class="layout-sidebar-user" type="button" aria-label="Open account">
+            <div class="layout-sidebar-avatar-wrap">
+              <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
+            </div>
+            <div class="layout-sidebar-user-info">
+              <span class="layout-sidebar-user-name">${displayName}</span>
+            </div>
+          </button>
+          <button id="btn-mobile-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
+            <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
+          </button>
+        </div>
+      </aside>
 
       <main class="layout-main">
         <!-- Sidebar Navigation -->
@@ -515,18 +565,31 @@ export function initLayout(wrapper, options = {}) {
         direction: 'forward',
       });
     });
+    wrapper.querySelector(`#nav-mobile-${link.route}`)?.addEventListener('click', () => {
+      closeMobileMenu();
+      navigateTo(link.route, {
+        source: 'sidebar',
+        transition: 'shell',
+        direction: 'forward',
+      });
+    });
   });
 
-  // Help Center -> docs
+  // Help Center -> account modal (help tab)
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
-    navigateTo('docs', {
-      source: 'sidebar',
-      direction: 'forward',
-    });
+    openAccountModal('help');
+  });
+  wrapper.querySelector('#nav-mobile-support')?.addEventListener('click', () => {
+    closeMobileMenu();
+    openAccountModal('help');
   });
 
   // Logo -> home
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
+    navigateTo(getHomeScreenForUser());
+  });
+  wrapper.querySelector('#btn-logo-home-mobile')?.addEventListener('click', () => {
+    closeMobileMenu();
     navigateTo(getHomeScreenForUser());
   });
 
@@ -535,6 +598,30 @@ export function initLayout(wrapper, options = {}) {
   });
 
   const layoutShell = wrapper.querySelector('.layout-shell');
+  const mobileMenuBtn = wrapper.querySelector('#btn-mobile-menu');
+  const mobileMenuCloseBtn = wrapper.querySelector('#btn-mobile-menu-close');
+  const mobileSidebar = wrapper.querySelector('#mobile-sidebar');
+  let mobileMenuOpen = false;
+  const setMobileMenuOpen = (open) => {
+    if (!layoutShell || !mobileSidebar) return;
+    mobileMenuOpen = Boolean(open);
+    layoutShell.classList.toggle('mobile-menu-open', mobileMenuOpen);
+    mobileSidebar.setAttribute('aria-hidden', mobileMenuOpen ? 'false' : 'true');
+    mobileMenuBtn?.setAttribute('aria-expanded', mobileMenuOpen ? 'true' : 'false');
+    document.body.classList.toggle('fm-mobile-menu-open', mobileMenuOpen);
+  };
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+  }
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+  const handleMobileMenuEscape = (event) => {
+    if (event.key === 'Escape' && mobileMenuOpen) {
+      closeMobileMenu();
+    }
+  };
+
   const sidebarToggleBtn = wrapper.querySelector('#btn-sidebar-toggle');
   const syncSidebarUi = (expanded) => {
     layoutShell?.classList.toggle(SIDEBAR_COLLAPSED_CLASS, !expanded);
@@ -561,6 +648,9 @@ export function initLayout(wrapper, options = {}) {
 
   sidebarToggleBtn?.addEventListener('click', handleSidebarToggle);
   syncSidebarUi(isSidebarExpanded());
+  mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+  mobileMenuCloseBtn?.addEventListener('click', closeMobileMenu);
+  document.addEventListener('keydown', handleMobileMenuEscape);
 
   const searchInput = wrapper.querySelector('#layout-search');
   const searchShortcut = wrapper.querySelector('#btn-layout-search-shortcut');
@@ -722,8 +812,16 @@ export function initLayout(wrapper, options = {}) {
   wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
     openAccountModal('profile');
   });
+  wrapper.querySelector('#nav-mobile-profile')?.addEventListener('click', () => {
+    closeMobileMenu();
+    openAccountModal('profile');
+  });
 
   wrapper.querySelector('#btn-sidebar-settings')?.addEventListener('click', () => {
+    openAccountModal('settings');
+  });
+  wrapper.querySelector('#btn-mobile-settings')?.addEventListener('click', () => {
+    closeMobileMenu();
     openAccountModal('settings');
   });
 
@@ -736,16 +834,24 @@ export function initLayout(wrapper, options = {}) {
   if (!zenMode) {
     return () => {
       sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+      mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
+      mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
       document.removeEventListener('click', handleDocumentClick);
       document.removeEventListener('keydown', handleSearchShortcut);
+      document.removeEventListener('keydown', handleMobileMenuEscape);
+      document.body.classList.remove('fm-mobile-menu-open');
       document.body.classList.remove('fm-zen-mode');
     };
   }
   const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
     sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+    mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
+    mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
     document.removeEventListener('click', handleDocumentClick);
     document.removeEventListener('keydown', handleSearchShortcut);
+    document.removeEventListener('keydown', handleMobileMenuEscape);
+    document.body.classList.remove('fm-mobile-menu-open');
     cleanupZen?.();
   };
 }

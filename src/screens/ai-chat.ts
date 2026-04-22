@@ -92,8 +92,8 @@ export function aiChatScreen() {
   const avatarSrc = safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
 
   const chatContent = `
-    <div class="flex-1 flex overflow-hidden zen-chat-shell">
-      <div class="zen-chat-main" data-fm-transition-main="true" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+    <div class="flex-1 flex overflow-hidden zen-chat-shell" data-fm-transition-main="true">
+      <div class="zen-chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
         <div class="zen-chat-header" data-zen-hide="always" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             <h2 style="font-size: 1.1rem; font-weight: 800; color: var(--fm-text);">FormMate AI</h2>
