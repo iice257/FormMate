@@ -20,7 +20,7 @@ function getSupabaseUrl() {
 }
 
 function getSupabaseAnonKey() {
-  return String(getEnv('VITE_SUPABASE_ANON_KEY') || '').trim();
+  return String(getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || '').trim();
 }
 
 export function isSupabaseConfigured() {

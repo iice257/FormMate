@@ -7,7 +7,7 @@ function getStorageMode() {
   const raw = String(process.env.VITE_STORAGE_PROVIDER || '').trim().toLowerCase();
   const supabaseConfigured = Boolean(
     String(process.env.VITE_SUPABASE_URL || '').trim() &&
-    String(process.env.VITE_SUPABASE_ANON_KEY || '').trim(),
+    String(process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim(),
   );
   if (raw === 'supabase') return 'supabase';
   if (!raw && supabaseConfigured) return 'supabase';
@@ -18,7 +18,7 @@ function buildConfigHealth() {
   const groqConfigured = Boolean(String(process.env.GROQ_API_KEY || '').trim());
   const supabaseConfigured = Boolean(
     String(process.env.VITE_SUPABASE_URL || '').trim() &&
-    String(process.env.VITE_SUPABASE_ANON_KEY || '').trim(),
+    String(process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim(),
   );
   const storageMode = getStorageMode();
   const imageParserConfigured = groqConfigured;

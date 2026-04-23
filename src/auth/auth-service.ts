@@ -199,6 +199,42 @@ function authError(message, code = 'AUTH_UNAVAILABLE') {
   return error;
 }
 
+export function getAuthErrorMessage(error, fallback = 'Sign-in is temporarily unavailable. Please try again shortly.') {
+  const raw = String(error?.message || error?.msg || error?.error_description || error?.error || '').trim();
+  const code = String(error?.code || error?.error_code || error?.data?.code || error?.data?.error_code || '').trim();
+  const normalized = `${code} ${raw}`.toLowerCase();
+
+  if (normalized.includes('unsupported provider') || normalized.includes('provider is not enabled')) {
+    return 'Google sign-in is not enabled yet. Please use email sign-in for now.';
+  }
+
+  if (normalized.includes('email not confirmed')) {
+    return 'Please verify your email before signing in.';
+  }
+
+  if (normalized.includes('invalid login credentials') || normalized.includes('invalid credentials')) {
+    return 'The email or password is incorrect.';
+  }
+
+  if (normalized.includes('otp') || normalized.includes('token')) {
+    return 'The verification code is invalid or expired. Please request a new code.';
+  }
+
+  if (normalized.includes('rate') || normalized.includes('too many')) {
+    return 'Too many attempts. Please wait a moment and try again.';
+  }
+
+  if (
+    normalized.includes('supabase_not_configured') ||
+    normalized.includes('not configured') ||
+    normalized.includes('auth_unavailable')
+  ) {
+    return fallback;
+  }
+
+  return raw && raw.length < 140 ? raw : fallback;
+}
+
 function getClientOrThrow() {
   const client = getSupabaseClient();
   if (!client) {

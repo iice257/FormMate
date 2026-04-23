@@ -2,7 +2,8 @@
 
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
-import { getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
+import { getAuthErrorMessage, getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
+import { isSupabaseConfigured } from '../auth/supabase-client';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
@@ -10,11 +11,12 @@ import { escapeHtml } from '../utils/escape';
 export function authScreen() {
   const appHealth = getState().appHealth || {};
   const devTestUsers = getDevTestUsers();
+  const browserAuthConfigured = isSupabaseConfigured();
   const authStatusMessage = !appHealth?.loaded
     ? ''
-    : !appHealth?.apiReachable
+    : !appHealth?.apiReachable && !browserAuthConfigured
       ? 'FormMate services are reconnecting. AI and cloud sync may be temporarily unavailable.'
-      : !appHealth?.authAvailable
+      : !appHealth?.authAvailable && !browserAuthConfigured
         ? 'Cloud sign-in is temporarily unavailable. Please try again shortly.'
         : '';
   const supabaseNoticeHtml = authStatusMessage ? `
@@ -302,7 +304,8 @@ export function authScreen() {
         const session = await signIn(email, password);
         completeAuthFlow(session, 'Welcome back, ' + (session.user.name || session.user.email) + '!');
       } catch (err) {
-        showError(errorEl, err.message);
+        console.warn('[Auth] Email sign-in failed:', err);
+        showError(errorEl, getAuthErrorMessage(err));
         btn.disabled = false;
         btn.innerHTML = 'Sign In <span class="material-symbols-outlined text-lg">arrow_forward</span>';
       }
@@ -337,7 +340,8 @@ export function authScreen() {
         otpInputs[0]?.focus();
         toast.success('Verification code sent.');
       } catch (err) {
-        showError(errorEl, err.message);
+        console.warn('[Auth] Signup OTP start failed:', err);
+        showError(errorEl, getAuthErrorMessage(err));
       } finally {
         btn.disabled = false;
         btn.innerHTML = 'Create Account <span class="material-symbols-outlined text-lg">arrow_forward</span>';
@@ -408,7 +412,8 @@ export function authScreen() {
         pendingOtpSignup = null;
         completeAuthFlow(session, 'Account verified. Welcome to FormMate.');
       } catch (err) {
-        showError(errorEl, err.message || 'Verification failed. Please try again.');
+        console.warn('[Auth] Signup OTP verification failed:', err);
+        showError(errorEl, getAuthErrorMessage(err, 'Verification failed. Please try again.'));
       } finally {
         btn.disabled = false;
         btn.innerHTML = 'Verify & Continue <span class="material-symbols-outlined text-lg">arrow_forward</span>';
@@ -434,7 +439,8 @@ export function authScreen() {
         otpInputs[0]?.focus();
         toast.success('New verification code sent.');
       } catch (err) {
-        showError(errorEl, err.message || 'Could not resend the code.');
+        console.warn('[Auth] Signup OTP resend failed:', err);
+        showError(errorEl, getAuthErrorMessage(err, 'Could not resend the code.'));
       } finally {
         btn.disabled = false;
         btn.textContent = originalText;
@@ -463,7 +469,8 @@ export function authScreen() {
       } catch (err) {
         msgEl.style.background = 'var(--fm-error-light)';
         msgEl.style.color = 'var(--fm-error)';
-        msgEl.textContent = err.message;
+        console.warn('[Auth] Password reset failed:', err);
+        msgEl.textContent = getAuthErrorMessage(err, 'Password reset is temporarily unavailable.');
         msgEl.classList.remove('hidden');
       }
     });
@@ -478,7 +485,8 @@ export function authScreen() {
         btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Redirecting...';
         await signInWithGoogle();
       } catch (err) {
-        showError(errorEl, err.message || 'Google sign-in failed.');
+        console.warn('[Auth] Google sign-in failed:', err);
+        showError(errorEl, getAuthErrorMessage(err, 'Google sign-in is temporarily unavailable. Please use email sign-in for now.'));
         btn.disabled = false;
         btn.innerHTML = originalHtml;
       }
@@ -495,7 +503,8 @@ export function authScreen() {
           const session = await signInWithDevTestUser(button.dataset.devTestUser);
           completeAuthFlow(session, `Signed in as ${session.user.name || 'Dev user'}.`);
         } catch (err) {
-          showError(errorEl, err.message || 'Dev sign-in failed.');
+          console.warn('[Auth] Dev sign-in failed:', err);
+          showError(errorEl, getAuthErrorMessage(err, 'Dev sign-in failed.'));
           button.disabled = false;
           button.innerHTML = originalHtml;
         }

@@ -8,10 +8,16 @@ if (!shouldValidate) {
 const requiredEnv = [
   'GROQ_API_KEY',
   'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
 ];
 
 const missing = requiredEnv.filter((key) => !String(process.env[key] || '').trim());
+const hasSupabasePublishableKey = Boolean(
+  String(process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim(),
+);
+
+if (!hasSupabasePublishableKey) {
+  missing.push('VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY');
+}
 
 if (!missing.length) {
   process.exit(0);

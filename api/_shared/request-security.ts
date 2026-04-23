@@ -134,7 +134,7 @@ async function validateSupabaseAccessToken(token) {
   }
 
   const supabaseUrl = getEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
-  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
+  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
   if (!supabaseUrl || !supabaseAnonKey) {
     return false;
   }
