@@ -28,7 +28,9 @@ function renderLegalTabs(active) {
 
 function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
   const authed = getState().isAuthenticated;
-  const dashboardLabel = authed ? 'Go to Dashboard' : 'Sign In';
+  const authButtonHtml = !authed
+    ? `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`
+    : `<button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>`;
 
   return `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
@@ -44,14 +46,40 @@ function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
           <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Legal</span>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-3 md:gap-4 text-sm font-semibold">
-          <button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
+        <div class="flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'docs'
+              ? 'bg-primary text-white border-primary shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
+            data-legal-nav="docs"
+          >
+            Docs
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'privacy'
+              ? 'bg-primary text-white border-primary shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
+            data-legal-nav="privacy"
+          >
+            Privacy Policy
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'terms'
+              ? 'bg-primary text-white border-primary shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
+            data-legal-nav="terms"
+          >
+            Terms
+          </button>
+          ${authButtonHtml}
         </div>
       </header>
 
       <main class="flex-1 overflow-y-auto bg-white">
         <div class="max-w-3xl mx-auto px-6 lg:px-12 py-12 pb-24">
-          ${renderLegalTabs(activeTab)}
           <div class="mb-10 text-center">
             <h1 class="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">${title}</h1>
             <p class="text-base lg:text-lg text-slate-500 max-w-2xl mx-auto">${subtitle}</p>
@@ -111,6 +139,7 @@ export function privacyScreen() {
 
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelectorAll('[data-legal-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.legalNav));

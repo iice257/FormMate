@@ -545,16 +545,36 @@ export function docsScreen() {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
     const docsSigninBtn = wrapper.querySelector('#btn-docs-signin');
+    let docsSigninAnimating = false;
+    let docsSigninQueuedState = null;
+    let docsSigninState = 'idle';
     const toggleDocsSigninShimmer = (active) => {
       if (!docsSigninBtn) return;
+      const targetState = active ? 'enter' : 'exit';
+      if (docsSigninAnimating) {
+        docsSigninQueuedState = targetState;
+        return;
+      }
+      if (docsSigninState === targetState) return;
+      docsSigninAnimating = true;
+      docsSigninState = targetState;
       docsSigninBtn.classList.remove('docs-signin-cta-enter', 'docs-signin-cta-exit');
       void docsSigninBtn.offsetWidth;
-      docsSigninBtn.classList.add(active ? 'docs-signin-cta-enter' : 'docs-signin-cta-exit');
+      docsSigninBtn.classList.add(targetState === 'enter' ? 'docs-signin-cta-enter' : 'docs-signin-cta-exit');
     };
     const handleDocsSigninEnter = () => toggleDocsSigninShimmer(true);
     const handleDocsSigninLeave = () => toggleDocsSigninShimmer(false);
+    const handleDocsSigninAnimationEnd = () => {
+      docsSigninAnimating = false;
+      const nextState = docsSigninQueuedState;
+      docsSigninQueuedState = null;
+      if (nextState && nextState !== docsSigninState) {
+        toggleDocsSigninShimmer(nextState === 'enter');
+      }
+    };
     docsSigninBtn?.addEventListener('mouseenter', handleDocsSigninEnter);
     docsSigninBtn?.addEventListener('mouseleave', handleDocsSigninLeave);
+    docsSigninBtn?.addEventListener('animationend', handleDocsSigninAnimationEnd);
     wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.docsNav));
     });
@@ -1039,6 +1059,7 @@ export function docsScreen() {
     return () => {
       docsSigninBtn?.removeEventListener('mouseenter', handleDocsSigninEnter);
       docsSigninBtn?.removeEventListener('mouseleave', handleDocsSigninLeave);
+      docsSigninBtn?.removeEventListener('animationend', handleDocsSigninAnimationEnd);
       cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();

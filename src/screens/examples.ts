@@ -148,7 +148,7 @@ export function examplesScreen() {
           </div>
 
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <button type="button" class="px-6 py-2 rounded-full bg-slate-100 text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
           </nav>
 
