@@ -441,8 +441,8 @@ export function landingScreen() {
             </div>
             
             <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
-              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
-              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
+              <button type="button" id="btn-footer-privacy" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
+              <button type="button" id="btn-footer-terms" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Cookie Settings</button>
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0" id="btn-footer-help">Help Center</button>
             </div>
@@ -459,6 +459,8 @@ export function landingScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     wrapper.querySelector('#btn-footer-help')?.addEventListener('click', () => navigateTo('docs'));
+    wrapper.querySelector('#btn-footer-privacy')?.addEventListener('click', () => navigateTo('privacy'));
+    wrapper.querySelector('#btn-footer-terms')?.addEventListener('click', () => navigateTo('terms'));
 
     wrapper.querySelector('#btn-hero-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#btn-hero-chat')?.addEventListener('click', () => navigateTo('ai-chat'));

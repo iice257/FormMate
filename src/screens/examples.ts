@@ -1,10 +1,12 @@
 // @ts-nocheck
-import { setState } from '../state';
+import { getState, setState } from '../state';
 import { navigateTo } from '../router';
 import { MOCK_FORMS } from '../parser/mock-forms';
 import { initLayout, withLayout } from '../components/layout';
+import { toast } from '../components/toast';
 
 export function examplesScreen() {
+  const authed = getState().isAuthenticated;
   const examplesContent = `
     <div class="app-page-scroll no-scrollbar scroll-smooth" data-fm-transition-main="true" data-fm-scroll-region="main">
       <main class="w-full max-w-6xl mx-auto px-6 py-12 md:py-20">
@@ -17,8 +19,14 @@ export function examplesScreen() {
             See FormMate in Action
           </h1>
           <p class="text-lg text-slate-500">
-            Click any form below to instantly see how FormMate's AI parses the URL, understands the fields, and generates smart answers.
+            Browse the demo catalog freely. You will need to sign in before launching any example or using FormMate AI features.
           </p>
+          ${authed ? '' : `
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
+              <span class="material-symbols-outlined text-[16px]">lock</span>
+              Examples are visible while signed out, but trying one requires sign-in.
+            </div>
+          `}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children" id="examples-grid">
@@ -186,6 +194,11 @@ export function examplesScreen() {
 
     wrapper.querySelectorAll('.demo-card').forEach((card) => {
       card.addEventListener('click', () => {
+        if (!getState().isAuthenticated) {
+          toast.info('Sign in to launch examples and use FormMate AI.');
+          navigateTo('auth');
+          return;
+        }
         setState({ formUrl: card.dataset.url, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
         navigateTo('analyzing');
       });

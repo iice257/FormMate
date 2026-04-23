@@ -14,6 +14,7 @@ import { analyticsScreen } from '../screens/analytics';
 import { docsScreen } from '../screens/docs';
 import { helpScreen } from '../screens/help';
 import { examplesScreen } from '../screens/examples';
+import { privacyScreen, termsScreen } from '../screens/legal';
 import { newFormScreen } from '../screens/new-form';
 import { dashboardScreen } from '../screens/dashboard';
 import { aiChatScreen } from '../screens/ai-chat';
@@ -41,6 +42,8 @@ function registerScreens() {
   registerScreen('accounts', accountsScreen);
   registerScreen('analytics', analyticsScreen);
   registerScreen('docs', docsScreen);
+  registerScreen('privacy', privacyScreen);
+  registerScreen('terms', termsScreen);
   registerScreen('help', helpScreen);
   registerScreen('examples', examplesScreen);
   registerScreen('new', newFormScreen);

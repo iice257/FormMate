@@ -119,6 +119,11 @@ export function docsScreen() {
         <!-- Content -->
         <main class="flex-1 overflow-y-auto bg-white scroll-smooth relative" id="docs-content">
           <div class="max-w-3xl mx-auto px-6 lg:px-12 py-12 pb-32">
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-10">
+              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
+              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
+              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms of Service</button>
+            </div>
             
             <article id="welcome" class="mb-20 scroll-mt-24">
                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold tracking-widest uppercase mb-4">
@@ -471,14 +476,21 @@ export function docsScreen() {
             </div>
             <div>
               <span class="font-bold tracking-tight text-sm block text-slate-900">Docs Assistant</span>
-              <span class="text-[10px] text-slate-500 font-medium">Ask me about FormMate</span>
+              <span class="text-[10px] text-slate-500 font-medium">${authed ? 'Ask me about FormMate' : 'Sign in to use Docs AI'}</span>
             </div>
           </div>
+          ${authed ? '' : `
+            <div class="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
+              Docs are available while signed out. AI chat requires sign-in.
+            </div>
+          `}
           
           <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-white">
             <div class="flex flex-col gap-1 animate-message-in">
               <div class="max-w-[85%] bg-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/50">
-                Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!
+                ${authed
+                  ? `Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!`
+                  : `Hi! You can read the docs while signed out. Sign in to use the Docs assistant, main AI chat, and example launches.`}
               </div>
             </div>
           </div>
@@ -491,13 +503,19 @@ export function docsScreen() {
             </div>
 
             <div id="docs-chat-followups" class="chat-followups chat-followups-docs mb-2"></div>
-            <div class="relative group">
-              <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
-              <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
-              <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
-                <span class="material-symbols-outlined text-[16px]">send</span>
+            ${authed ? `
+              <div class="relative group">
+                <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
+                <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
+                <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
+                  <span class="material-symbols-outlined text-[16px]">send</span>
+                </button>
+              </div>
+            ` : `
+              <button id="btn-docs-signin" type="button" class="w-full rounded-xl bg-primary text-white px-4 py-3 text-xs font-bold shadow-sm hover:brightness-110 transition-all btn-press">
+                Sign In to Use Docs AI
               </button>
-            </div>
+            `}
           </div>
         </aside>
       </div>
@@ -507,6 +525,10 @@ export function docsScreen() {
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
+    wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
+    wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
+      button.addEventListener('click', () => navigateTo(button.dataset.docsNav));
+    });
     wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => {
       const target = wrapper.querySelector('#contact');
       target?.scrollIntoView({ behavior: 'smooth' });
@@ -594,6 +616,11 @@ export function docsScreen() {
     });
 
     btnAskAiSearch?.addEventListener('click', () => {
+      if (!authed) {
+        toast.info('Sign in to use the Docs assistant.');
+        navigateTo('auth');
+        return;
+      }
       searchDropdown.classList.add('hidden');
       chatInput?.focus();
     });

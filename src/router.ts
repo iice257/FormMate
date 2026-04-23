@@ -44,7 +44,7 @@ const routes: Record<string, ScreenRenderer> = {};
 let currentCleanup: null | (() => void) = null;
 let historySequence = 0;
 
-const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'examples', 'privacy', 'terms'];
 const APP_SHELL_SCREENS = new Set([
   'dashboard',
   'new',
@@ -298,6 +298,8 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     'accounts': 'My Account | FormMate',
     'analytics': 'Analytics | FormMate',
     'docs': 'Documentation | FormMate',
+    'privacy': 'Privacy Policy | FormMate',
+    'terms': 'Terms of Service | FormMate',
     'help': 'Help Center | FormMate',
     'examples': 'Examples | FormMate',
     'onboarding': 'Welcome | FormMate',

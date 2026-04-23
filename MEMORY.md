@@ -44,6 +44,8 @@
 - Mobile app shell should expose a hamburger beside `New Form` that opens a full-screen left menu with push-style page motion; account modal should also be full-screen on mobile.
 - Zen mode should reuse the subtle new-form background image treatment across zen screens only (same image and very low-opacity overlay), without changing non-zen screens.
 - Cloud sync degraded banners/notices should be hidden sitewide (including auth and layout-level warning surfaces).
+- Docs and examples should remain publicly browsable while signed out, but AI usage and example launches must require sign-in with explicit UI messaging.
+- Legal pages should live as lightweight direct-link surfaces (`privacy`, `terms`) accessible from the docs-style navigation.
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.
