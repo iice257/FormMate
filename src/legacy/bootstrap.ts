@@ -145,7 +145,8 @@ async function boot() {
     registerAccountModalOpener(openModal);
 
     try {
-      const { getSession } = await import('../auth/auth-service');
+      const { ensureAuthBootstrapped, getSession } = await import('../auth/auth-service');
+      await ensureAuthBootstrapped();
       const session = getSession();
 
       if (session) {

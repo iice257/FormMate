@@ -4540,16 +4540,8 @@ button#btn-back-login .material-symbols-outlined,
   gap: 2rem;
 }
 
-.auth-hero-gradient-text {
-  background: linear-gradient(120deg, #f5fbff 0%, #b8d6ff 46%, #7cb8f5 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-
-.auth-hero-subtle-shadow {
-  text-shadow: 0 1px 3px rgba(9, 30, 62, 0.28);
+.auth-hero-mate-stroke {
+  text-shadow: 0 1px 2px rgba(6, 24, 44, 0.38);
 }
 
 .auth-form-shell {
@@ -4562,6 +4554,29 @@ button#btn-back-login .material-symbols-outlined,
 
 .auth-form-panel form {
   background: rgba(255, 255, 255, 0.62);
+}
+
+.otp-code-input {
+  appearance: textfield;
+  transition:
+    border-color var(--fm-transition-fast),
+    box-shadow var(--fm-transition-fast),
+    background-color var(--fm-transition-fast),
+    transform var(--fm-transition-fast);
+}
+
+.otp-code-input::-webkit-outer-spin-button,
+.otp-code-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.otp-code-input:focus {
+  outline: none;
+  border-color: rgba(var(--fm-primary-rgb), 0.48) !important;
+  background: #fff !important;
+  box-shadow: var(--fm-focus-ring);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1200px) {

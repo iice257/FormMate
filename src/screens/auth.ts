@@ -2,7 +2,7 @@
 
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
-import { getDevTestUsers, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signUp } from '../auth/auth-service';
+import { getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
@@ -50,34 +50,29 @@ export function authScreen() {
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh auth-shell">
       <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017] auth-hero-panel">
-        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-hero-bg.png');"></div>
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-bg-image.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
-        <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div class="w-[110%] h-[46%] bg-black/14 blur-[68px] rounded-[100%] rounded-full"></div>
-        </div>
 
-        <div class="relative z-20 flex w-full flex-col justify-between h-full auth-hero-copy">
+        <div class="relative z-20 flex w-full flex-col h-full auth-hero-copy">
           <div class="flex items-center gap-3 self-start">
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-[2rem] font-black tracking-tighter auth-hero-gradient-text auth-hero-subtle-shadow">FormMate</h2>
+            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="text-link-gradient animate-gradient-x auth-hero-mate-stroke">Mate</span></h2>
           </div>
 
-          <div class="w-full max-w-[28rem] px-4">
-            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight auth-hero-subtle-shadow">
-              Fill forms with<br/><span class="auth-hero-gradient-text">AI magic.</span>
+          <div class="w-full max-w-[28rem] px-4 lg:mt-24">
+            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
+              Fill forms with<br/><span class="text-link-gradient animate-gradient-x">AI magic.</span>
             </h1>
           </div>
-
-          <div></div>
         </div>
       </div>
 
       <div class="flex-1 flex items-center justify-center px-6 py-12 auth-form-shell">
         <div class="w-full max-w-[420px] auth-form-panel">
           <div class="lg:hidden relative mb-6 h-40 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-hero-bg.png');"></div>
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-bg-image.png');"></div>
             <div class="absolute inset-0 bg-black/40"></div>
             <div class="relative z-10 h-full flex items-end p-4">
               <p class="text-white text-lg font-bold tracking-tight">Fill forms with AI magic.</p>
@@ -138,7 +133,7 @@ export function authScreen() {
 
           <form id="signup-form" class="hidden" novalidate>
             <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Create account</h2>
-            <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Get started with FormMate in seconds</p>
+            <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Get started with FormMate in seconds. We will verify your email with a secure one-time code.</p>
 
             <div class="space-y-4">
               <div>
@@ -164,6 +159,49 @@ export function authScreen() {
 
             <p class="text-center text-xs mt-6" style="color: var(--fm-text-tertiary);">
               Already have an account? <button type="button" id="btn-to-login" class="font-semibold hover:underline" style="color: var(--fm-primary);">Sign in</button>
+            </p>
+          </form>
+
+          <form id="otp-form" class="hidden" novalidate>
+            <button type="button" id="btn-back-signup" class="flex items-center gap-1 text-xs font-semibold mb-6 hover:underline" style="color: var(--fm-primary);">
+              <span class="material-symbols-outlined text-sm">arrow_back</span> Back to account details
+            </button>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5" style="background: var(--fm-primary-50); color: var(--fm-primary); border: 1px solid rgba(var(--fm-primary-rgb), 0.16);">
+              <span class="material-symbols-outlined text-sm">mark_email_read</span>
+              <span class="text-[10px] font-black uppercase tracking-[0.16em]">Email Verification</span>
+            </div>
+            <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Enter your code</h2>
+            <p class="text-sm mb-6" style="color: var(--fm-text-tertiary);">
+              We sent a 6-digit code to <strong id="otp-email-label" style="color: var(--fm-text);"></strong>.
+            </p>
+
+            <div class="space-y-5">
+              <div class="grid grid-cols-6 gap-2" id="otp-code-group" aria-label="Verification code">
+                ${Array.from({ length: 6 }, (_, index) => `
+                  <input
+                    id="otp-code-${index}"
+                    class="otp-code-input h-13 rounded-xl text-center text-lg font-black"
+                    inputmode="numeric"
+                    autocomplete="${index === 0 ? 'one-time-code' : 'off'}"
+                    maxlength="1"
+                    pattern="[0-9]*"
+                    aria-label="Verification code digit ${index + 1}"
+                    style="height: 3.25rem; border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);"
+                  />
+                `).join('')}
+              </div>
+
+              <button type="submit" id="btn-verify-otp" class="w-full h-12 rounded-xl text-sm font-bold text-white btn-press flex items-center justify-center gap-2" style="background: var(--fm-gradient-primary); box-shadow: var(--fm-shadow-primary);">
+                Verify & Continue
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+              </button>
+
+              <div id="otp-error" class="hidden text-xs font-medium text-center p-3 rounded-lg" role="alert" aria-live="polite" style="background: var(--fm-error-light); color: var(--fm-error);"></div>
+            </div>
+
+            <p class="text-center text-xs mt-6" style="color: var(--fm-text-tertiary);">
+              Did not get it?
+              <button type="button" id="btn-resend-otp" class="font-semibold hover:underline" style="color: var(--fm-primary);">Send a new code</button>
             </p>
           </form>
 
@@ -200,11 +238,16 @@ export function authScreen() {
   function init(wrapper) {
     const loginForm = wrapper.querySelector('#login-form');
     const signupForm = wrapper.querySelector('#signup-form');
+    const otpForm = wrapper.querySelector('#otp-form');
     const forgotForm = wrapper.querySelector('#forgot-form');
+    const otpEmailLabel = wrapper.querySelector('#otp-email-label');
+    const otpInputs = Array.from(wrapper.querySelectorAll('.otp-code-input'));
+    let pendingOtpSignup = null;
 
     const showForm = (targetForm) => {
       loginForm.classList.toggle('hidden', targetForm !== loginForm);
       signupForm.classList.toggle('hidden', targetForm !== signupForm);
+      otpForm.classList.toggle('hidden', targetForm !== otpForm);
       forgotForm.classList.toggle('hidden', targetForm !== forgotForm);
     };
 
@@ -216,6 +259,7 @@ export function authScreen() {
       showForm(forgotForm);
     });
     wrapper.querySelector('#btn-back-login').addEventListener('click', () => showForm(loginForm));
+    wrapper.querySelector('#btn-back-signup').addEventListener('click', () => showForm(signupForm));
 
     const applySessionState = (session) => {
       const user = session.user;
@@ -280,15 +324,118 @@ export function authScreen() {
       }
 
       btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Creating...';
+      btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Sending code...';
 
       try {
-        const session = await signUp(email, password, name);
-        completeAuthFlow(session, 'Account created! Welcome to FormMate.');
+        await startOtpSignUp(email, password, name);
+        pendingOtpSignup = { email, password, name };
+        if (otpEmailLabel) otpEmailLabel.textContent = email;
+        otpInputs.forEach((input) => { input.value = ''; });
+        showForm(otpForm);
+        otpInputs[0]?.focus();
+        toast.success('Verification code sent.');
       } catch (err) {
         showError(errorEl, err.message);
+      } finally {
         btn.disabled = false;
         btn.innerHTML = 'Create Account <span class="material-symbols-outlined text-lg">arrow_forward</span>';
+      }
+    });
+
+    const getOtpCode = () => otpInputs.map((input) => input.value || '').join('').replace(/\D/g, '');
+    const fillOtpCode = (value) => {
+      const digits = String(value || '').replace(/\D/g, '').slice(0, 6).split('');
+      otpInputs.forEach((input, index) => {
+        input.value = digits[index] || '';
+      });
+      otpInputs[Math.min(digits.length, 5)]?.focus();
+    };
+
+    otpInputs.forEach((input, index) => {
+      input.addEventListener('input', () => {
+        const digits = input.value.replace(/\D/g, '');
+        if (digits.length > 1) {
+          fillOtpCode(digits);
+          return;
+        }
+        input.value = digits;
+        if (digits && index < otpInputs.length - 1) {
+          otpInputs[index + 1]?.focus();
+        }
+      });
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Backspace' && !input.value && index > 0) {
+          otpInputs[index - 1]?.focus();
+        }
+      });
+
+      input.addEventListener('paste', (event) => {
+        const text = event.clipboardData?.getData('text/plain') || '';
+        if (!/\d/.test(text)) return;
+        event.preventDefault();
+        fillOtpCode(text);
+      });
+    });
+
+    otpForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const errorEl = wrapper.querySelector('#otp-error');
+      const btn = wrapper.querySelector('#btn-verify-otp');
+      const code = getOtpCode();
+
+      if (!pendingOtpSignup?.email) {
+        showError(errorEl, 'Please restart account creation.');
+        showForm(signupForm);
+        return;
+      }
+
+      if (code.length !== 6) {
+        showError(errorEl, 'Enter the 6-digit verification code.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Verifying...';
+
+      try {
+        const session = await verifyOtpSignUp(pendingOtpSignup.email, code, {
+          password: pendingOtpSignup.password,
+          name: pendingOtpSignup.name,
+        });
+        pendingOtpSignup = null;
+        completeAuthFlow(session, 'Account verified. Welcome to FormMate.');
+      } catch (err) {
+        showError(errorEl, err.message || 'Verification failed. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Verify & Continue <span class="material-symbols-outlined text-lg">arrow_forward</span>';
+      }
+    });
+
+    wrapper.querySelector('#btn-resend-otp').addEventListener('click', async () => {
+      const btn = wrapper.querySelector('#btn-resend-otp');
+      const errorEl = wrapper.querySelector('#otp-error');
+      const originalText = btn.textContent;
+
+      if (!pendingOtpSignup?.email) {
+        showError(errorEl, 'Please restart account creation.');
+        showForm(signupForm);
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        await resendOtpSignUp(pendingOtpSignup.email, pendingOtpSignup.name);
+        otpInputs.forEach((input) => { input.value = ''; });
+        otpInputs[0]?.focus();
+        toast.success('New verification code sent.');
+      } catch (err) {
+        showError(errorEl, err.message || 'Could not resend the code.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     });
 

@@ -33,6 +33,7 @@ const DEV_SESSION = {
 
 const authListeners = new Set();
 let authBootstrapStarted = false;
+let authBootstrapPromise = null;
 let inMemorySession = null;
 
 function isBrowser() {
@@ -308,7 +309,13 @@ async function restoreSessionFromUrl() {
 }
 
 async function bootstrapSession() {
-  if (authBootstrapStarted || !isBrowser()) return;
+  if (authBootstrapPromise) return authBootstrapPromise;
+  authBootstrapPromise = bootstrapSessionInternal();
+  return authBootstrapPromise;
+}
+
+async function bootstrapSessionInternal() {
+  if (authBootstrapStarted || !isBrowser()) return getSession();
   authBootstrapStarted = true;
 
   try {
@@ -316,20 +323,27 @@ async function bootstrapSession() {
     if (sessionFromUrl) {
       storeSession(sessionFromUrl);
       await hydrateAccountData(sessionFromUrl, { seedIfMissing: true });
-      return;
+      return sessionFromUrl;
     }
 
     const cachedSession = getSession();
     if (cachedSession?.user?.id) {
       storeSession(cachedSession);
       await hydrateAccountData(cachedSession, { seedIfMissing: true });
+      return cachedSession;
     }
   } catch (error) {
     console.warn('[Auth] Supabase session bootstrap failed:', error);
   }
+
+  return getSession();
 }
 
 void bootstrapSession();
+
+export function ensureAuthBootstrapped() {
+  return bootstrapSession();
+}
 
 export async function signUp(email, password, name = '') {
   if (!email || !password) {
@@ -367,6 +381,99 @@ export async function signUp(email, password, name = '') {
   }
 
   return session;
+}
+
+export async function startOtpSignUp(email, password, name = '') {
+  if (!email || !password) {
+    throw authError('Email and password are required.', 'INVALID_CREDENTIALS');
+  }
+
+  if (password.length < 6) {
+    throw authError('Password must be at least 6 characters.', 'INVALID_CREDENTIALS');
+  }
+
+  await delay(250);
+
+  const client = getClientOrThrow();
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      data: {
+        name: String(name || '').trim() || undefined,
+      },
+      emailRedirectTo: getAuthRedirectUrl(),
+    },
+  });
+
+  if (error) throw error;
+
+  return {
+    email,
+    name: String(name || '').trim(),
+  };
+}
+
+export async function verifyOtpSignUp(email, token, { password = '', name = '' } = {}) {
+  if (!email || !token) {
+    throw authError('Email and verification code are required.', 'INVALID_OTP');
+  }
+
+  await delay(150);
+
+  const client = getClientOrThrow();
+  const normalizedToken = String(token || '').replace(/\D/g, '');
+  const { data, error } = await client.auth.verifyOtp({
+    email,
+    token: normalizedToken,
+    type: 'email',
+    options: {
+      redirectTo: getAuthRedirectUrl(),
+    },
+  });
+
+  if (error) throw error;
+  if (!data?.session) {
+    throw authError('The verification code was accepted, but no session was returned.', 'AUTH_SESSION_MISSING');
+  }
+
+  const session = normalizeSession(data.session);
+  storeSession(session);
+
+  if (password || String(name || '').trim()) {
+    try {
+      const updatePayload = {};
+      if (password) updatePayload.password = password;
+      if (String(name || '').trim()) updatePayload.data = { name: String(name || '').trim() };
+      await client.auth.updateUser({ accessToken: session.access_token, ...updatePayload });
+    } catch (updateError) {
+      console.warn('[Auth] Could not finalize OTP account metadata/password:', updateError);
+    }
+  }
+
+  await hydrateAccountData(session, { seedIfMissing: true });
+  return session;
+}
+
+export async function resendOtpSignUp(email, name = '') {
+  if (!email) {
+    throw authError('Email is required.', 'INVALID_CREDENTIALS');
+  }
+
+  const client = getClientOrThrow();
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      data: {
+        name: String(name || '').trim() || undefined,
+      },
+      emailRedirectTo: getAuthRedirectUrl(),
+    },
+  });
+
+  if (error) throw error;
+  return { email };
 }
 
 export async function signIn(email, password) {
