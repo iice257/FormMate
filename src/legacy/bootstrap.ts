@@ -2,7 +2,6 @@
 import { registerScreen, initRouter } from '../router';
 import { registerAccountModalOpener } from '../components/layout';
 import { initAccountModal } from '../components/account-modal';
-import { toast } from '../components/toast';
 import { authScreen } from '../screens/auth';
 import { onboardingScreen } from '../screens/onboarding';
 import { landingScreen } from '../screens/landing';
@@ -174,23 +173,6 @@ async function boot() {
       const runtimeHealth = await loadRuntimeHealth();
       setRuntimeHealth(runtimeHealth);
 
-      if (import.meta.env.DEV && runtimeHealth.apiReachable && runtimeHealth.degradedMode && !runtimeHealth.syncAvailable) {
-        const noticeKey = 'formmate_degraded_notice_shown';
-        let alreadyShown = false;
-        try {
-          alreadyShown = window.sessionStorage?.getItem(noticeKey) === '1';
-        } catch {
-          alreadyShown = false;
-        }
-        if (!alreadyShown) {
-          try {
-            window.sessionStorage?.setItem(noticeKey, '1');
-          } catch {
-            // Ignore storage write failures.
-          }
-          toast.warning('Cloud sync is temporarily unavailable. FormMate is running in secure local session mode.');
-        }
-      }
     } catch (runtimeError) {
       console.warn('[boot] Runtime health check failed; continuing with local assumptions.', runtimeError);
     }

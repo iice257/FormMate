@@ -42,6 +42,28 @@ Use this path instead:
 
 If Google returns `Unsupported provider: provider is not enabled`, the app is working but Supabase's Google provider is not enabled or is missing its Google Client ID/Secret.
 
+## Google One Tap and Automatic Sign-In
+
+FormMate also supports Google Identity Services:
+
+- Landing page: automatic Google sign-in is requested with One Tap `auto_select`.
+- Auth page: Google One Tap is shown without automatic selection.
+- Sign-out calls Google's `disableAutoSelect()` hook to prevent immediate re-login loops.
+
+Required app env:
+
+- `VITE_GOOGLE_CLIENT_ID`: the same Google Web OAuth Client ID configured in Supabase's Google provider.
+
+Required Google Cloud OAuth client settings:
+
+- Authorized JavaScript origins:
+  - `https://form-mate-ai.vercel.app`
+  - `http://localhost:5173`
+- Authorized redirect URI:
+  - `https://chrrljkxnpuqdhhptntc.supabase.co/auth/v1/callback`
+
+If `VITE_GOOGLE_CLIENT_ID` is missing, One Tap/automatic sign-in is skipped silently and standard email/Google redirect sign-in remains available.
+
 ## Provider Decision
 
 Keep Supabase Auth for now. It supports custom OTP screens, custom email templates, custom SMTP, and Send Email Hooks. If we later need fully controlled transactional auth emails outside Supabase's template system, use Supabase Send Email Hook with Resend/Postmark rather than replacing the whole auth provider.

@@ -178,6 +178,20 @@ function createAuthAdapter() {
       return { data: { url: url.toString() }, error: null };
     },
 
+    async signInWithIdToken({ provider, token, accessToken, nonce } = {}) {
+      const data = await authRequest('/auth/v1/token?grant_type=id_token', {
+        method: 'POST',
+        body: {
+          provider,
+          token,
+          access_token: accessToken || undefined,
+          nonce: nonce || undefined,
+        },
+      });
+
+      return normalizeAuthResponse(data);
+    },
+
     async exchangeCodeForSession(code, redirectTo = getAuthRedirectUrl()) {
       const verifier = isBrowser() ? sessionStorage.getItem(PKCE_VERIFIER_KEY) : null;
       const data = await authRequest('/auth/v1/token?grant_type=pkce', {

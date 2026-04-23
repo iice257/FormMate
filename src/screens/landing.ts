@@ -7,6 +7,9 @@ import { getDashboardActionScreenForUser, getFormsEntryScreenForUser, navigateTo
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { openAccountModal } from '../components/layout';
+import { signInWithGoogleCredential } from '../auth/auth-service';
+import { promptGoogleOneTap } from '../auth/google-one-tap';
+import { isOnboardingComplete } from '../storage/local-store';
 
 export function landingScreen() {
   const { isAuthenticated, userProfile } = getState();
@@ -464,6 +467,44 @@ export function landingScreen() {
     // Restore saved URL
     const state = getState();
     if (state.formUrl) urlInput.value = state.formUrl;
+
+    if (!state.isAuthenticated) {
+      void promptGoogleOneTap({
+        autoSelect: true,
+        context: 'signin',
+        onCredential: async (response, { nonce } = {}) => {
+          try {
+            const session = await signInWithGoogleCredential(response, { nonce });
+            if (!wrapper.isConnected) return;
+            applySessionState(session);
+            navigateTo(isOnboardingComplete() ? getDashboardActionScreenForUser() : 'onboarding');
+          } catch (error) {
+            console.warn('[Landing] Google automatic sign-in failed:', error);
+          }
+        },
+        onPromptMoment: (notification) => {
+          if (notification?.skipped || notification?.dismissed || notification?.displayReason) {
+            console.info('[Landing] Google One Tap prompt state:', notification);
+          }
+        },
+      }).catch((error) => {
+        console.warn('[Landing] Google automatic sign-in unavailable:', error);
+      });
+    }
+
+    function applySessionState(session) {
+      const user = session?.user || {};
+      setState({
+        isAuthenticated: true,
+        authUser: user,
+        userProfile: {
+          ...getState().userProfile,
+          name: user.name || '',
+          email: user.email || '',
+          avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2298da&color=fff&bold=true`,
+        },
+      });
+    }
 
     // Analyze button
     btnAnalyze.addEventListener('click', () => {

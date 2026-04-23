@@ -2,28 +2,14 @@
 
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
-import { getAuthErrorMessage, getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
-import { isSupabaseConfigured } from '../auth/supabase-client';
+import { getAuthErrorMessage, getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signInWithGoogleCredential, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
+import { promptGoogleOneTap } from '../auth/google-one-tap';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
 
 export function authScreen() {
-  const appHealth = getState().appHealth || {};
   const devTestUsers = getDevTestUsers();
-  const browserAuthConfigured = isSupabaseConfigured();
-  const authStatusMessage = !appHealth?.loaded
-    ? ''
-    : !appHealth?.apiReachable && !browserAuthConfigured
-      ? 'FormMate services are reconnecting. AI and cloud sync may be temporarily unavailable.'
-      : !appHealth?.authAvailable && !browserAuthConfigured
-        ? 'Cloud sign-in is temporarily unavailable. Please try again shortly.'
-        : '';
-  const supabaseNoticeHtml = authStatusMessage ? `
-            <div class="mb-4 rounded-xl px-4 py-3 text-xs font-medium" style="border: 1px solid var(--fm-warning-light); background: #fff8e7; color: #8a5b00;">
-              ${escapeHtml(authStatusMessage)}
-            </div>
-          ` : '';
   const devAccessHtml = devTestUsers.length ? `
             <div class="mt-5 rounded-2xl p-4" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated);">
               <div class="flex items-start justify-between gap-3">
@@ -92,7 +78,6 @@ export function authScreen() {
           <form id="login-form" novalidate>
             <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Continue to FormMate</h2>
             <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Please sign in or register to proceed.</p>
-            ${supabaseNoticeHtml}
 
             <div class="space-y-4">
               <div>
@@ -284,6 +269,27 @@ export function authScreen() {
       toast.success(successMessage);
       navigateAfterAuth();
     };
+
+    void promptGoogleOneTap({
+      autoSelect: false,
+      context: 'signin',
+      onCredential: async (response, { nonce } = {}) => {
+        try {
+          const session = await signInWithGoogleCredential(response, { nonce });
+          if (!wrapper.isConnected) return;
+          completeAuthFlow(session, 'Welcome to FormMate.');
+        } catch (err) {
+          console.warn('[Auth] Google One Tap sign-in failed:', err);
+        }
+      },
+      onPromptMoment: (notification) => {
+        if (notification?.skipped || notification?.dismissed || notification?.displayReason) {
+          console.info('[Auth] Google One Tap prompt state:', notification);
+        }
+      },
+    }).catch((error) => {
+      console.warn('[Auth] Google One Tap unavailable:', error);
+    });
 
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();

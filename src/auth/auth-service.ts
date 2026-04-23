@@ -2,6 +2,7 @@
 import { load, remove, clearSensitiveSessionCache } from '../storage/local-store';
 import { ensureAccountData, deleteRemoteUserData, hydrateFromRemote, isSupabaseStorageConfigured } from '../storage/storage-provider';
 import { getAuthRedirectUrl, getSupabaseClient, isSupabaseConfigured } from './supabase-client';
+import { disableGoogleAutoSelect } from './google-one-tap';
 
 const AUTH_KEY = 'auth_session';
 const DEV_TEST_USERS = [
@@ -555,6 +556,33 @@ export async function signInWithGoogle() {
   return new Promise(() => {});
 }
 
+export async function signInWithGoogleCredential(response, { nonce } = {}) {
+  const token = String(response?.credential || '').trim();
+  if (!token) {
+    throw authError('Google did not return a sign-in credential.', 'GOOGLE_CREDENTIAL_MISSING');
+  }
+
+  const client = getClientOrThrow();
+  const { data, error } = await client.auth.signInWithIdToken({
+    provider: 'google',
+    token,
+    nonce,
+  });
+
+  if (error) throw error;
+  if (!data?.session) {
+    throw authError('Unable to establish a Google session.', 'AUTH_SESSION_MISSING');
+  }
+
+  const session = normalizeSession({
+    ...data.session,
+    provider: 'google',
+  });
+  storeSession(session);
+  await hydrateAccountData(session, { seedIfMissing: true });
+  return session;
+}
+
 export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id) {
   if (!isDevAuthEnabled()) {
     throw authError('Dev test access is only available in local development.', 'DEV_AUTH_DISABLED');
@@ -589,6 +617,7 @@ export async function signInWithApple() {
 
 export async function signOut() {
   const session = getSession();
+  disableGoogleAutoSelect();
   writeStoredSession(null);
   clearSensitiveSessionCache();
   clearLocalAccountCache();
@@ -640,6 +669,7 @@ export async function updatePassword(email, newPassword) {
 export async function deleteAccount() {
   const session = getSession();
   if (!session?.user?.id) return;
+  disableGoogleAutoSelect();
 
   try {
     await deleteRemoteUserData(session.user.id);

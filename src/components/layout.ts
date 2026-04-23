@@ -352,7 +352,7 @@ export function bindZenModeControls(wrapper, zenMode) {
  * @returns {string} The full HTML with layout wrapper.
  */
 export function withLayout(pageId, contentHtml, options = {}) {
-  const { isAuthenticated, userProfile, appHealth } = getState();
+  const { isAuthenticated, userProfile } = getState();
   const zenScreenId = options.zenMode?.screenId || pageId;
   const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
@@ -362,20 +362,6 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
   const avatarSrc = avatarFromProfile || fallbackAvatar;
-  const showSyncDegradedBanner = Boolean(
-    import.meta.env.DEV &&
-    appHealth?.loaded &&
-    appHealth?.apiReachable &&
-    appHealth?.degradedMode &&
-    !appHealth?.syncAvailable,
-  );
-  const degradedBanner = showSyncDegradedBanner
-    ? `
-      <div class="layout-degraded-banner" role="status" aria-live="polite" style="margin: 0.9rem 1.25rem 0.25rem; border: 1px solid rgba(245, 158, 11, 0.28); background: rgba(255, 251, 235, 0.9); color: #92400e; border-radius: 0.9rem; padding: 0.6rem 0.8rem; font-size: 0.76rem; line-height: 1.35; font-weight: 600;">
-        Cloud sync is temporarily unavailable. Your account data is staying in secure local session mode until sync reconnects.
-      </div>
-    `
-    : '';
 
   const sidebarLinks = [
     { id: 'dashboard', icon: 'space_dashboard', label: 'Dashboard', route: 'dashboard' },
@@ -533,7 +519,6 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
         <!-- Main Content Area -->
         <div class="layout-content ${pageId !== 'ai-chat' ? 'layout-content-scrollable' : ''} ${options.contentClassName || ''}" id="internal-page-container">
-           ${degradedBanner}
            ${contentHtml}
         </div>
       </main>
