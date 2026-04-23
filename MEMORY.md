@@ -46,6 +46,8 @@
 - Cloud sync degraded banners/notices should be hidden sitewide (including auth and layout-level warning surfaces).
 - Docs and examples should remain publicly browsable while signed out, but AI usage and example launches must require sign-in with explicit UI messaging.
 - Legal pages should live as lightweight direct-link surfaces (`privacy`, `terms`) accessible from the docs-style navigation.
+- Public pages must never render the private app shell or expose sidebar/dashboard/workspace affordances while signed out.
+- Router auth gating must run before account-modal shortcut handling so `accounts`, `settings`, and `help` cannot bypass sign-in.
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.

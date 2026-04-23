@@ -12,7 +12,7 @@ import { executeAction, searchActions } from '../actions/action-index';
 let _accountModalOpenFn = null;
 const ZEN_MODE_STORAGE_KEY = 'fm_zen_mode_enabled';
 const ZEN_MODE_EVENT = 'fm:zen-mode-change';
-const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'new', 'workspace', 'history', 'ai-chat', 'vault', 'examples']);
+const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'new', 'workspace', 'history', 'ai-chat', 'vault']);
 const SIDEBAR_COLLAPSED_CLASS = 'layout-shell-sidebar-collapsed';
 const ZEN_SCREEN_LABELS = {
   'dashboard': 'Dashboard',
@@ -21,7 +21,6 @@ const ZEN_SCREEN_LABELS = {
   'history': 'History',
   'workspace': 'Active Form',
   'vault': 'Vault',
-  'examples': 'Examples',
 };
 const ZEN_SCREEN_ICONS = {
   'dashboard': 'space_dashboard',
@@ -30,7 +29,6 @@ const ZEN_SCREEN_ICONS = {
   'history': 'schedule',
   'workspace': 'description',
   'vault': 'shield',
-  'examples': 'auto_stories',
 };
 
 /**

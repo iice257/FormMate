@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBack } from '../router';
+import { navigateTo, goBack } from '../router';
 import { AI_SURFACES, generateText, getAiErrorMessage } from '../ai/ai-service';
 import { SESSION_CLOSED_EVENT } from '../auth/session-lifecycle';
 import { toast } from '../components/toast';
@@ -19,7 +19,6 @@ import {
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
-  const dashboardLabel = authed ? 'Go to Dashboard' : 'Sign In';
 
   const previousScreen = window.__fmPreviousScreen;
   let backText = 'Back';
@@ -60,8 +59,10 @@ export function docsScreen() {
           </div>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-3 md:gap-4 text-sm font-semibold">
-           <button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
+        <div class="flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms</button>
         </div>
       </header>
 
@@ -119,12 +120,6 @@ export function docsScreen() {
         <!-- Content -->
         <main class="flex-1 overflow-y-auto bg-white scroll-smooth relative" id="docs-content">
           <div class="max-w-3xl mx-auto px-6 lg:px-12 py-12 pb-32">
-            <div class="flex flex-wrap items-center justify-center gap-2 mb-10">
-              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
-              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
-              <button type="button" class="px-4 py-2 rounded-full text-xs font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms of Service</button>
-            </div>
-            
             <article id="welcome" class="mb-20 scroll-mt-24">
                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold tracking-widest uppercase mb-4">
                  <span class="material-symbols-outlined text-[14px]">waving_hand</span> Welcome
@@ -469,33 +464,37 @@ export function docsScreen() {
         <div id="handle-right" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block"></div>
         
         <!-- AI Docs Chat (Right Sidebar) -->
-        <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-white flex flex-col shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] hidden lg:flex">
-          <div class="p-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50 sticky top-0">
-            <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[18px]">smart_toy</span>
-            </div>
-            <div>
-              <span class="font-bold tracking-tight text-sm block text-slate-900">Docs Assistant</span>
-              <span class="text-[10px] text-slate-500 font-medium">${authed ? 'Ask me about FormMate' : 'Sign in to use Docs AI'}</span>
-            </div>
+        <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex">
+          <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
+            <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs Chat</span>
+            <span class="mt-1 block text-sm font-semibold text-slate-500">${authed ? 'Ask about FormMate features and workflows' : 'Sign in to start a docs conversation'}</span>
           </div>
-          ${authed ? '' : `
-            <div class="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800">
-              Docs are available while signed out. AI chat requires sign-in.
-            </div>
-          `}
-          
-          <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-white">
+
+          <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-transparent">
             <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[85%] bg-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/50">
-                ${authed
-                  ? `Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!`
-                  : `Hi! You can read the docs while signed out. Sign in to use the Docs assistant, main AI chat, and example launches.`}
-              </div>
+              ${authed
+                ? `
+                  <div class="max-w-[85%] bg-white rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/70">
+                    Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!
+                  </div>
+                `
+                : `
+                  <div class="flex min-h-full items-center justify-center px-4 py-8">
+                    <div class="w-full rounded-[2rem] border border-white/70 bg-white/80 px-6 py-10 text-center shadow-[0_30px_80px_-40px_rgba(37,99,235,0.35)] backdrop-blur-xl">
+                      <div class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.2))] flex items-center justify-center text-primary shadow-sm">
+                        <span class="material-symbols-outlined text-[26px]">forum</span>
+                      </div>
+                      <h3 class="text-xl font-black tracking-tight text-slate-900">Sign in to chat</h3>
+                      <p class="mt-3 text-sm font-semibold leading-6 text-slate-500">
+                        Read the docs freely. When you want live help, sign in and start a guided FormMate conversation.
+                      </p>
+                    </div>
+                  </div>
+                `}
             </div>
           </div>
 
-          <div class="p-3 border-t border-slate-200 bg-slate-50 relative">
+          <div class="p-3 border-t border-slate-200/80 bg-white/70 backdrop-blur-md relative">
             <!-- Focus Tooltip -->
             <div id="ai-focus-tooltip" class="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-primary text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 pointer-events-none transition-all duration-300 translate-y-2 z-50 whitespace-nowrap">
               Ask me anything!
@@ -512,8 +511,8 @@ export function docsScreen() {
                 </button>
               </div>
             ` : `
-              <button id="btn-docs-signin" type="button" class="w-full rounded-xl bg-primary text-white px-4 py-3 text-xs font-bold shadow-sm hover:brightness-110 transition-all btn-press">
-                Sign In to Use Docs AI
+              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl border border-primary/20 bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_35%,#38bdf8_55%,#1d4ed8_72%,#0f172a_100%)] bg-[length:220%_220%] animate-gradient-x text-white px-4 py-3 text-sm font-black tracking-tight shadow-[0_18px_40px_-22px_rgba(29,78,216,0.65)] hover:brightness-110 transition-all btn-press">
+                Sign in to chat
               </button>
             `}
           </div>
@@ -524,7 +523,6 @@ export function docsScreen() {
 
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
-    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.docsNav));

@@ -52,7 +52,6 @@ const APP_SHELL_SCREENS = new Set([
   'history',
   'ai-chat',
   'vault',
-  'examples',
 ]);
 
 export function getHomeScreenForUser() {
@@ -234,38 +233,18 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     return;
   }
 
+  const requestedScreen = screen;
+  const authed = isAuthenticated();
+  const onboardingComplete = isOnboardingComplete();
   let replace = options.replace;
-  const modalTab = screen === 'accounts'
-    ? 'profile'
-    : screen === 'settings'
-      ? 'settings'
-      : screen === 'help'
-        ? 'help'
-        : null;
-
-  if (modalTab && app.childElementCount && typeof window.__fmOpenAccountModalTab === 'function') {
-    window.__fmOpenAccountModalTab(modalTab);
-    return;
-  }
-
   let path = `/${screen === 'landing' ? '' : screen}`;
   if (screen === 'landing') path = '/';
-
-  if (replace) {
-    const currentPath = window.location.pathname;
-    const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
-    if (window.location.search && currentScreen === screen) {
-      path = `${currentPath}${window.location.search}`;
-    }
-  }
 
   if (screen === 'settings') {
     screen = 'accounts';
     path = '/accounts';
   }
 
-  const authed = isAuthenticated();
-  const onboardingComplete = isOnboardingComplete();
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
     screen = 'auth';
     path = '/auth';
@@ -278,6 +257,27 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     screen = onboardingComplete ? 'dashboard' : 'onboarding';
     path = onboardingComplete ? '/dashboard' : '/onboarding';
     replace = true;
+  }
+
+  const modalTab = authed && requestedScreen === 'settings'
+    ? 'settings'
+    : authed && screen === 'accounts'
+    ? 'profile'
+    : authed && requestedScreen === 'help'
+      ? 'help'
+      : null;
+
+  if (modalTab && app.childElementCount && typeof window.__fmOpenAccountModalTab === 'function') {
+    window.__fmOpenAccountModalTab(modalTab);
+    return;
+  }
+
+  if (replace) {
+    const currentPath = window.location.pathname;
+    const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
+    if (window.location.search && currentScreen === screen) {
+      path = `${currentPath}${window.location.search}`;
+    }
   }
 
   const currentWrapper = app.firstElementChild as HTMLElement | null;
