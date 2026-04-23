@@ -148,7 +148,7 @@ export function examplesScreen() {
           </div>
 
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <button type="button" class="px-6 py-2 rounded-full bg-slate-100 text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
+            <button type="button" class="px-6 py-2 rounded-full bg-slate-100 text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
           </nav>
 
@@ -160,10 +160,6 @@ export function examplesScreen() {
         <main class="flex-1 px-6 pb-16 pt-8 md:px-12 lg:px-24 lg:pt-12">
           <div class="mx-auto max-w-6xl">
             <div class="mb-12 text-center">
-              <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/75 border border-primary/15 text-primary text-[11px] font-black uppercase tracking-[0.28em] shadow-sm">
-                <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
-                Example Gallery
-              </div>
               <h1 class="mt-6 text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.05]">
                 Explore Real FormMate
                 <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">Use Cases</span>
@@ -211,7 +207,7 @@ export function examplesScreen() {
 
   function init(wrapper) {
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => navigateTo('landing'));
-    wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
+    wrapper.querySelector('#nav-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));

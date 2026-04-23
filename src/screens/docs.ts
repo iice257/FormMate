@@ -27,6 +27,26 @@ export function docsScreen() {
 
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
+      <style>
+        .docs-signin-cta-enter {
+          animation: docs-signin-shimmer-enter 850ms ease-out 1;
+        }
+
+        .docs-signin-cta-exit {
+          animation: docs-signin-shimmer-exit 700ms ease-out 1;
+        }
+
+        @keyframes docs-signin-shimmer-enter {
+          0% { background-position: 0% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.35); }
+          35% { background-position: 55% 50%; box-shadow: 0 24px 52px -24px rgba(56, 189, 248, 0.55); }
+          100% { background-position: 100% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65); }
+        }
+
+        @keyframes docs-signin-shimmer-exit {
+          0% { background-position: 100% 50%; box-shadow: 0 20px 44px -22px rgba(56, 189, 248, 0.45); }
+          100% { background-position: 0% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65); }
+        }
+      </style>
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
@@ -467,7 +487,7 @@ export function docsScreen() {
         <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex">
           <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
             <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs Chat</span>
-            <span class="mt-1 block text-sm font-semibold text-slate-500">${authed ? 'Ask about FormMate features and workflows' : 'Sign in to start a docs conversation'}</span>
+            ${authed ? '<span class="mt-1 block text-sm font-semibold text-slate-500">Ask about FormMate features and workflows</span>' : ''}
           </div>
 
           <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-transparent">
@@ -479,7 +499,7 @@ export function docsScreen() {
                   </div>
                 `
                 : `
-                  <div class="flex min-h-full items-center justify-center px-4 py-8">
+                  <div class="flex min-h-[calc(100vh-24rem)] items-center justify-center px-4 py-12">
                     <div class="w-full rounded-[2rem] border border-white/70 bg-white/80 px-6 py-10 text-center shadow-[0_30px_80px_-40px_rgba(37,99,235,0.35)] backdrop-blur-xl">
                       <div class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.2))] flex items-center justify-center text-primary shadow-sm">
                         <span class="material-symbols-outlined text-[26px]">forum</span>
@@ -511,7 +531,7 @@ export function docsScreen() {
                 </button>
               </div>
             ` : `
-              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl border border-primary/20 bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_35%,#38bdf8_55%,#1d4ed8_72%,#0f172a_100%)] bg-[length:220%_220%] animate-gradient-x text-white px-4 py-3 text-sm font-black tracking-tight shadow-[0_18px_40px_-22px_rgba(29,78,216,0.65)] hover:brightness-110 transition-all btn-press">
+              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl border border-primary/20 bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_35%,#38bdf8_55%,#1d4ed8_72%,#0f172a_100%)] bg-[length:220%_220%] text-white px-4 py-3 text-sm font-black tracking-tight shadow-[0_18px_40px_-22px_rgba(29,78,216,0.65)] hover:brightness-110 transition-all btn-press docs-signin-cta">
                 Sign in to chat
               </button>
             `}
@@ -524,6 +544,17 @@ export function docsScreen() {
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
     wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
+    const docsSigninBtn = wrapper.querySelector('#btn-docs-signin');
+    const toggleDocsSigninShimmer = (active) => {
+      if (!docsSigninBtn) return;
+      docsSigninBtn.classList.remove('docs-signin-cta-enter', 'docs-signin-cta-exit');
+      void docsSigninBtn.offsetWidth;
+      docsSigninBtn.classList.add(active ? 'docs-signin-cta-enter' : 'docs-signin-cta-exit');
+    };
+    const handleDocsSigninEnter = () => toggleDocsSigninShimmer(true);
+    const handleDocsSigninLeave = () => toggleDocsSigninShimmer(false);
+    docsSigninBtn?.addEventListener('mouseenter', handleDocsSigninEnter);
+    docsSigninBtn?.addEventListener('mouseleave', handleDocsSigninLeave);
     wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.docsNav));
     });
@@ -1006,6 +1037,8 @@ export function docsScreen() {
     });
 
     return () => {
+      docsSigninBtn?.removeEventListener('mouseenter', handleDocsSigninEnter);
+      docsSigninBtn?.removeEventListener('mouseleave', handleDocsSigninLeave);
       cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();
