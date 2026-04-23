@@ -146,7 +146,7 @@ export function workspaceScreen() {
             </div>
             <div class="workspace-progress-actions">
               <span class="app-pill workspace-answered-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
-              <button id="btn-review-bottom" class="btn-press workspace-submit-btn">Submit Application</button>
+              <button id="btn-review-bottom" class="btn-press workspace-submit-btn">Submit Form</button>
             </div>
           </div>
 

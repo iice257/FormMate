@@ -50,7 +50,7 @@ export function authScreen() {
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh auth-shell">
       <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017] auth-hero-panel">
-        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-bg-image.png');"></div>
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-100" style="background-image: url('/auth-bg-image.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
 
         <div class="relative z-20 flex w-full flex-col h-full auth-hero-copy">
@@ -58,10 +58,10 @@ export function authScreen() {
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="text-link-gradient animate-gradient-x auth-hero-mate-stroke">Mate</span></h2>
+            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="auth-hero-mate-solid">Mate</span></h2>
           </div>
 
-          <div class="w-full max-w-[28rem] px-4 lg:mt-24">
+          <div class="w-full max-w-[28rem] px-4 lg:mt-72 xl:mt-56 lg:-ml-5 xl:ml-0 lg:max-w-[24rem] xl:max-w-[28rem]">
             <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
               Fill forms with<br/><span class="text-link-gradient animate-gradient-x">AI magic.</span>
             </h1>
@@ -71,11 +71,13 @@ export function authScreen() {
 
       <div class="flex-1 flex items-center justify-center px-6 py-12 auth-form-shell">
         <div class="w-full max-w-[420px] auth-form-panel">
-          <div class="lg:hidden relative mb-6 h-40 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90" style="background-image: url('/auth-bg-image.png');"></div>
-            <div class="absolute inset-0 bg-black/40"></div>
-            <div class="relative z-10 h-full flex items-end p-4">
-              <p class="text-white text-lg font-bold tracking-tight">Fill forms with AI magic.</p>
+          <div class="lg:hidden relative mb-6 h-52 sm:h-56 md:h-64 overflow-hidden rounded-2xl ring-1 ring-primary/20 bg-[#0d1017]">
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100" style="background-image: url('/auth-bg-image.png');"></div>
+            <div class="absolute inset-0 bg-black/25"></div>
+            <div class="relative z-10 h-full flex items-center px-5 sm:px-6 md:px-7">
+              <p class="max-w-[18rem] sm:max-w-[20rem] text-white text-[2.1rem] sm:text-[2.5rem] md:text-[2.8rem] font-extrabold leading-[1.08] tracking-tight">
+                Fill forms with <span class="text-link-gradient animate-gradient-x">AI magic.</span>
+              </p>
             </div>
           </div>
           <div class="lg:hidden flex items-center gap-3 mb-10">

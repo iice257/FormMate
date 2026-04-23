@@ -38,6 +38,7 @@
 - Back buttons sitewide should use the softer white outlined treatment while preserving each screen's existing corner roundness.
 - New account creation should use FormMate's in-app OTP verification screen, not a Supabase-branded confirmation page; Supabase email templates should expose `{{ .Token }}` for the custom code-entry flow.
 - Mobile app shell should expose a hamburger beside `New Form` that opens a full-screen left menu with push-style page motion; account modal should also be full-screen on mobile.
+- Zen mode should reuse the subtle new-form background image treatment across zen screens only (same image and very low-opacity overlay), without changing non-zen screens.
 
 ## Chat Interaction Contract
 - Sitewide AI chats should expose two suggested follow-up chips directly above each chat input.
