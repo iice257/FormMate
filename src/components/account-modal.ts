@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getState, setState, updateProfile, updateSettings } from '../state';
+import { getState, setState, updateProfile } from '../state';
 import { signOut } from '../auth/auth-service';
 import { navigateTo } from '../router';
 import { toast } from './toast';
@@ -7,16 +7,61 @@ import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { logSettingsChanged } from '../storage/activity-logger';
 import { isZenModeEnabled, isZenModeSupported, updateZenMode } from './layout';
-import { applyTheme, normalizeTheme } from '../theme';
 
 let modalRoot = null;
 let activeTab = 'profile';
 let escapeHandler = null;
+let profileDraft = null;
+let settingsDraft = null;
+let profileDirty = false;
+let settingsDirty = false;
 const ACCOUNT_MODAL_TABS = [
   { id: 'profile', icon: 'person', label: 'Profile' },
   { id: 'settings', icon: 'settings', label: 'Preferences' },
   { id: 'help', icon: 'help', label: 'Help' },
 ];
+
+function cloneDeep(value) {
+  try {
+    return JSON.parse(JSON.stringify(value || {}));
+  } catch {
+    return value || {};
+  }
+}
+
+function initDraftState() {
+  const { userProfile, settings } = getState();
+  profileDraft = cloneDeep(userProfile || {});
+  settingsDraft = cloneDeep(settings || {});
+  profileDirty = false;
+  settingsDirty = false;
+}
+
+function hasUnsavedChanges() {
+  return profileDirty || settingsDirty;
+}
+
+function confirmDiscardChanges() {
+  return window.confirm('Discard changes?\nAre you sure you want to exit without saving');
+}
+
+function ensureDraftState() {
+  if (!profileDraft || !settingsDraft) {
+    initDraftState();
+  }
+}
+
+function setNestedValue(target, path, value) {
+  const keys = String(path || '').split('.');
+  if (!keys.length) return;
+  let cursor = target;
+  for (let index = 0; index < keys.length - 1; index += 1) {
+    const key = keys[index];
+    if (!cursor[key] || typeof cursor[key] !== 'object') cursor[key] = {};
+    cursor = cursor[key];
+  }
+  cursor[keys[keys.length - 1]] = value;
+}
 
 function getAvatarSrc() {
   const { userProfile } = getState();
@@ -30,6 +75,7 @@ export function initAccountModal() {
 
   return function openModal(tab = 'profile') {
     activeTab = tab;
+    initDraftState();
     renderModal();
   };
 }
@@ -117,6 +163,12 @@ function setActiveTab(nextTab, { focus = false } = {}) {
   if (!ACCOUNT_MODAL_TABS.some((tab) => tab.id === nextTab)) {
     return;
   }
+  if (nextTab !== activeTab && hasUnsavedChanges() && !confirmDiscardChanges()) {
+    return;
+  }
+  if (nextTab !== activeTab) {
+    initDraftState();
+  }
 
   activeTab = nextTab;
   renderActiveTab();
@@ -131,17 +183,17 @@ function renderActiveTab() {
   const content = document.getElementById('account-modal-content');
   if (!content) return;
 
-  const { userProfile, settings } = getState();
+  ensureDraftState();
   const avatarSrc = getAvatarSrc();
 
   if (activeTab === 'profile') {
-    replaceChildrenWithSafeHtml(content, renderProfileTab(userProfile, avatarSrc));
+    replaceChildrenWithSafeHtml(content, renderProfileTab(profileDraft, avatarSrc));
     wireProfileEvents();
     return;
   }
 
   if (activeTab === 'settings') {
-    replaceChildrenWithSafeHtml(content, renderSettingsTab(settings));
+    replaceChildrenWithSafeHtml(content, renderSettingsTab(settingsDraft));
     wireSettingsEvents();
     return;
   }
@@ -206,10 +258,11 @@ function renderSettingsTab(settings) {
   const temp = settings?.ai?.temperature ?? 0.7;
   const verbosity = settings?.ai?.verbosity || 'balanced';
   const personality = settings?.ai?.defaultPersonality || 'professional';
-  const theme = normalizeTheme(settings?.ui?.theme);
   const currentScreen = getState().currentScreen;
   const zenSupported = isZenModeSupported(currentScreen);
-  const zenEnabled = zenSupported ? isZenModeEnabled(currentScreen) : false;
+  const zenEnabled = zenSupported
+    ? (typeof settings?.ui?.zenModeEnabled === 'boolean' ? settings.ui.zenModeEnabled : isZenModeEnabled(currentScreen))
+    : false;
 
   return `
     <div style="display:flex; flex-direction:column; gap:1.1rem;">
@@ -256,31 +309,6 @@ function renderSettingsTab(settings) {
               return `<button class="modal-personality-btn ${active ? 'is-active' : ''}" data-value="${value}" type="button" style="padding:0.6rem 0.5rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.85rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.78rem; font-weight:${active ? '700' : '600'}; cursor:pointer;">${label}</button>`;
             }).join('')}
           </div>
-        </div>
-      </section>
-
-      <section style="display:flex; flex-direction:column; gap:0.9rem; padding:1rem 1.05rem; border:1px solid var(--fm-border-light); border-radius:1rem; background:#fff;">
-        <div>
-          <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text); margin-bottom:0.2rem;">Theme</h3>
-          <p style="font-size:0.77rem; color:#64748b;">Pick a single app theme. Light stays the default.</p>
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.6rem;" id="modal-theme-group" aria-label="Theme selection">
-          ${['light', 'dark'].map((value) => {
-            const active = value === theme;
-            const label = value.charAt(0).toUpperCase() + value.slice(1);
-            const icon = value === 'light' ? 'light_mode' : 'dark_mode';
-            return `
-              <button
-                class="modal-theme-btn ${active ? 'is-active' : ''}"
-                data-theme="${value}"
-                type="button"
-                style="display:flex; align-items:center; justify-content:center; gap:0.45rem; min-height:44px; padding:0.72rem 0.9rem; border:1px solid ${active ? 'var(--fm-primary)' : 'var(--fm-border)'}; border-radius:0.9rem; background:${active ? 'var(--fm-primary-50)' : '#fff'}; color:${active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)'}; font-size:0.82rem; font-weight:${active ? '700' : '600'}; cursor:pointer;"
-              >
-                <span class="material-symbols-outlined" style="font-size:18px;">${icon}</span>
-                <span>${label}</span>
-              </button>
-            `;
-          }).join('')}
         </div>
       </section>
 
@@ -335,10 +363,10 @@ function renderHelpTab() {
       <div style="display:flex; flex-direction:column; gap:0.6rem;">
         <h3 style="font-size:1rem; font-weight:800; color:var(--fm-text);">Frequently Asked Questions</h3>
         ${[
-          { q: 'How does FormMate work?', a: 'FormMate analyzes forms, maps fields, and helps you review answers based on your account data and current workspace context.' },
-          { q: 'Is my data secure?', a: 'When Supabase is configured, authenticated accounts can sync profile, preferences, vault data, and history to the configured backend. Otherwise the app falls back to local browser storage.' },
-          { q: 'Why did the AI answer a question wrong?', a: 'AI can still miss context. Review, edit, or regenerate answers, and tune Preferences for more precise output.' },
-          { q: 'Where do I update my profile and preferences?', a: 'Right here. Profile, Preferences, and Help all live inside this single account modal.' },
+          { q: 'How does FormMate work?', a: 'FormMate helps you complete forms faster by organizing your profile data, mapping form fields, and guiding answer quality before submission.' },
+          { q: 'Is my data secure?', a: 'Your data is protected in transit and only used to support the actions you request. AI features process relevant form context, so avoid sharing highly sensitive information unless required.' },
+          { q: 'Why did the AI answer a question wrong?', a: 'AI responses can occasionally miss context, so review important details and edit or regenerate when needed.' },
+          { q: 'Where do I update my profile and preferences?', a: 'Account settings and preferences are in the sidebar to your left.' },
         ].map((faq, index) => `
           <div class="modal-faq-item" style="border:1px solid var(--fm-border-light); border-radius:0.95rem; overflow:hidden; background:#fff;">
             <button class="modal-faq-toggle" data-faq="${index}" type="button" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; background:#fff; border:none; cursor:pointer; font-size:0.84rem; font-weight:700; color:var(--fm-text); text-align:left;">
@@ -363,8 +391,8 @@ function wireModalShellEvents() {
   const overlay = document.getElementById('account-modal-overlay');
   if (!overlay) return;
 
-  document.getElementById('account-modal-close')?.addEventListener('click', closeModal);
-  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('account-modal-close')?.addEventListener('click', () => closeModal());
+  document.getElementById('modal-cancel')?.addEventListener('click', () => closeModal());
 
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeModal();
@@ -395,7 +423,7 @@ function wireModalShellEvents() {
   });
 
   document.getElementById('account-modal-open-vault')?.addEventListener('click', () => {
-    closeModal();
+    if (!closeModal()) return;
     navigateTo('vault');
   });
 
@@ -404,11 +432,9 @@ function wireModalShellEvents() {
     setState({
       isAuthenticated: false,
       authUser: null,
-      tier: 'free',
       currentScreen: 'auth',
-      userProfile: { name: '', email: '', phone: '', occupation: '', bio: '', experience: '', preferredTone: 'professional', avatar: '' }
     });
-    closeModal();
+    closeModal({ force: true });
     toast.info('Signed out.');
     navigateTo('auth');
   });
@@ -423,36 +449,70 @@ function wireModalShellEvents() {
 }
 
 function wireProfileEvents() {
-  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
-  document.getElementById('modal-prof-bio')?.addEventListener('input', (event) => {
-    const counter = document.getElementById('modal-bio-count');
-    if (counter) counter.textContent = String(event.target.value.length);
+  const baseline = cloneDeep(getState().userProfile || {});
+  const profileFields = [
+    { id: 'modal-prof-name', key: 'name' },
+    { id: 'modal-prof-email', key: 'email' },
+    { id: 'modal-prof-phone', key: 'phone' },
+    { id: 'modal-prof-occupation', key: 'occupation' },
+    { id: 'modal-prof-bio', key: 'bio' },
+  ];
+
+  profileFields.forEach(({ id, key }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener('input', () => {
+      ensureDraftState();
+      profileDraft[key] = input.value;
+      profileDirty = JSON.stringify({
+        ...baseline,
+        ...profileDraft,
+      }) !== JSON.stringify(baseline);
+
+      if (key === 'bio') {
+        const counter = document.getElementById('modal-bio-count');
+        if (counter) counter.textContent = String(input.value.length);
+      }
+    });
   });
 
+  document.getElementById('modal-cancel')?.addEventListener('click', () => closeModal());
+
   document.getElementById('modal-save-profile')?.addEventListener('click', () => {
+    ensureDraftState();
     updateProfile({
-      name: document.getElementById('modal-prof-name')?.value?.trim() || '',
-      email: document.getElementById('modal-prof-email')?.value?.trim() || '',
-      phone: document.getElementById('modal-prof-phone')?.value?.trim() || '',
-      occupation: document.getElementById('modal-prof-occupation')?.value?.trim() || '',
-      bio: document.getElementById('modal-prof-bio')?.value?.trim() || '',
+      name: String(profileDraft?.name || '').trim(),
+      email: String(profileDraft?.email || '').trim(),
+      phone: String(profileDraft?.phone || '').trim(),
+      occupation: String(profileDraft?.occupation || '').trim(),
+      bio: String(profileDraft?.bio || '').trim(),
     });
+    profileDirty = false;
     toast.success('Profile saved to this account.');
-    closeModal();
+    closeModal({ force: true });
   });
 }
 
 function wireSettingsEvents() {
-  document.getElementById('modal-cancel')?.addEventListener('click', closeModal);
+  document.getElementById('modal-cancel')?.addEventListener('click', () => closeModal());
+  ensureDraftState();
+  const baselineSettings = cloneDeep(getState().settings || {});
+
+  const markDirty = () => {
+    settingsDirty = JSON.stringify(settingsDraft) !== JSON.stringify(baselineSettings);
+  };
 
   const tempSlider = document.getElementById('modal-set-temperature');
   const tempVal = document.getElementById('modal-temp-val');
   tempSlider?.addEventListener('input', () => {
     if (tempVal) tempVal.textContent = tempSlider.value;
+    setNestedValue(settingsDraft, 'ai.temperature', parseFloat(tempSlider.value || '0.7'));
+    markDirty();
   });
 
   document.querySelectorAll('.modal-verbosity-btn').forEach((button) => {
     button.addEventListener('click', () => {
+      const nextValue = button.dataset.value || 'balanced';
       document.querySelectorAll('.modal-verbosity-btn').forEach((candidate) => {
         const active = candidate === button;
         candidate.classList.toggle('is-active', active);
@@ -461,11 +521,14 @@ function wireSettingsEvents() {
         candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
         candidate.style.fontWeight = active ? '700' : '500';
       });
+      setNestedValue(settingsDraft, 'ai.verbosity', nextValue);
+      markDirty();
     });
   });
 
   document.querySelectorAll('.modal-personality-btn').forEach((button) => {
     button.addEventListener('click', () => {
+      const nextValue = button.dataset.value || 'professional';
       document.querySelectorAll('.modal-personality-btn').forEach((candidate) => {
         const active = candidate === button;
         candidate.classList.toggle('is-active', active);
@@ -474,6 +537,8 @@ function wireSettingsEvents() {
         candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
         candidate.style.fontWeight = active ? '700' : '600';
       });
+      setNestedValue(settingsDraft, 'ai.defaultPersonality', nextValue);
+      markDirty();
     });
   });
 
@@ -485,61 +550,50 @@ function wireSettingsEvents() {
       if (event.target === checkbox) return;
       event.preventDefault();
       checkbox.checked = !checkbox.checked;
-      syncToggle(label, checkbox.checked, id === 'modal-set-zen' ? 20 : 20);
-      if (id === 'modal-set-zen') {
-        updateZenMode(getState().currentScreen, checkbox.checked);
-      }
+      syncToggle(label, checkbox.checked);
+      setNestedValue(settingsDraft, 'ui.zenModeEnabled', Boolean(checkbox.checked));
+      markDirty();
     });
     checkbox.addEventListener('change', () => {
-      syncToggle(label, checkbox.checked, id === 'modal-set-zen' ? 20 : 20);
-      if (id === 'modal-set-zen') {
-        updateZenMode(getState().currentScreen, checkbox.checked);
-      }
-    });
-  });
-
-  document.querySelectorAll('.modal-theme-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.modal-theme-btn').forEach((candidate) => {
-        const active = candidate === button;
-        candidate.classList.toggle('is-active', active);
-        candidate.style.borderColor = active ? 'var(--fm-primary)' : 'var(--fm-border)';
-        candidate.style.background = active ? 'var(--fm-primary-50)' : '#fff';
-        candidate.style.color = active ? 'var(--fm-primary)' : 'var(--fm-text-secondary)';
-        candidate.style.fontWeight = active ? '700' : '600';
-      });
-
-      const nextTheme = button.dataset.theme || 'light';
-      updateSettings('ui.theme', nextTheme);
-      applyTheme(nextTheme);
+      syncToggle(label, checkbox.checked);
+      setNestedValue(settingsDraft, 'ui.zenModeEnabled', Boolean(checkbox.checked));
+      markDirty();
     });
   });
 
   document.getElementById('modal-save-settings')?.addEventListener('click', () => {
-    const temp = parseFloat(document.getElementById('modal-set-temperature')?.value || '0.7');
-    const verbosity = document.querySelector('.modal-verbosity-btn.is-active')?.dataset?.value || 'balanced';
-    const personality = document.querySelector('.modal-personality-btn.is-active')?.dataset?.value || 'professional';
-    updateSettings('ai.temperature', temp);
-    updateSettings('ai.verbosity', verbosity);
-    updateSettings('ai.defaultPersonality', personality);
-    if (typeof logSettingsChanged === 'function') logSettingsChanged('ai');
+    ensureDraftState();
+    const nextSettings = cloneDeep(settingsDraft || {});
+    setState({ settings: nextSettings });
+
+    const currentScreen = getState().currentScreen;
+    if (isZenModeSupported(currentScreen)) {
+      const zenEnabled = Boolean(nextSettings?.ui?.zenModeEnabled);
+      updateZenMode(currentScreen, zenEnabled);
+    }
+
+    settingsDirty = false;
+    if (typeof logSettingsChanged === 'function') {
+      logSettingsChanged('ai');
+      logSettingsChanged('ui');
+    }
     toast.success('Preferences saved to this account.');
-    closeModal();
+    closeModal({ force: true });
   });
 }
 
 function wireHelpEvents() {
   document.getElementById('modal-help-docs')?.addEventListener('click', () => {
-    closeModal();
+    if (!closeModal()) return;
     navigateTo('docs');
   });
   document.getElementById('modal-help-contact')?.addEventListener('click', () => {
-    closeModal();
+    if (!closeModal()) return;
     navigateTo('docs');
     setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 250);
   });
   document.getElementById('modal-help-feedback')?.addEventListener('click', () => {
-    closeModal();
+    if (!closeModal()) return;
     navigateTo('docs');
     setTimeout(() => document.getElementById('feedback')?.scrollIntoView({ behavior: 'smooth' }), 250);
   });
@@ -561,7 +615,12 @@ function syncToggle(label, checked) {
   if (spans[1]) spans[1].style.left = checked ? '20px' : '2px';
 }
 
-function closeModal() {
+function closeModal(options = {}) {
+  const force = Boolean(options?.force);
+  if (!force && hasUnsavedChanges() && !confirmDiscardChanges()) {
+    return false;
+  }
+
   if (escapeHandler) {
     document.removeEventListener('keydown', escapeHandler);
     escapeHandler = null;
@@ -569,4 +628,9 @@ function closeModal() {
   if (modalRoot) {
     modalRoot.replaceChildren();
   }
+  profileDraft = null;
+  settingsDraft = null;
+  profileDirty = false;
+  settingsDirty = false;
+  return true;
 }

@@ -1,0 +1,57 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "success",
+    "completeness": "complete",
+    "blockedReason": null,
+    "unsupportedReasons": [],
+    "nextAction": "none",
+    "nextStepRequired": false,
+    "nextStepHint": "",
+    "warningCodes": []
+  },
+  "compatibility": {
+    "title": "Contact Us",
+    "questionCount": 4,
+    "questions": [
+      {
+        "text": "Full Name",
+        "type": "short_text",
+        "required": true,
+        "options": []
+      },
+      {
+        "text": "Email Address",
+        "type": "email",
+        "required": true,
+        "options": []
+      },
+      {
+        "text": "Topic",
+        "type": "dropdown",
+        "required": false,
+        "options": [
+          "Support",
+          "Sales"
+        ]
+      },
+      {
+        "text": "Message",
+        "type": "long_text",
+        "required": false,
+        "options": []
+      }
+    ]
+  },
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": false,
+    "renderSignal": false,
+    "aiFallbackUsed": false
+  }
+}

@@ -3,7 +3,7 @@
 // FormMate — Voice Input Pipeline
 // ═══════════════════════════════════════════
 
-import { transcribeAudio } from './ai-service';
+import { AI_SURFACES, transcribeAudio } from './ai-service';
 
 let mediaRecorder = null;
 let audioChunks = [];
@@ -31,7 +31,7 @@ export async function startRecording() {
   isRecording = true;
 }
 
-export async function stopAndTranscribe() {
+export async function stopAndTranscribe(surface = AI_SURFACES.AI_CHAT) {
   if (!isRecording || !mediaRecorder) return '';
 
   return new Promise((resolve, reject) => {
@@ -44,7 +44,7 @@ export async function stopAndTranscribe() {
       mediaRecorder = null;
 
       try {
-        const transcript = await transcribeAudio(audioBlob);
+        const transcript = await transcribeAudio(audioBlob, { surface });
         resolve(cleanTranscript(transcript));
       } catch (err) {
         console.error('[Voice] Transcription failed:', err);

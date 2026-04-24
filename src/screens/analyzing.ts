@@ -5,8 +5,7 @@
 
 import { getState, setState } from '../state';
 import { navigateTo } from '../router';
-import { parseFormUrl, detectFormPlatform, parseCapturePayload, isGoogleFormUrl } from '../parser/form-parser';
-import { requestImageParse } from '../parser/adapters/image';
+import { parseFormUrl, detectFormPlatform, parseCapturePayload, parseImageArtifacts, isGoogleFormUrl } from '../parser/form-parser';
 import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
@@ -191,7 +190,7 @@ export function analyzingScreen() {
           </div>
 
           <p class="text-sm text-slate-600 leading-relaxed mb-5">
-            Google Forms can hide parseable structure behind session checks, so FormMate needs screenshots from your live form tab for reliable field extraction.
+            Google Forms often restrict structural access behind active sessions, so FormMate securely parses screenshots you provide from the live form tab.
           </p>
 
           <a id="google-open-form" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-colors mb-5">
@@ -460,7 +459,7 @@ export function analyzingScreen() {
           updateProgress(40, 'Extracting from screenshots', 'Step 1 of 3', 'Running image parser...');
           await delay(250);
           if (cancelled) return;
-          parseResult = await requestImageParse({
+          parseResult = await parseImageArtifacts({
             imageArtifacts,
             sourceUrl: formUrl,
           });
@@ -470,8 +469,14 @@ export function analyzingScreen() {
         }
         if (cancelled) return;
 
-        const parseOutcome = parseResult?.outcome || {};
-        const formData = parseResult?.compatibility || null;
+        const parseOutcome = parseResult?.outcome
+          || {
+            status: parseResult?.parseStatus,
+            nextAction: parseResult?.nextAction,
+            nextStepHint: parseResult?.nextStepHint,
+            warnings: parseResult?.warnings,
+          };
+        const formData = parseResult?.compatibility || parseResult?.legacyFormData || null;
         const questionCount = Array.isArray(formData?.questions) ? formData.questions.length : 0;
 
         if (!formData || questionCount === 0 || ['blocked', 'unsupported', 'no_form', 'error'].includes(parseOutcome.status)) {
@@ -594,8 +599,14 @@ export function analyzingScreen() {
     }
 
     function handleOutcomeFailure(parseResult) {
-      const outcome = parseResult?.outcome || {};
-      const fallbackMessage = parseResult?.outcome?.warnings?.[0]?.message
+      const outcome = parseResult?.outcome
+        || {
+          status: parseResult?.parseStatus,
+          nextAction: parseResult?.nextAction,
+          nextStepHint: parseResult?.nextStepHint,
+          warnings: parseResult?.warnings,
+        };
+      const fallbackMessage = outcome?.warnings?.[0]?.message
         || parseResult?.diagnostics?.extractionWarnings?.[0]
         || 'Could not map inputs from this form.';
 

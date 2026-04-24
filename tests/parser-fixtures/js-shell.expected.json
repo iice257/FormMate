@@ -1,0 +1,27 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "blocked",
+    "completeness": "visible_step_only",
+    "blockedReason": "interaction_required",
+    "unsupportedReasons": [],
+    "nextAction": "use_capture",
+    "nextStepRequired": true,
+    "nextStepHint": "This form appears client-rendered. Open it in-browser and use Assisted Capture.",
+    "warningCodes": [
+      "INTERACTION_REQUIRED"
+    ]
+  },
+  "compatibility": null,
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": false,
+    "renderSignal": true,
+    "aiFallbackUsed": false
+  }
+}

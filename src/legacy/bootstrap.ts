@@ -2,7 +2,6 @@
 import { registerScreen, initRouter } from '../router';
 import { registerAccountModalOpener } from '../components/layout';
 import { initAccountModal } from '../components/account-modal';
-import { applyTheme } from '../theme';
 import { authScreen } from '../screens/auth';
 import { onboardingScreen } from '../screens/onboarding';
 import { landingScreen } from '../screens/landing';
@@ -13,15 +12,17 @@ import { successScreen } from '../screens/success';
 import { accountsScreen } from '../screens/accounts';
 import { analyticsScreen } from '../screens/analytics';
 import { docsScreen } from '../screens/docs';
-import { pricingScreen } from '../screens/pricing';
 import { helpScreen } from '../screens/help';
 import { examplesScreen } from '../screens/examples';
+import { privacyScreen, termsScreen } from '../screens/legal';
 import { newFormScreen } from '../screens/new-form';
 import { dashboardScreen } from '../screens/dashboard';
 import { aiChatScreen } from '../screens/ai-chat';
 import { historyScreen } from '../screens/history';
 import { vaultScreen } from '../screens/vault';
 import { captureScreen } from '../screens/capture';
+import { initSessionLifecycle } from '../auth/session-lifecycle';
+import { loadRuntimeHealth } from '../app/runtime-health';
 
 let booted = false;
 let screensRegistered = false;
@@ -41,7 +42,8 @@ function registerScreens() {
   registerScreen('accounts', accountsScreen);
   registerScreen('analytics', analyticsScreen);
   registerScreen('docs', docsScreen);
-  registerScreen('pricing', pricingScreen);
+  registerScreen('privacy', privacyScreen);
+  registerScreen('terms', termsScreen);
   registerScreen('help', helpScreen);
   registerScreen('examples', examplesScreen);
   registerScreen('new', newFormScreen);
@@ -139,29 +141,24 @@ async function boot() {
   booted = true;
 
   try {
-    const { getState, subscribe } = await import('../state');
-    applyTheme(getState().settings?.ui?.theme);
-    subscribe((nextState) => {
-      applyTheme(nextState?.settings?.ui?.theme);
-    });
+    const { setState } = await import('../state');
 
     const openModal = initAccountModal();
     registerAccountModalOpener(openModal);
 
     try {
-      const { getSession } = await import('../auth/auth-service');
+      const { ensureAuthBootstrapped, getSession } = await import('../auth/auth-service');
+      await ensureAuthBootstrapped();
       const session = getSession();
 
       if (session) {
-        const { setState } = await import('../state');
-        setState({ isAuthenticated: true, authUser: session.user, tier: session.tier });
+        setState({ isAuthenticated: true, authUser: session.user });
 
         try {
           const { hydrateFromRemote } = await import('../storage/storage-provider');
           const hydrated = await hydrateFromRemote(session.user);
           if (hydrated) {
             setState(hydrated);
-            applyTheme(hydrated?.settings?.ui?.theme ?? getState().settings?.ui?.theme);
           }
         } catch (hydrateErr) {
           console.warn('[boot] Remote storage hydration failed; continuing with local cache.', hydrateErr);
@@ -172,6 +169,17 @@ async function boot() {
     }
 
     initRouter();
+    initSessionLifecycle();
+
+    try {
+      const { setRuntimeHealth } = await import('../state');
+      const runtimeHealth = await loadRuntimeHealth();
+      setRuntimeHealth(runtimeHealth);
+
+    } catch (runtimeError) {
+      console.warn('[boot] Runtime health check failed; continuing with local assumptions.', runtimeError);
+    }
+
     initHidingHeader();
   } catch (error) {
     console.error('[boot] Fatal startup error:', error);

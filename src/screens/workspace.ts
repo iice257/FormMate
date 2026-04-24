@@ -5,16 +5,29 @@
 import { getState, setState, updateAnswer, addChatMessage, undoAnswer, redoAnswer, canUndo, canRedo } from '../state';
 import { navigateTo } from '../router';
 import { regenerateAnswer, processChatMessage, quickEditAnswer } from '../ai/ai-actions';
-import { getAiErrorMessage } from '../ai/ai-service';
+import { AI_SURFACES, extractVisionContext, getAiErrorMessage } from '../ai/ai-service';
+import { cancelRecording, getRecordingState, isVoiceSupported, startRecording, stopAndTranscribe } from '../ai/voice';
 import { renderQuestionCard } from '../components/question-card';
 import { categorizeField } from '../ai/field-classifier';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
-import { escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import {
+  buildMessageWithUiContext,
+  buildNextFollowUps,
+  createFollowUpClickEvent,
+  createUiContextEvent,
+  enqueueUiContextEvent,
+  getDefaultFollowUps,
+  stripFollowUpTags,
+} from '../ai/chat-interactions';
 
 let sortableModulePromise = null;
+const MAX_CHAT_IMAGE_ATTACHMENTS = 5;
+const MAX_CHAT_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_CHAT_TEXT_CHARS = 3200;
 
 async function loadSortable() {
   if (!sortableModulePromise) {
@@ -45,6 +58,24 @@ function formatFileMetadata(file) {
   return `${file.name} - ${size} - ${type}`;
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsText(file);
+  });
+}
+
 function buildChatAvatar(icon, background) {
   const avatar = document.createElement('div');
   avatar.style.cssText = `width: 24px; height: 24px; border-radius: 50%; background: ${background}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;`;
@@ -72,7 +103,7 @@ function buildTypingIndicator() {
 }
 
 export function workspaceScreen() {
-  const { formData, answers, tier, aiDiagnostics } = getState();
+  const { formData, answers, aiDiagnostics } = getState();
 
   if (!formData) {
     navigateTo('landing');
@@ -103,45 +134,47 @@ export function workspaceScreen() {
   const workspaceContent = `
     <div class="flex-1 flex overflow-hidden relative zen-workspace-shell workspace-screen" id="editor-container">
       <!-- Editor Center -->
-      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor" id="editor-scroll">
-          <div class="zen-workspace-editor-inner" style="max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 8rem;">
+      <div class="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar zen-workspace-editor workspace-editor-stage" id="editor-scroll" data-fm-transition-main="true" data-fm-scroll-region="main">
+          <div class="zen-workspace-editor-inner workspace-editor-inner">
           
           <!-- Breadcrumb & Actions Bar -->
-          <div class="zen-workspace-toolbar app-surface-soft" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
-            <div class="workspace-zen-hide" style="display: flex; align-items: center; gap: 0.5rem;">
+          <div class="zen-workspace-toolbar app-surface-soft workspace-toolbar-card">
+            <div class="workspace-zen-hide workspace-topline">
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;">Applications</span>
               <span style="font-size: 0.65rem; color: #cbd5e1;">&gt;</span>
               <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--fm-primary);">Current Draft</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span class="app-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
-              <button id="btn-review-bottom" class="btn-press" style="padding: 0.5rem 1rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 700; cursor: pointer;">Submit Application</button>
+            <div class="workspace-progress-actions">
+              <span class="app-pill workspace-answered-pill" style="background: #d1fae5; color: #059669; border-color: rgba(16, 185, 129, 0.18);">Answered <span id="answered-count">${answeredCount}</span> / ${totalQ}</span>
+              <button id="btn-review-bottom" class="btn-press workspace-submit-btn">Submit Form</button>
             </div>
           </div>
 
           ${aiDiagnosticsBanner}
 
-          <h1 class="workspace-title" style="font-size: 1.65rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;">${escapeHtml(formData.title)}</h1>
+          <div class="workspace-title-block">
+            <h1 class="workspace-title">${escapeHtml(formData.title)}</h1>
+          </div>
 
           <!-- Filter Tabs -->
-          <div class="workspace-zen-hide app-surface-soft workspace-filter-row" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div class="workspace-zen-hide app-surface-soft workspace-filter-row workspace-filter-shell">
             <button class="filter-pill" data-filter="all" data-active="true" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-text); background: var(--fm-text); color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer;">All Questions</button>
             ${autoCount > 0 ? `<button class="filter-pill" data-filter="autofillable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Autofillable</button>` : ''}
             ${aiCount > 0 ? `<button class="filter-pill" data-filter="generatable" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">AI Generated</button>` : ''}
             ${manualCount > 0 ? `<button class="filter-pill" data-filter="manual_only" style="padding: 0.4rem 0.85rem; border-radius: var(--fm-radius-full); border: 1px solid var(--fm-border); background: #fff; color: var(--fm-text); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Manual</button>` : ''}
-            <div data-zen-hide="always" style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #94a3b8; cursor: pointer;">
+            <div data-zen-hide="always" class="workspace-sort-chip">
               <span class="material-symbols-outlined" style="font-size: 16px;">sort</span> Sort
             </div>
           </div>
 
           <!-- Question Cards -->
-          <div id="questions-container" class="space-y-6 stagger-children workspace-question-list">
+          <div id="questions-container" class="space-y-6 stagger-children workspace-question-list workspace-question-stack">
             ${questionsHtml}
           </div>
 
           <!-- Bottom Review CTA -->
-          <div data-zen-hide="always" style="margin-top: 2.5rem; display: flex; justify-content: center;">
-            <button id="btn-review-bottom-2" class="btn-press" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.7rem 2rem; background: var(--fm-primary-dark); color: #fff; border: none; border-radius: var(--fm-radius-xl); font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+          <div data-zen-hide="always" class="workspace-bottom-cta">
+            <button id="btn-review-bottom-2" class="btn-press workspace-bottom-submit">
               <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
               Review & Submit
             </button>
@@ -150,7 +183,7 @@ export function workspaceScreen() {
       </div>
 
       <!-- Right Panel: AI Chat / AI Actions (Toggle) -->
-      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
+      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" data-fm-transition-panel="true" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
         
         <!-- Panel Toggle Tabs -->
         <div class="workspace-zen-panel-tabs" role="tablist" aria-label="Workspace AI panels" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
@@ -184,14 +217,16 @@ export function workspaceScreen() {
 
           <!-- Chat Input -->
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
+          <div id="workspace-chat-followups" class="chat-followups chat-followups-sidebar"></div>
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <button type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                <button id="btn-workspace-chat-attach" type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
                 </button>
-                <button type="button" aria-label="Open files" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
-                  <span class="material-symbols-outlined" style="font-size: 18px;">folder</span>
+                <button id="btn-workspace-chat-voice" type="button" aria-label="Start voice input" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
                 </button>
+                <input id="workspace-chat-attach-input" type="file" accept="image/*,.txt,.md,.csv,text/plain" multiple style="display:none;" />
               </div>
               <div style="flex: 1; position: relative;">
                 <input type="text" id="chat-input" placeholder="Ask Copilot anything..." aria-label="Ask Copilot anything" style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
@@ -283,11 +318,33 @@ export function workspaceScreen() {
 
     const chatInput = wrapper.querySelector('#chat-input');
     const btnSend = wrapper.querySelector('#btn-send-chat');
+    const btnAttach = wrapper.querySelector('#btn-workspace-chat-attach');
+    const attachInput = wrapper.querySelector('#workspace-chat-attach-input');
+    const btnVoice = wrapper.querySelector('#btn-workspace-chat-voice');
+    const followUpsWrap = wrapper.querySelector('#workspace-chat-followups');
+    const attachmentState = wrapper.querySelector('#workspace-chat-attachment-state');
     const chatMessages = wrapper.querySelector('#chat-messages');
     const questionsContainer = wrapper.querySelector('#questions-container');
     let sortableInstance = null;
     let isChatPending = false;
-    const cleanupRichActions = bindRichActionClicks(chatMessages, { openAccountModal });
+    let pendingImages = [];
+    let pendingTextSnippets = [];
+    let pendingUiContextEvents = [];
+    let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.WORKSPACE, formData?.title || '');
+    const cleanupRichActions = bindRichActionClicks(chatMessages, {
+      openAccountModal,
+      onInteractiveCommit: (payload) => {
+        const event = createUiContextEvent(payload);
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
+        renderAttachmentState();
+        if (chatInput && !chatInput.value.trim()) {
+          chatInput.value = 'Apply the queued field updates to the active form.';
+        }
+        syncSendButton();
+        toast.success('Queued for your next copilot message.');
+        return true;
+      },
+    });
 
     // Panel Toggle
     const aiChatPanel = wrapper.querySelector('#ai-chat-panel');
@@ -608,6 +665,127 @@ export function workspaceScreen() {
       });
     });
 
+    const syncSendButton = () => {
+      if (!btnSend) return;
+      const hasText = Boolean(chatInput?.value?.trim());
+      const hasAttachment = pendingImages.length > 0 || pendingTextSnippets.length > 0 || pendingUiContextEvents.length > 0;
+      btnSend.disabled = !(hasText || hasAttachment) || isChatPending;
+    };
+
+    const renderFollowUps = () => {
+      if (!followUpsWrap) return;
+      const items = (Array.isArray(followUpSuggestions) ? followUpSuggestions : [])
+        .filter(Boolean)
+        .slice(0, 1);
+      replaceChildrenWithSafeHtml(
+        followUpsWrap,
+        items.map((prompt) => `
+          <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+            <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
+          </button>
+        `).join('')
+      );
+    };
+
+    const renderAttachmentState = () => {
+      const imageCount = pendingImages.length;
+      const textCount = pendingTextSnippets.length;
+      const uiContextCount = pendingUiContextEvents.length;
+      if (attachmentState) {
+        if (!imageCount && !textCount && !uiContextCount) {
+          attachmentState.textContent = 'No attachments';
+        } else {
+          const parts = [];
+          if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
+          if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
+          if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
+          attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
+        }
+      }
+      syncSendButton();
+    };
+
+    const syncVoiceButton = () => {
+      if (!btnVoice) return;
+      const icon = btnVoice.querySelector('.material-symbols-outlined');
+      const recording = getRecordingState().isRecording;
+      btnVoice.style.color = recording ? '#dc2626' : '#94a3b8';
+      btnVoice.setAttribute('aria-label', recording ? 'Stop voice input' : 'Start voice input');
+      btnVoice.setAttribute('title', recording ? 'Stop voice input' : 'Start voice input');
+      if (icon) icon.textContent = recording ? 'stop_circle' : 'mic';
+    };
+
+    const clearPendingAttachments = () => {
+      pendingImages = [];
+      pendingTextSnippets = [];
+      renderAttachmentState();
+    };
+
+    const clearUiContextQueue = () => {
+      pendingUiContextEvents = [];
+      renderAttachmentState();
+    };
+
+    const addTextSnippet = (label, text) => {
+      const snippet = String(text || '').trim().slice(0, MAX_CHAT_TEXT_CHARS);
+      if (!snippet) return false;
+      pendingTextSnippets.push({
+        label: label || 'Text snippet',
+        text: snippet,
+      });
+      if (pendingTextSnippets.length > 6) {
+        pendingTextSnippets = pendingTextSnippets.slice(-6);
+      }
+      renderAttachmentState();
+      return true;
+    };
+
+    const addImageFiles = async (files) => {
+      const selected = Array.from(files || []).filter((file) => String(file.type || '').startsWith('image/'));
+      if (!selected.length) return;
+
+      const slots = MAX_CHAT_IMAGE_ATTACHMENTS - pendingImages.length;
+      if (slots <= 0) {
+        toast.warning(`Maximum ${MAX_CHAT_IMAGE_ATTACHMENTS} screenshots can be attached.`);
+        return;
+      }
+
+      const valid = selected
+        .filter((file) => file.size <= MAX_CHAT_IMAGE_BYTES)
+        .slice(0, slots);
+
+      if (valid.length < selected.length) {
+        toast.warning(`Ignored oversized screenshots. Max ${Math.floor(MAX_CHAT_IMAGE_BYTES / (1024 * 1024))}MB each.`);
+      }
+
+      for (const file of valid) {
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          pendingImages.push({ name: file.name || 'Screenshot', dataUrl });
+        } catch {
+          // Ignore individual file failures and continue.
+        }
+      }
+
+      renderAttachmentState();
+    };
+
+    const addTextFiles = async (files) => {
+      const selected = Array.from(files || []).filter((file) => {
+        const type = String(file.type || '').toLowerCase();
+        return type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name || '');
+      });
+
+      for (const file of selected.slice(0, 4)) {
+        try {
+          const text = await readFileAsText(file);
+          addTextSnippet(file.name || 'Attachment', text);
+        } catch {
+          // Ignore individual file failures and continue.
+        }
+      }
+    };
+
     // Chat
     const chatHistory = [];
 
@@ -623,7 +801,14 @@ export function workspaceScreen() {
         body.textContent = text;
         body.style.whiteSpace = 'pre-wrap';
       } else {
-        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text));
+        body.classList.add('ai-message-rich');
+        replaceChildrenWithSafeHtml(body, renderAssistantRichText(text, {
+          onDiagnostics: (diagnostics) => {
+            if (diagnostics.length) {
+              console.warn('[Workspace Chat] Assistant message diagnostics:', diagnostics);
+            }
+          },
+        }));
       }
       bubble.appendChild(body);
       chatMessages.appendChild(bubble);
@@ -632,13 +817,19 @@ export function workspaceScreen() {
 
     async function sendMessage(text) {
       const trimmedText = text.trim();
-      if (!trimmedText || isChatPending) return;
+      const hasUiContext = pendingUiContextEvents.length > 0;
+      if ((!trimmedText && !pendingImages.length && !pendingTextSnippets.length && !hasUiContext) || isChatPending) return;
       isChatPending = true;
-      appendChatBubble('user', trimmedText);
-      addChatMessage('user', trimmedText);
-      chatHistory.push({ role: 'user', content: trimmedText });
-      btnSend.disabled = true;
+      const userVisibleText = trimmedText
+        || (hasUiContext ? 'Applied queued interactive edits for this request.' : 'Added attachment context for this request.');
+      const modelMessage = buildMessageWithUiContext(trimmedText, pendingUiContextEvents);
+      appendChatBubble('user', userVisibleText);
+      addChatMessage('user', userVisibleText);
+      chatHistory.push({ role: 'user', content: modelMessage || userVisibleText });
+      syncSendButton();
       chatInput.disabled = true;
+      btnAttach && (btnAttach.disabled = true);
+      btnVoice && (btnVoice.disabled = true);
 
       const typingEl = document.createElement('div');
       typingEl.style.cssText = 'display: flex; gap: 0.5rem; align-items: flex-start;';
@@ -648,27 +839,87 @@ export function workspaceScreen() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       try {
-        const response = await processChatMessage(trimmedText, formData, chatHistory, getState().activeQuestionId);
+        const attachmentPayload = [];
+        pendingTextSnippets.forEach((entry) => {
+          attachmentPayload.push({
+            type: 'text_snippet',
+            name: entry.label,
+            text: entry.text,
+          });
+        });
+
+        if (pendingImages.length) {
+          try {
+            const activeField = formData?.questions?.find((entry) => String(entry?.id) === String(getState().activeQuestionId));
+            const vision = await extractVisionContext({
+              surface: AI_SURFACES.WORKSPACE,
+              images: pendingImages.map((entry) => entry.dataUrl),
+              prompt: trimmedText,
+              formTitle: formData?.title || '',
+              activeFieldText: activeField?.text || '',
+            });
+            const fieldPreview = Array.isArray(vision.detectedFields)
+              ? vision.detectedFields
+                .slice(0, 6)
+                .map((entry) => {
+                  const label = String(entry?.label || '').trim();
+                  const typeHint = String(entry?.typeHint || '').trim();
+                  return label ? `${label}${typeHint ? ` (${typeHint})` : ''}` : '';
+                })
+                .filter(Boolean)
+              : [];
+            const combined = [
+              vision.summary ? `Screenshot summary: ${vision.summary}` : '',
+              fieldPreview.length ? `Detected fields: ${fieldPreview.join('; ')}` : '',
+            ].filter(Boolean).join('\n');
+            if (combined) {
+              attachmentPayload.push({
+                type: 'screenshot_summary',
+                name: 'Screenshot context',
+                text: combined,
+              });
+            }
+          } catch (visionError) {
+            console.warn('[Workspace Chat] Screenshot context unavailable:', visionError);
+          }
+        }
+
+        const response = await processChatMessage(modelMessage || userVisibleText, formData, chatHistory, getState().activeQuestionId, {
+          surface: AI_SURFACES.WORKSPACE,
+          attachments: attachmentPayload,
+        });
         const cleanResponse = String(response || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim() || 'I did not generate a response.';
+        const displayResponse = stripFollowUpTags(cleanResponse);
+        followUpSuggestions = buildNextFollowUps({
+          surface: AI_SURFACES.WORKSPACE,
+          responseText: cleanResponse,
+          formTitle: formData?.title || '',
+        });
+        renderFollowUps();
         typingEl.remove();
-        appendChatBubble('assistant', cleanResponse);
-        addChatMessage('assistant', cleanResponse);
-        chatHistory.push({ role: 'assistant', content: cleanResponse });
+        appendChatBubble('assistant', displayResponse);
+        addChatMessage('assistant', displayResponse);
+        chatHistory.push({ role: 'assistant', content: displayResponse });
+        clearPendingAttachments();
+        clearUiContextQueue();
       } catch (error) {
+        console.error('[Workspace Chat] Message failed:', error);
         typingEl.remove();
         const message = getAiErrorMessage(error, 'AI service is unavailable right now.');
         appendChatBubble('assistant', message);
-        toast.error(message);
       } finally {
-        btnSend.disabled = !chatInput.value.trim();
         chatInput.disabled = false;
+        btnAttach && (btnAttach.disabled = false);
+        btnVoice && (btnVoice.disabled = false);
         isChatPending = false;
+        syncSendButton();
         chatInput.focus();
+        syncVoiceButton();
       }
     }
 
     chatInput?.addEventListener('input', () => {
-      btnSend.disabled = !chatInput.value.trim();
+      syncSendButton();
     });
 
     chatInput?.addEventListener('keydown', (e) => {
@@ -678,13 +929,84 @@ export function workspaceScreen() {
     btnSend?.addEventListener('click', () => {
       sendMessage(chatInput.value);
       chatInput.value = '';
+      syncSendButton();
     });
+
+    btnAttach?.addEventListener('click', () => attachInput?.click());
+    attachInput?.addEventListener('change', async () => {
+      const files = Array.from(attachInput.files || []);
+      await addImageFiles(files);
+      await addTextFiles(files);
+      attachInput.value = '';
+    });
+
+    chatInput?.addEventListener('paste', async (event) => {
+      const items = Array.from(event?.clipboardData?.items || []);
+      const imageFiles = items
+        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+
+      if (imageFiles.length) {
+        event.preventDefault();
+        await addImageFiles(imageFiles);
+        return;
+      }
+
+      const pastedText = event?.clipboardData?.getData('text/plain') || '';
+      if (pastedText.length > 180 && /\n/.test(pastedText)) {
+        event.preventDefault();
+        if (addTextSnippet('Pasted snippet', pastedText)) {
+          toast.info('Attached pasted text snippet.');
+        }
+      }
+    });
+
+    btnVoice?.addEventListener('click', async () => {
+      if (!isVoiceSupported()) {
+        toast.error('Voice input is not supported in this browser.');
+        return;
+      }
+
+      try {
+        if (getRecordingState().isRecording) {
+          const transcript = await stopAndTranscribe(AI_SURFACES.WORKSPACE);
+          if (transcript) {
+            chatInput.value = chatInput.value ? `${chatInput.value.trim()} ${transcript}` : transcript;
+            syncSendButton();
+          }
+        } else {
+          await startRecording();
+        }
+      } catch (error) {
+        toast.error(getAiErrorMessage(error, 'Voice transcription failed.'));
+      } finally {
+        syncVoiceButton();
+      }
+    });
+
+    followUpsWrap?.addEventListener('click', (event) => {
+      const chip = event.target?.closest?.('.chat-followup-chip[data-followup-msg]');
+      if (!chip || !followUpsWrap.contains(chip)) return;
+      const prompt = String(chip.dataset.followupMsg || '').trim();
+      if (!prompt) return;
+      pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, createFollowUpClickEvent(prompt));
+      renderAttachmentState();
+      sendMessage(prompt);
+    });
+
+    renderFollowUps();
+    syncVoiceButton();
+    renderAttachmentState();
+    syncSendButton();
 
     wrapper.querySelectorAll('.chat-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const text = chip.dataset.msg || '';
         chatInput.value = text;
         btnSend.disabled = !text.trim();
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, createFollowUpClickEvent(text));
+        renderAttachmentState();
         // Switch to chat panel first
         toggleChat?.click();
         sendMessage(text);
@@ -704,6 +1026,7 @@ export function workspaceScreen() {
     syncWorkspaceZenPanel(wrapper.classList.contains('zen-mode-active'), wrapper);
 
     return () => {
+      if (getRecordingState().isRecording) cancelRecording();
       sortableInstance?.destroy?.();
       cleanupRichActions?.();
       cleanupLayout?.();

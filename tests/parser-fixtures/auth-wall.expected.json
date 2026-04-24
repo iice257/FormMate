@@ -1,0 +1,27 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "blocked",
+    "completeness": "blocked_before_form",
+    "blockedReason": "auth_required",
+    "unsupportedReasons": [],
+    "nextAction": "use_capture",
+    "nextStepRequired": false,
+    "nextStepHint": "Sign-in is required to access this form.",
+    "warningCodes": [
+      "AUTH_REQUIRED"
+    ]
+  },
+  "compatibility": null,
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": true,
+    "renderSignal": false,
+    "aiFallbackUsed": false
+  }
+}

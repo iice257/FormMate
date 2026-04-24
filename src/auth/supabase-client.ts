@@ -20,7 +20,7 @@ function getSupabaseUrl() {
 }
 
 function getSupabaseAnonKey() {
-  return String(getEnv('VITE_SUPABASE_ANON_KEY') || '').trim();
+  return String(getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || '').trim();
 }
 
 export function isSupabaseConfigured() {
@@ -67,9 +67,10 @@ async function authRequest(path, { method = 'GET', body = null, accessToken = nu
   const data = text ? safeJsonParse(text) : null;
 
   if (!res.ok) {
-    const message = data?.msg || data?.error_description || data?.error || text || `Request failed with status ${res.status}`;
+    const message = data?.msg || data?.message || data?.error_description || data?.error || text || `Request failed with status ${res.status}`;
     const error = new Error(message);
     error.status = res.status;
+    error.code = data?.code || data?.error_code || data?.error || undefined;
     error.data = data;
     throw error;
   }
@@ -117,6 +118,38 @@ function createAuthAdapter() {
       return normalizeAuthResponse(data);
     },
 
+    async signInWithOtp({ email, options = {} }) {
+      await authRequest('/auth/v1/otp', {
+        method: 'POST',
+        body: {
+          email,
+          create_user: options.shouldCreateUser !== false,
+          data: options.data || {},
+          redirect_to: options.emailRedirectTo || options.redirectTo || getAuthRedirectUrl(),
+          gotrue_meta_security: {
+            captcha_token: options.captchaToken || undefined,
+          },
+        },
+      });
+
+      return { data: {}, error: null };
+    },
+
+    async verifyOtp({ email, token, token_hash, type = 'email', options = {} }) {
+      const data = await authRequest('/auth/v1/verify', {
+        method: 'POST',
+        body: {
+          email,
+          token,
+          token_hash,
+          type,
+          redirect_to: options.redirectTo || getAuthRedirectUrl(),
+        },
+      });
+
+      return normalizeAuthResponse(data);
+    },
+
     async signInWithOAuth({ provider, options = {} }) {
       const redirectTo = options.redirectTo || getAuthRedirectUrl();
       const verifier = createPkceVerifier();
@@ -145,24 +178,39 @@ function createAuthAdapter() {
       return { data: { url: url.toString() }, error: null };
     },
 
-    async exchangeCodeForSession(code, redirectTo = getAuthRedirectUrl()) {
-      const verifier = isBrowser() ? sessionStorage.getItem(PKCE_VERIFIER_KEY) : null;
-      const data = await authRequest('/auth/v1/oauth/token', {
+    async signInWithIdToken({ provider, token, accessToken, nonce } = {}) {
+      const data = await authRequest('/auth/v1/token?grant_type=id_token', {
         method: 'POST',
         body: {
-          grant_type: 'authorization_code',
-          code,
-          code_verifier: verifier || undefined,
-          redirect_uri: redirectTo || undefined,
+          provider,
+          token,
+          access_token: accessToken || undefined,
+          nonce: nonce || undefined,
         },
-        form: true,
       });
 
-      if (isBrowser()) {
-        sessionStorage.removeItem(PKCE_VERIFIER_KEY);
-      }
-
       return normalizeAuthResponse(data);
+    },
+
+    async exchangeCodeForSession(code, redirectTo = getAuthRedirectUrl()) {
+      const verifier = isBrowser() ? sessionStorage.getItem(PKCE_VERIFIER_KEY) : null;
+      try {
+        const data = await authRequest('/auth/v1/token?grant_type=pkce', {
+          method: 'POST',
+          body: {
+            auth_code: code,
+            code_verifier: verifier || undefined,
+            redirect_uri: redirectTo || undefined,
+          },
+          form: true,
+        });
+
+        return normalizeAuthResponse(data);
+      } finally {
+        if (isBrowser()) {
+          sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+        }
+      }
     },
 
     async refreshSession(refreshToken) {
@@ -250,7 +298,6 @@ function normalizeSession(raw) {
       name,
       avatar,
       provider: user.app_metadata?.provider || user.app_metadata?.providers?.[0] || raw.provider || 'email',
-      tier: user.app_metadata?.tier || metadata.tier || raw.tier || 'free',
     },
   };
 }

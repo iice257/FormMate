@@ -2,6 +2,13 @@ import { getState, setState } from './state';
 import { getSession, isAuthenticated } from './auth/auth-service';
 import { isOnboardingComplete } from './storage/local-store';
 import { createSafeHtmlFragment } from './utils/safe-html';
+import {
+  applyNavigationTransition,
+  captureScrollState,
+  type NavigationDirection,
+  type NavigationTransitionKind,
+  type ScrollStrategy,
+} from './navigation/transition-system';
 
 type ScreenRenderResult = {
   html: string;
@@ -9,6 +16,22 @@ type ScreenRenderResult = {
 };
 
 type ScreenRenderer = () => ScreenRenderResult;
+
+type RouterHistoryState = {
+  screen: string;
+  seq: number;
+  previousScreen: string | null;
+};
+
+type NavigateOptions = {
+  replace?: boolean;
+  direction?: NavigationDirection | 'auto';
+  source?: 'app' | 'sidebar' | 'shell' | 'browser';
+  transition?: NavigationTransitionKind | 'auto';
+  scroll?: ScrollStrategy | 'auto';
+  historySync?: 'auto' | 'skip';
+  incomingHistoryState?: RouterHistoryState | null;
+};
 
 declare global {
   interface Window {
@@ -19,9 +42,17 @@ declare global {
 
 const routes: Record<string, ScreenRenderer> = {};
 let currentCleanup: null | (() => void) = null;
-const historyStack: string[] = [];
+let historySequence = 0;
 
-const PUBLIC_SCREENS = ['auth', 'landing', 'capture'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'examples', 'privacy', 'terms'];
+const APP_SHELL_SCREENS = new Set([
+  'dashboard',
+  'new',
+  'workspace',
+  'history',
+  'ai-chat',
+  'vault',
+]);
 
 export function getHomeScreenForUser() {
   if (!isAuthenticated()) return 'landing';
@@ -42,44 +73,178 @@ export function registerScreen(name: string, renderFn: ScreenRenderer) {
   routes[name] = renderFn;
 }
 
-export function navigateTo(screen: string, replace = false, direction = replace ? 'back' : 'forward') {
-  void direction;
-  performNavigation(screen, replace);
+function getActiveHistoryState() {
+  const state = window.history.state as RouterHistoryState | null;
+
+  if (!state || typeof state.seq !== 'number') {
+    return null;
+  }
+
+  return state;
 }
 
-function performNavigation(screen: string, replace = false) {
-  const app = document.getElementById('app');
-  const modalTab = screen === 'accounts'
-    ? 'profile'
-    : screen === 'settings'
-      ? 'settings'
-      : screen === 'help'
-        ? 'help'
-        : null;
+function isAppShellScreen(screen: string | null | undefined) {
+  return Boolean(screen && APP_SHELL_SCREENS.has(screen));
+}
 
-  if (modalTab && app?.childElementCount && typeof window.__fmOpenAccountModalTab === 'function') {
-    window.__fmOpenAccountModalTab(modalTab);
+function normalizeNavigateOptions(
+  replaceOrOptions: boolean | NavigateOptions = false,
+  legacyDirection?: NavigationDirection,
+) {
+  if (typeof replaceOrOptions === 'boolean') {
+    return {
+      replace: replaceOrOptions,
+      direction: legacyDirection ?? (replaceOrOptions ? 'back' : 'forward'),
+      source: 'app' as const,
+      transition: 'auto' as const,
+      scroll: 'auto' as const,
+      historySync: 'auto' as const,
+      incomingHistoryState: null,
+    };
+  }
+
+  return {
+    replace: replaceOrOptions.replace ?? false,
+    direction: replaceOrOptions.direction ?? 'auto',
+    source: replaceOrOptions.source ?? 'app',
+    transition: replaceOrOptions.transition ?? 'auto',
+    scroll: replaceOrOptions.scroll ?? 'auto',
+    historySync: replaceOrOptions.historySync ?? 'auto',
+    incomingHistoryState: replaceOrOptions.incomingHistoryState ?? null,
+  };
+}
+
+function resolveNavigationDirection(
+  screen: string,
+  direction: NavigationDirection | 'auto',
+) {
+  if (direction === 'forward' || direction === 'back') {
+    return direction;
+  }
+
+  const activeHistoryState = getActiveHistoryState();
+  if (activeHistoryState?.previousScreen === screen) {
+    return 'back';
+  }
+
+  return 'forward';
+}
+
+function resolveTransitionKind(
+  currentScreen: string | null | undefined,
+  nextScreen: string,
+  options: ReturnType<typeof normalizeNavigateOptions>,
+) {
+  if (options.transition === 'page' || options.transition === 'shell') {
+    return options.transition;
+  }
+
+  if (
+    (options.source === 'sidebar' || options.source === 'shell' || options.source === 'browser')
+    && isAppShellScreen(currentScreen)
+    && isAppShellScreen(nextScreen)
+  ) {
+    return 'shell';
+  }
+
+  return 'page';
+}
+
+function resolveScrollStrategy(
+  direction: NavigationDirection,
+  options: ReturnType<typeof normalizeNavigateOptions>,
+) {
+  if (options.scroll === 'top' || options.scroll === 'restore' || options.scroll === 'preserve') {
+    return options.scroll;
+  }
+
+  return direction === 'back' && options.source === 'browser' ? 'restore' : 'top';
+}
+
+function createRouteWrapper(screen: string, html: string) {
+  const wrapper = document.createElement('div');
+  wrapper.dataset.fmRouteRoot = 'true';
+  wrapper.dataset.fmRouteScreen = screen;
+  wrapper.appendChild(createSafeHtmlFragment(html));
+  return wrapper;
+}
+
+function syncHistoryState(
+  screen: string,
+  path: string,
+  replace: boolean,
+  currentScreen: string | null,
+  requestedHistoryMode: 'auto' | 'skip',
+  incomingHistoryState: RouterHistoryState | null,
+) {
+  const activeHistoryState = getActiveHistoryState();
+  let historyMode: 'push' | 'replace' | 'skip' = requestedHistoryMode === 'skip'
+    ? 'skip'
+    : replace
+      ? 'replace'
+      : 'push';
+
+  const currentPath = window.location.pathname;
+  const requestedStateMatchesCurrentHistory = incomingHistoryState?.screen === screen && currentPath === path;
+  if (historyMode === 'skip' && !requestedStateMatchesCurrentHistory) {
+    historyMode = 'replace';
+  }
+
+  if (historyMode === 'skip') {
+    historySequence = incomingHistoryState?.seq ?? historySequence;
+    window.__fmPreviousScreen = incomingHistoryState?.previousScreen ?? null;
+    return incomingHistoryState ?? activeHistoryState;
+  }
+
+  const nextSeq = historyMode === 'push'
+    ? (activeHistoryState?.seq ?? historySequence) + 1
+    : activeHistoryState?.seq ?? historySequence;
+
+  const nextHistoryState: RouterHistoryState = {
+    screen,
+    seq: nextSeq,
+    previousScreen: historyMode === 'push'
+      ? currentScreen
+      : activeHistoryState?.previousScreen ?? currentScreen,
+  };
+
+  if (historyMode === 'push') {
+    window.history.pushState(nextHistoryState, '', path);
+  } else {
+    window.history.replaceState(nextHistoryState, '', path);
+  }
+
+  historySequence = nextSeq;
+  window.__fmPreviousScreen = nextHistoryState.previousScreen;
+  return nextHistoryState;
+}
+
+export function navigateTo(
+  screen: string,
+  replaceOrOptions: boolean | NavigateOptions = false,
+  legacyDirection?: NavigationDirection,
+) {
+  performNavigation(screen, normalizeNavigateOptions(replaceOrOptions, legacyDirection));
+}
+
+function performNavigation(screen: string, options: ReturnType<typeof normalizeNavigateOptions>) {
+  const app = document.getElementById('app');
+  if (!app) {
     return;
   }
 
+  const requestedScreen = screen;
+  const authed = isAuthenticated();
+  const onboardingComplete = isOnboardingComplete();
+  let replace = options.replace;
   let path = `/${screen === 'landing' ? '' : screen}`;
   if (screen === 'landing') path = '/';
-
-  if (replace) {
-    const currentPath = window.location.pathname;
-    const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
-    if (window.location.search && currentScreen === screen) {
-      path = `${currentPath}${window.location.search}`;
-    }
-  }
 
   if (screen === 'settings') {
     screen = 'accounts';
     path = '/accounts';
   }
 
-  const authed = isAuthenticated();
-  const onboardingComplete = isOnboardingComplete();
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
     screen = 'auth';
     path = '/auth';
@@ -94,21 +259,33 @@ function performNavigation(screen: string, replace = false) {
     replace = true;
   }
 
-  if (!replace) {
-    window.history.pushState({ screen }, '', path);
-  } else {
-    window.history.replaceState({ screen }, '', path);
+  const modalTab = authed && requestedScreen === 'settings'
+    ? 'settings'
+    : authed && screen === 'accounts'
+    ? 'profile'
+    : authed && requestedScreen === 'help'
+      ? 'help'
+      : null;
+
+  if (modalTab && app.childElementCount && typeof window.__fmOpenAccountModalTab === 'function') {
+    window.__fmOpenAccountModalTab(modalTab);
+    return;
   }
 
-  window.scrollTo(0, 0);
-
-  const { currentScreen } = getState();
-  if (currentScreen && !replace) {
-    historyStack.push(currentScreen);
+  if (replace) {
+    const currentPath = window.location.pathname;
+    const currentScreen = currentPath.replace(/^\/+/, '') || 'landing';
+    if (window.location.search && currentScreen === screen) {
+      path = `${currentPath}${window.location.search}`;
+    }
   }
 
-  setState({ currentScreen: screen });
-  window.__fmPreviousScreen = historyStack.length > 0 ? historyStack[historyStack.length - 1] : null;
+  const currentWrapper = app.firstElementChild as HTMLElement | null;
+  const departingHistoryState = getActiveHistoryState();
+  const previousScreen = getState().currentScreen;
+  const direction = resolveNavigationDirection(screen, options.direction);
+  const transitionKind = resolveTransitionKind(previousScreen, screen, options);
+  const scrollStrategy = resolveScrollStrategy(direction, options);
 
   const titleMap = {
     'landing': 'Home | FormMate',
@@ -121,7 +298,8 @@ function performNavigation(screen: string, replace = false) {
     'accounts': 'My Account | FormMate',
     'analytics': 'Analytics | FormMate',
     'docs': 'Documentation | FormMate',
-    'pricing': 'Pricing | FormMate',
+    'privacy': 'Privacy Policy | FormMate',
+    'terms': 'Terms of Service | FormMate',
     'help': 'Help Center | FormMate',
     'examples': 'Examples | FormMate',
     'onboarding': 'Welcome | FormMate',
@@ -135,10 +313,33 @@ function performNavigation(screen: string, replace = false) {
 
   if (!routes[screen]) return;
 
+  const departingSeq = options.historySync === 'skip' && options.source === 'browser'
+    ? historySequence
+    : departingHistoryState?.seq;
+
+  if (departingSeq != null) {
+    captureScrollState(departingSeq, currentWrapper);
+  }
+
   const { html, init } = routes[screen]();
   if (!html && !init) return;
 
-  const mountScreen = (wrapper: HTMLElement) => {
+  const nextHistoryState = syncHistoryState(
+    screen,
+    path,
+    replace,
+    previousScreen,
+    options.historySync,
+    options.incomingHistoryState,
+  );
+
+  setState({ currentScreen: screen });
+
+  const mountScreen = (wrapper: HTMLElement | null) => {
+    if (!wrapper) {
+      return null;
+    }
+
     if (currentCleanup) {
       currentCleanup();
       currentCleanup = null;
@@ -147,23 +348,72 @@ function performNavigation(screen: string, replace = false) {
     if (init) {
       currentCleanup = init(wrapper) || null;
     }
+    return wrapper;
   };
 
-  const nextWrapper = document.createElement('div');
-  nextWrapper.appendChild(createSafeHtmlFragment(html));
-  app.replaceChildren(nextWrapper);
-  mountScreen(nextWrapper);
+  const renderNextScreen = () => {
+    const nextWrapper = createRouteWrapper(screen, html);
+    app.replaceChildren(nextWrapper);
+    return mountScreen(nextWrapper);
+  };
+
+  const shouldAnimate = Boolean(currentWrapper && previousScreen);
+
+  if (!shouldAnimate) {
+    const mountedWrapper = renderNextScreen();
+    const strategy = transitionKind === 'shell' ? 'top' : scrollStrategy;
+    const mainScrollRegion = mountedWrapper?.querySelector?.('[data-fm-scroll-region="main"]') as HTMLElement | null;
+    if (strategy !== 'preserve') {
+      window.scrollTo(0, 0);
+      if (mainScrollRegion) {
+        mainScrollRegion.scrollTop = 0;
+      }
+    }
+    return;
+  }
+
+  applyNavigationTransition({
+    kind: transitionKind,
+    direction,
+    scrollKey: nextHistoryState?.seq ?? historySequence,
+    scrollStrategy: transitionKind === 'shell' ? 'top' : scrollStrategy,
+    update: renderNextScreen,
+  });
 }
 
 export function initRouter() {
   window.addEventListener('popstate', (e: PopStateEvent) => {
-    const nextState = e.state as { screen?: string } | null;
+    const nextState = e.state as RouterHistoryState | null;
+    const direction: NavigationDirection = nextState?.seq != null && nextState.seq < historySequence ? 'back' : 'forward';
+    const currentScreen = getState().currentScreen;
+
     if (nextState?.screen) {
-      navigateTo(nextState.screen, true, 'back');
+      navigateTo(nextState.screen, {
+        replace: true,
+        direction,
+        source: 'browser',
+        transition: 'auto',
+        scroll: 'restore',
+        historySync: 'skip',
+        incomingHistoryState: nextState,
+      });
+    } else if (currentScreen === 'privacy' || currentScreen === 'terms') {
+      navigateTo('docs', {
+        replace: true,
+        direction: 'back',
+        source: 'browser',
+        transition: 'page',
+        scroll: 'top',
+      });
     } else {
       const homeScreen = getHomeScreenForUser();
-      navigateTo(homeScreen, true, 'back');
-      window.history.pushState({ screen: homeScreen }, '', homeScreen === 'landing' ? '/' : `/${homeScreen}`);
+      navigateTo(homeScreen, {
+        replace: true,
+        direction: 'back',
+        source: 'browser',
+        transition: 'page',
+        scroll: 'top',
+      });
     }
   });
 
@@ -176,7 +426,6 @@ export function initRouter() {
       setState({
         isAuthenticated: true,
         authUser: session.user,
-        tier: session.user.tier || session.tier || 'free',
         userProfile: {
           ...getState().userProfile,
           name: session.user.name || '',
@@ -193,25 +442,58 @@ export function initRouter() {
   const initialScreen = path || 'landing';
 
   if (!authenticated) {
-    navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', true);
+    navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', {
+      replace: true,
+      direction: 'forward',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    });
   } else if (!onboarded) {
-    navigateTo(initialScreen === 'capture' ? 'capture' : 'onboarding', true);
+    navigateTo(initialScreen === 'capture' ? 'capture' : 'onboarding', {
+      replace: true,
+      direction: 'forward',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    });
   } else if (initialScreen === 'landing' || initialScreen === 'auth') {
-    navigateTo('dashboard', true);
+    navigateTo('dashboard', {
+      replace: true,
+      direction: 'forward',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    });
   } else if (routes[initialScreen]) {
-    navigateTo(initialScreen, true);
+    navigateTo(initialScreen, {
+      replace: true,
+      direction: 'forward',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    });
   } else {
-    navigateTo('dashboard', true);
+    navigateTo('dashboard', {
+      replace: true,
+      direction: 'forward',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    });
   }
 }
 
 export function goBack() {
   if (window.history.length > 1) {
     window.history.back();
-  } else if (historyStack.length > 0) {
-    const previousScreen = historyStack.pop();
-    navigateTo(previousScreen, true, 'back');
   } else {
-    navigateTo(getHomeScreenForUser(), true, 'back');
+    navigateTo(getHomeScreenForUser(), {
+      replace: true,
+      direction: 'back',
+      source: 'browser',
+      transition: 'page',
+      scroll: 'restore',
+    });
   }
 }

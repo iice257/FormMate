@@ -1,0 +1,45 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "image",
+    "sourceType": "image",
+    "fetchStrategy": "image_boundary"
+  },
+  "outcome": {
+    "status": "partial",
+    "completeness": "visible_step_only",
+    "blockedReason": null,
+    "unsupportedReasons": [],
+    "nextAction": "upload_screenshots",
+    "nextStepRequired": true,
+    "nextStepHint": "Additional form steps were inferred. Upload screenshots for remaining steps.",
+    "warningCodes": [
+      "IMAGE_PARSE_USED",
+      "IMAGE_WARNING_1"
+    ]
+  },
+  "compatibility": {
+    "title": "Parsed Screenshot Form",
+    "questionCount": 2,
+    "questions": [
+      {
+        "text": "Full Name",
+        "type": "short_text",
+        "required": true,
+        "options": []
+      },
+      {
+        "text": "Portfolio URL",
+        "type": "short_text",
+        "required": false,
+        "options": []
+      }
+    ]
+  },
+  "diagnostics": {
+    "parseStrategy": "image_llm_extract",
+    "authSignal": false,
+    "renderSignal": true,
+    "aiFallbackUsed": true
+  }
+}

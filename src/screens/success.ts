@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════
 
 import { getState, setState } from '../state';
-import { navigateTo, goBack } from '../router';
+import { navigateTo } from '../router';
 
 let confettiModulePromise = null;
 
@@ -173,7 +173,7 @@ export function successScreen() {
       }, 250);
     });
 
-    wrapper.querySelector('#btn-close').addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-close').addEventListener('click', () => navigateTo(authed ? 'dashboard' : 'landing'));
 
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
       navigateTo(authed ? 'dashboard' : 'landing');

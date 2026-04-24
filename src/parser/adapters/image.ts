@@ -104,13 +104,13 @@ export async function requestImageParse({ imageArtifacts, imageServiceUrl = '/ap
   }
 
   try {
-    const authHeaders = getRequestAuthHeaders();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getRequestAuthHeaders(),
+    };
     const response = await fetch(imageServiceUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-      },
+      headers,
       body: JSON.stringify({ images: artifacts, sourceUrl }),
     });
 

@@ -3,28 +3,37 @@ import { createServer } from 'node:http';
 import { config as loadDotenv } from 'dotenv';
 import chatHandler from '../api/ai/chat.ts';
 import transcribeHandler from '../api/ai/transcribe.ts';
+import visionContextHandler from '../api/ai/vision-context.ts';
 import imageExtractHandler from '../api/parser/image-extract.ts';
 import scrapeHandler from '../api/proxy/scrape.ts';
 import googleFormHandler from '../api/proxy/google-form.ts';
+import healthHandler from '../api/health.ts';
 
-const HOST = '127.0.0.1';
-const PORT = 3000;
+const HOST = String(process.env.FORMMATE_API_HOST || '127.0.0.1').trim() || '127.0.0.1';
+const parsedPort = Number.parseInt(String(process.env.FORMMATE_API_PORT || ''), 10);
+const PORT = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 
 // Local API server should mirror Vercel env pulls used by frontend proxy flows.
 loadDotenv({ path: '.env.local' });
 loadDotenv();
 
-if (typeof process.env.NODE_TLS_REJECT_UNAUTHORIZED === 'undefined') {
+const strictTls = String(process.env.FORMMATE_STRICT_TLS || '').trim() === '1';
+if (!strictTls) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  console.warn('[local-api] NODE_TLS_REJECT_UNAUTHORIZED is not set; defaulting to 0 for local TLS compatibility.');
+  console.warn('[local-api] TLS certificate verification disabled for local API compatibility. Set FORMMATE_STRICT_TLS=1 to enforce strict TLS.');
+} else {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
+  console.log('[local-api] Strict TLS enabled (FORMMATE_STRICT_TLS=1).');
 }
 
 const ROUTES = new Map([
   ['/api/ai/chat', { handler: chatHandler, parseJson: true, maxBytes: 2 * 1024 * 1024 }],
   ['/api/ai/transcribe', { handler: transcribeHandler, parseJson: false }],
+  ['/api/ai/vision-context', { handler: visionContextHandler, parseJson: true, maxBytes: 22 * 1024 * 1024 }],
   ['/api/parser/image-extract', { handler: imageExtractHandler, parseJson: true, maxBytes: 22 * 1024 * 1024 }],
   ['/api/proxy/scrape', { handler: scrapeHandler, parseJson: false }],
   ['/api/proxy/google-form', { handler: googleFormHandler, parseJson: false }],
+  ['/api/health', { handler: healthHandler, parseJson: false }],
 ]);
 
 function parseQuery(searchParams) {

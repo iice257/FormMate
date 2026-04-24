@@ -189,14 +189,31 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
 }
 
+function getLabelEvidenceSource(labelSource) {
+  const normalized = String(labelSource || '').trim().toLowerCase();
+  if (normalized === 'placeholder') return EVIDENCE_SOURCE.PLACEHOLDER;
+  if (normalized === 'aria_label' || normalized === 'aria_labelledby') return EVIDENCE_SOURCE.ARIA;
+  if (normalized === 'name_attr') return EVIDENCE_SOURCE.NAME_ATTR;
+  return EVIDENCE_SOURCE.LABEL_TEXT;
+}
+
 function convertLegacyQuestionToCanonicalField(question, context = {}) {
   const uiType = legacyQuestionTypeToUiType(question?.type);
   const label = normalizeWhitespace(question?.text || `Question ${context.order + 1}`);
   const normalized = normalizeLabel(label);
   const options = toFieldOptions(question?.options);
+  const parserHints = question?.parserHints || {};
+  const labelEvidenceSource = getLabelEvidenceSource(parserHints.labelSource);
+  const labelConfidence = parserHints.generatedLabel
+    ? 0.52
+    : parserHints.placeholderLabel
+      ? 0.68
+      : parserHints.ariaLabelUsed
+        ? 0.82
+        : 0.92;
 
   const provenance = [
-    createEvidence(EVIDENCE_SOURCE.LABEL_TEXT, label, normalized ? 0.92 : 0.4),
+    createEvidence(labelEvidenceSource, label, normalized ? labelConfidence : 0.4),
     createEvidence(EVIDENCE_SOURCE.INPUT_TYPE, String(question?.type || ''), uiType === UI_TYPE.UNKNOWN ? 0.4 : 0.9),
   ];
   if (options.length > 0) {
@@ -253,7 +270,17 @@ function convertLegacyQuestionToCanonicalField(question, context = {}) {
       },
       provenance,
       confidence: {
-        detected: normalized && !/^question \d+$/i.test(label) ? 0.9 : 0.66,
+        detected: clamp(
+          parserHints.generatedLabel
+            ? 0.56
+            : parserHints.placeholderLabel
+              ? 0.7
+              : normalized && !/^question \d+$/i.test(label)
+                ? 0.9
+                : 0.66,
+          0,
+          1,
+        ),
         uiType: uiType === UI_TYPE.UNKNOWN ? 0.52 : 0.9,
       },
     },
@@ -370,4 +397,3 @@ export function toLegacyFormData(parseEnvelope) {
     questions: fields.map((field, index) => legacyQuestionFromCanonicalField(field, index)),
   };
 }
-

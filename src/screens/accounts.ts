@@ -13,7 +13,7 @@ import { logSettingsChanged } from '../storage/activity-logger';
 import { safeHttpUrl } from '../utils/escape';
 
 export function accountsScreen() {
-  const { userProfile, vault, settings, tier = 'free' } = getState();
+  const { userProfile, vault, settings } = getState();
   const formHistory = loadFormHistory();
 
   const tones = ['professional', 'friendly', 'concise', 'creative', 'formal', 'casual'];
@@ -65,9 +65,7 @@ export function accountsScreen() {
           <div class="flex-1 flex justify-end">
             <button id="btn-user-badge" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
               <img src="${escapeAttr(safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
-              <span class="truncate max-w-[100px]">${escapeHtml(userProfile?.name?.split(' ')[0] || 'User')}</span>
-              <span class="w-px h-4 bg-slate-300"></span>
-              <span class="text-xs font-bold ${tier === 'free' ? 'text-slate-400' : 'text-primary'} uppercase tracking-tight">${tier === 'free' ? 'Free' : 'Pro'}</span>
+              <span class="truncate max-w-[120px]">${escapeHtml(userProfile?.name?.split(' ')[0] || 'User')}</span>
             </button>
           </div>
         </header>
@@ -474,18 +472,7 @@ export function accountsScreen() {
       setState({
         isAuthenticated: false,
         authUser: null,
-        tier: 'free',
         currentScreen: 'auth',
-        userProfile: {
-          name: '',
-          email: '',
-          phone: '',
-          occupation: '',
-          bio: '',
-          experience: '',
-          preferredTone: 'professional',
-          avatar: ''
-        }
       });
       toast.info('Signed out.');
       navigateTo('auth');
@@ -498,18 +485,7 @@ export function accountsScreen() {
         setState({
           isAuthenticated: false,
           authUser: null,
-          tier: 'free',
           currentScreen: 'auth',
-          userProfile: {
-            name: '',
-            email: '',
-            phone: '',
-            occupation: '',
-            bio: '',
-            experience: '',
-            preferredTone: 'professional',
-            avatar: ''
-          }
         });
         toast.warning('Account deleted.');
         navigateTo('auth');

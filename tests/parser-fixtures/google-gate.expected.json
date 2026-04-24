@@ -1,0 +1,27 @@
+{
+  "acquisition": {
+    "provider": "google_forms",
+    "adapterKey": "google_forms_capture_gate",
+    "sourceType": "html",
+    "fetchStrategy": "provider_gate"
+  },
+  "outcome": {
+    "status": "blocked",
+    "completeness": "blocked_before_form",
+    "blockedReason": "interaction_required",
+    "unsupportedReasons": [],
+    "nextAction": "upload_screenshots",
+    "nextStepRequired": true,
+    "nextStepHint": "Google Forms are screenshot-first in FormMate because structural access is frequently blocked by active-session requirements.",
+    "warningCodes": [
+      "PROVIDER_CAPTURE_GATE"
+    ]
+  },
+  "compatibility": null,
+  "diagnostics": {
+    "parseStrategy": "provider_capture_gate",
+    "authSignal": false,
+    "renderSignal": true,
+    "aiFallbackUsed": false
+  }
+}

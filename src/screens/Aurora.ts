@@ -101,7 +101,7 @@ void main() {
   // smoothstep(0.85, 1.0, ...) ensures it reaches 1.0 (full opacity) at the top edge.
   float height = smoothstep(0.82, 0.98, uv.y + noise * 0.02);
   
-  // No dark intensity multiplier. We blend directly to background using height as alpha.
+  // Blend directly to the background using height as alpha.
   // This ensures colors stay vibrant and fade into white.
   fragColor = vec4(rampColor * height, height);
 }

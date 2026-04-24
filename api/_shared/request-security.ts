@@ -134,7 +134,7 @@ async function validateSupabaseAccessToken(token) {
   }
 
   const supabaseUrl = getEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
-  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
+  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
   if (!supabaseUrl || !supabaseAnonKey) {
     return false;
   }
@@ -164,6 +164,13 @@ export async function assertTrustedAppSignal(req, res, message = 'Access denied.
   if (['1', 'true'].includes(devAuthHeader)) {
     if (isLocalDevRequest(req, origin)) return true;
     if (isDevAuthEnabled() && isLocalOrigin(origin)) return true;
+  }
+
+  // Allow trusted same-origin/same-site browser requests from the FormMate app.
+  // This keeps AI/parser routes functional even when Supabase token validation is
+  // unavailable (for example, missing anon key in a given environment).
+  if (hasBrowserTrustSignal(req)) {
+    return true;
   }
 
   const bearerToken = getBearerToken(req);

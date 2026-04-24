@@ -7,6 +7,9 @@ import { getDashboardActionScreenForUser, getFormsEntryScreenForUser, navigateTo
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { openAccountModal } from '../components/layout';
+import { signInWithGoogleCredential } from '../auth/auth-service';
+import { promptGoogleOneTap } from '../auth/google-one-tap';
+import { isOnboardingComplete } from '../storage/local-store';
 
 export function landingScreen() {
   const { isAuthenticated, userProfile } = getState();
@@ -42,7 +45,6 @@ export function landingScreen() {
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
             ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-pricing">${(getState().tier && getState().tier !== 'free') ? 'Subscription' : 'Pricing'}</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
           </nav>
  
@@ -439,8 +441,8 @@ export function landingScreen() {
             </div>
             
             <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
-              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
-              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
+              <button type="button" id="btn-footer-privacy" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
+              <button type="button" id="btn-footer-terms" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Cookie Settings</button>
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0" id="btn-footer-help">Help Center</button>
             </div>
@@ -457,6 +459,8 @@ export function landingScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     wrapper.querySelector('#btn-footer-help')?.addEventListener('click', () => navigateTo('docs'));
+    wrapper.querySelector('#btn-footer-privacy')?.addEventListener('click', () => navigateTo('privacy'));
+    wrapper.querySelector('#btn-footer-terms')?.addEventListener('click', () => navigateTo('terms'));
 
     wrapper.querySelector('#btn-hero-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#btn-hero-chat')?.addEventListener('click', () => navigateTo('ai-chat'));
@@ -465,6 +469,44 @@ export function landingScreen() {
     // Restore saved URL
     const state = getState();
     if (state.formUrl) urlInput.value = state.formUrl;
+
+    if (!state.isAuthenticated) {
+      void promptGoogleOneTap({
+        autoSelect: true,
+        context: 'signin',
+        onCredential: async (response, { nonce } = {}) => {
+          try {
+            const session = await signInWithGoogleCredential(response, { nonce });
+            if (!wrapper.isConnected) return;
+            applySessionState(session);
+            navigateTo(isOnboardingComplete() ? getDashboardActionScreenForUser() : 'onboarding');
+          } catch (error) {
+            console.warn('[Landing] Google automatic sign-in failed:', error);
+          }
+        },
+        onPromptMoment: (notification) => {
+          if (notification?.skipped || notification?.dismissed || notification?.displayReason) {
+            console.info('[Landing] Google One Tap prompt state:', notification);
+          }
+        },
+      }).catch((error) => {
+        console.warn('[Landing] Google automatic sign-in unavailable:', error);
+      });
+    }
+
+    function applySessionState(session) {
+      const user = session?.user || {};
+      setState({
+        isAuthenticated: true,
+        authUser: user,
+        userProfile: {
+          ...getState().userProfile,
+          name: user.name || '',
+          email: user.email || '',
+          avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2298da&color=fff&bold=true`,
+        },
+      });
+    }
 
     // Analyze button
     btnAnalyze.addEventListener('click', () => {
@@ -536,7 +578,6 @@ export function landingScreen() {
       navigateTo(getDashboardActionScreenForUser());
     });
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
-    wrapper.querySelector('#nav-pricing')?.addEventListener('click', () => navigateTo('pricing'));
     wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
@@ -553,7 +594,7 @@ export function landingScreen() {
     // Testimonials Logic
     const testimonialsList = [
       { quote: "I applied to 14 product design roles in one weekend using FormMate. Each cover letter was tailored to the company's specific stack. My callback rate went from 12% to nearly 40%.", author: "James Peterson", role: "Procurement Analyst, Deloitte" },
-      { quote: "The AI correctly auto-filled my 6 years of Python and Go experience across three different ATS formats without me editing a single line. That alone justified the subscription.", author: "Aisha Patel", role: "Software Engineer, Stripe" },
+      { quote: "The AI correctly auto-filled my 6 years of Python and Go experience across three different ATS formats without me editing a single line. It saved me hours every week.", author: "Aisha Patel", role: "Software Engineer, Stripe" },
       { quote: "I process about 30 new patient intake forms per week. FormMate helps my admin staff pre-populate medical histories so patients only need to verify - saves roughly 2 hours daily.", author: "Dr. Marcus Thorne", role: "Clinical Psychologist" },
       { quote: "Our team used FormMate to fill out Michigan's annual compliance renewal - 47 fields across 5 pages. It pulled our EIN, DUNS number, and officer details from the vault perfectly.", author: "Sarah Jenkins", role: "Operations Lead, Acme Corp" },
       { quote: "I was skeptical because every autofill tool I've tried breaks on Workday's custom iframes. FormMate actually parsed the nested fields and suggested accurate answers for each one.", author: "David Reyes", role: "B2B Sales Executive, HubSpot" },

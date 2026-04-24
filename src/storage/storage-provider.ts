@@ -85,11 +85,17 @@ export function getStorageMode() {
 }
 
 export function isSupabaseStorageConfigured() {
-  return Boolean(String(getEnv('VITE_SUPABASE_URL') || '').trim() && String(getEnv('VITE_SUPABASE_ANON_KEY') || '').trim());
+  return Boolean(
+    String(getEnv('VITE_SUPABASE_URL') || '').trim() &&
+    String(getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || '').trim()
+  );
 }
 
 export function shouldPersistLocalAccountCache(user = null) {
-  return !(getStorageMode() === 'supabase' && user?.id);
+  void user;
+  // Sensitive account data is cached in sessionStorage for responsive UX,
+  // even when remote Supabase sync is active.
+  return true;
 }
 
 export function getCachedUserData() {
@@ -108,11 +114,11 @@ export async function initRemoteProvider() {
   if (getStorageMode() !== 'supabase') return null;
 
   const supabaseUrl = String(getEnv('VITE_SUPABASE_URL') || '').trim();
-  const supabaseAnonKey = String(getEnv('VITE_SUPABASE_ANON_KEY') || '').trim();
+  const supabaseAnonKey = String(getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || '').trim();
   const table = String(getEnv('VITE_SUPABASE_TABLE') || 'formmate_user_data').trim();
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[StorageProvider] Supabase mode selected but missing VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY. Falling back to local.');
+    console.warn('[StorageProvider] Supabase mode selected but missing VITE_SUPABASE_URL and publishable key. Falling back to local.');
     return null;
   }
 

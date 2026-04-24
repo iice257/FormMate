@@ -1,35 +1,68 @@
 // @ts-nocheck
-import { getDashboardActionScreenForUser, getHomeScreenForUser, navigateTo, goBack } from '../router';
-import { generateText, getAiErrorMessage } from '../ai/ai-service';
+import { navigateTo } from '../router';
+import { AI_SURFACES, generateText, getAiErrorMessage } from '../ai/ai-service';
+import { SESSION_CLOSED_EVENT } from '../auth/session-lifecycle';
 import { toast } from '../components/toast';
 import { getState } from '../state';
-import { escapeHtml } from '../utils/escape';
+import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import {
+  buildMessageWithUiContext,
+  buildNextFollowUps,
+  createFollowUpClickEvent,
+  createUiContextEvent,
+  enqueueUiContextEvent,
+  getDefaultFollowUps,
+  stripFollowUpTags,
+} from '../ai/chat-interactions';
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
-  const dashboardLabel = authed ? 'Go to Dashboard' : 'Sign In';
-
-  const previousScreen = window.__fmPreviousScreen;
-  let backText = 'Back';
-  if (previousScreen === 'landing') backText = 'Back to Home';
-  else if (previousScreen === 'dashboard') backText = 'Back to Dashboard';
 
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
+      <style>
+        .docs-signin-cta-enter {
+          animation: docs-signin-shimmer-enter 1150ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+        }
+
+        @keyframes docs-signin-shimmer-enter {
+          0% {
+            background-position: 0% 50%;
+            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.35);
+            filter: brightness(1);
+          }
+          38% {
+            background-position: 78% 50%;
+            box-shadow: 0 28px 56px -24px rgba(56, 189, 248, 0.58);
+            filter: brightness(1.08);
+          }
+          68% {
+            background-position: 100% 50%;
+            box-shadow: 0 24px 48px -24px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.04);
+          }
+          100% {
+            background-position: 100% 50%;
+            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65);
+            filter: brightness(1);
+          }
+        }
+      </style>
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
           <button type="button" class="docs-home-button bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
-            ${backText}
+            Back to Home
           </button>
         </div>
         
         <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
             <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Docs &amp; Help</span>
           <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
-          <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
+          <div class="hidden md:block flex-1 max-w-lg lg:max-w-xl" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
@@ -49,10 +82,10 @@ export function docsScreen() {
           </div>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-3 md:gap-4 text-sm font-semibold">
-           <button type="button" class="text-slate-500 hover:text-slate-900 transition-colors hidden md:block cursor-pointer bg-transparent border-0 p-0" id="btn-docs-pricing">Pricing</button>
-           <div class="w-px h-5 bg-slate-200 hidden md:block"></div>
-           <button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">${dashboardLabel}</button>
+        <div class="flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
+          <button type="button" class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms</button>
         </div>
       </header>
 
@@ -110,7 +143,6 @@ export function docsScreen() {
         <!-- Content -->
         <main class="flex-1 overflow-y-auto bg-white scroll-smooth relative" id="docs-content">
           <div class="max-w-3xl mx-auto px-6 lg:px-12 py-12 pb-32">
-            
             <article id="welcome" class="mb-20 scroll-mt-24">
                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-bold tracking-widest uppercase mb-4">
                  <span class="material-symbols-outlined text-[14px]">waving_hand</span> Welcome
@@ -296,7 +328,7 @@ export function docsScreen() {
                </p>
                
                <div class="mb-6">
-                  <h4 class="font-bold text-slate-900 text-base mb-2">Preferences & Theme</h4>
+                  <h4 class="font-bold text-slate-900 text-base mb-2">Preferences</h4>
                   <p class="text-sm text-slate-600">Under the <strong>Preferences</strong> tab, you can fundamentally change how FormMate interacts with you. Change the default AI Temperature to be more "Creative" or more "Precise". Adjust the default verbosity level, and toggle UI animations or compact mode to fit your visual preference.</p>
                </div>
             </article>
@@ -325,7 +357,7 @@ export function docsScreen() {
                <div class="space-y-6">
                   <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                     <h4 class="font-bold text-slate-900 mb-2">Is FormMate free to use?</h4>
-                    <p class="text-slate-600 text-sm leading-relaxed">Yes! You can fill up to 5 forms per month for free. For users who need higher volume or more advanced AI features, we offer Weekly and Monthly Pro subscriptions.</p>
+                    <p class="text-slate-600 text-sm leading-relaxed">Yes. FormMate is currently available as a free offering while we continue to expand reliability and feature coverage.</p>
                   </div>
                   
                   <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100">
@@ -397,7 +429,7 @@ export function docsScreen() {
                  Contact Us
                  <a href="#contact" class="opacity-0 group-hover:opacity-100 ml-2 text-primary transition-opacity"><span class="material-symbols-outlined text-xl">link</span></a>
                </h2>
-               <p class="text-base text-slate-600 leading-relaxed mb-8">Have a specific question, billing issue, or partnership inquiry? Reach out to our support team and we'll get back to you within 24 hours.</p>
+               <p class="text-base text-slate-600 leading-relaxed mb-8">Have a specific question or partnership inquiry? Reach out to our support team and we'll get back to you within 24 hours.</p>
 
                <div class="p-8 border border-slate-200 rounded-2xl bg-slate-50">
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -416,7 +448,6 @@ export function docsScreen() {
                    <select id="contact-subject" class="w-full h-11 px-4 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                      <option value="general">General Inquiry</option>
                      <option value="support">Technical Support</option>
-                     <option value="billing">Billing</option>
                      <option value="partnership">Partnership</option>
                    </select>
                  </div>
@@ -456,39 +487,57 @@ export function docsScreen() {
         <div id="handle-right" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block"></div>
         
         <!-- AI Docs Chat (Right Sidebar) -->
-        <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-white flex flex-col shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] hidden lg:flex">
-          <div class="p-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50 sticky top-0">
-            <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[18px]">smart_toy</span>
-            </div>
-            <div>
-              <span class="font-bold tracking-tight text-sm block text-slate-900">Docs Assistant</span>
-              <span class="text-[10px] text-slate-500 font-medium">Ask me about FormMate</span>
-            </div>
+        <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex">
+          <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
+            <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs Chat</span>
+            ${authed ? '<span class="mt-1 block text-sm font-semibold text-slate-500">Ask about FormMate features and workflows</span>' : ''}
           </div>
-          
-          <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-white">
+
+          <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-transparent">
             <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[85%] bg-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/50">
-                Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!
-              </div>
+              ${authed
+                ? `
+                  <div class="max-w-[85%] bg-white rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/70">
+                    Hi! I'm the FormMate Docs assistant. Need help understanding how the Vault works or how to use the Copilot? Ask away!
+                  </div>
+                `
+                : `
+                  <div class="flex min-h-[calc(100vh-24rem)] items-center justify-center px-4 py-12">
+                    <div class="w-full rounded-[2rem] border border-white/70 bg-white/80 px-6 py-10 text-center shadow-[0_30px_80px_-40px_rgba(37,99,235,0.35)] backdrop-blur-xl">
+                      <div class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.2))] flex items-center justify-center text-primary shadow-sm">
+                        <span class="material-symbols-outlined text-[26px]">forum</span>
+                      </div>
+                      <h3 class="text-3xl md:text-4xl font-black tracking-tight leading-none text-slate-900">Sign in to chat</h3>
+                      <p class="mt-3 text-sm font-semibold leading-6 text-slate-500">
+                        Read the docs freely. When you want live help, sign in and start a guided FormMate conversation.
+                      </p>
+                    </div>
+                  </div>
+                `}
             </div>
           </div>
 
-          <div class="p-3 border-t border-slate-200 bg-slate-50 relative">
+          <div class="p-3 border-t border-slate-200/80 bg-white/70 backdrop-blur-md relative">
             <!-- Focus Tooltip -->
             <div id="ai-focus-tooltip" class="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-primary text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 pointer-events-none transition-all duration-300 translate-y-2 z-50 whitespace-nowrap">
               Ask me anything!
               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
             </div>
 
-            <div class="relative group">
-              <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
-              <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
-              <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
-                <span class="material-symbols-outlined text-[16px]">send</span>
+            <div id="docs-chat-followups" class="chat-followups chat-followups-docs mb-2"></div>
+            ${authed ? `
+              <div class="relative group">
+                <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
+                <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
+                <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
+                  <span class="material-symbols-outlined text-[16px]">send</span>
+                </button>
+              </div>
+            ` : `
+              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl border border-primary/20 bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_35%,#38bdf8_55%,#1d4ed8_72%,#0f172a_100%)] bg-[length:220%_220%] text-white px-4 py-3 text-sm font-black tracking-tight shadow-[0_18px_40px_-22px_rgba(29,78,216,0.65)] hover:brightness-110 transition-all btn-press docs-signin-cta">
+                Sign in to chat
               </button>
-            </div>
+            `}
           </div>
         </aside>
       </div>
@@ -496,9 +545,26 @@ export function docsScreen() {
   `;
 
   function init(wrapper) {
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
-    wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
-    wrapper.querySelector('#btn-docs-pricing')?.addEventListener('click', () => navigateTo('pricing'));
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
+    const docsSigninBtn = wrapper.querySelector('#btn-docs-signin');
+    let docsSigninAnimating = false;
+    const playDocsSigninShimmer = () => {
+      if (!docsSigninBtn || docsSigninAnimating) return;
+      docsSigninAnimating = true;
+      docsSigninBtn.classList.remove('docs-signin-cta-enter');
+      void docsSigninBtn.offsetWidth;
+      docsSigninBtn.classList.add('docs-signin-cta-enter');
+    };
+    const handleDocsSigninAnimationEnd = () => {
+      docsSigninAnimating = false;
+      docsSigninBtn?.classList.remove('docs-signin-cta-enter');
+    };
+    docsSigninBtn?.addEventListener('mouseenter', playDocsSigninShimmer);
+    docsSigninBtn?.addEventListener('animationend', handleDocsSigninAnimationEnd);
+    wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
+      button.addEventListener('click', () => navigateTo(button.dataset.docsNav));
+    });
     wrapper.querySelector('#btn-docs-contact-support')?.addEventListener('click', () => {
       const target = wrapper.querySelector('#contact');
       target?.scrollIntoView({ behavior: 'smooth' });
@@ -513,6 +579,7 @@ export function docsScreen() {
     const chatInput = wrapper.querySelector('#docs-chat-input');
     const btnSend = wrapper.querySelector('#btn-docs-send');
     const chatMessages = wrapper.querySelector('#docs-chat-messages');
+    const followUpsWrap = wrapper.querySelector('#docs-chat-followups');
     const cleanupTasks = [];
 
     const searchIndex = [
@@ -523,11 +590,11 @@ export function docsScreen() {
       { id: 'editing', title: 'Reviewing & Editing', text: 'In your Workspace center screen, you\'ll notice a list of question cards.', type: 'guide' },
       { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and account-backed settings are handled in the Accounts Center.', type: 'guide' },
       { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
-      { id: 'faqs', title: 'Pricing FAQ', text: 'Is FormMate free to use? Yes! You can fill up to 5 forms per month for free.', type: 'faq' },
+      { id: 'faqs', title: 'Free Access FAQ', text: 'Is FormMate free to use? Yes. FormMate is currently available as a free offering.', type: 'faq' },
       { id: 'faqs', title: 'Multi-step FAQ', text: 'Can FormMate handle multi-step forms? Absolutely.', type: 'faq' },
       { id: 'faqs', title: 'Security FAQ', text: 'How safe is my Vault data? Your data is stored locally and used only for your sessions.', type: 'faq' },
       { id: 'feedback', title: 'Review & Feedback', text: 'Share your feedback, rate your experience, and help us improve FormMate.', type: 'guide' },
-      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions, billing issues, or partnership inquiries.', type: 'guide' }
+      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions or partnership inquiries.', type: 'guide' }
     ];
 
     searchInput?.addEventListener('input', (e) => {
@@ -585,6 +652,11 @@ export function docsScreen() {
     });
 
     btnAskAiSearch?.addEventListener('click', () => {
+      if (!authed) {
+        toast.info('Sign in to use the Docs assistant.');
+        navigateTo('auth');
+        return;
+      }
       searchDropdown.classList.add('hidden');
       chatInput?.focus();
     });
@@ -638,20 +710,49 @@ export function docsScreen() {
 
     // --- Docs AI Chat Logic ---
 
-    let chatHistory = [
-      {
-        role: 'system',
-        content: `You are a helpful, extremely concise assistant embedded directly in FormMate's documentation page.
-Your ONLY job is to help users understand FormMate, its features (like the Vault, Form Copilot, autofilling forms, and the dashboard).
-Keep your answers extremely simple, non-technical, and easy for a very casual user to understand. 
-Do NOT include any code snippets, JSON objects, SDK setups, or technical API jargon. 
-If the user asks something completely beyond the scope of FormMate, FormMate's features, or general FormMate help, you MUST decline respectfully by saying that you are only here to help with FormMate and the question is beyond your scope.`
-      }
-    ];
+    let chatHistory = [];
+    let pendingUiContextEvents = [];
+    let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.DOCS);
+    const initialDocsChatMarkup = chatMessages?.innerHTML || '';
+    const cleanupRichActions = bindRichActionClicks(chatMessages, {
+      onInteractiveCommit: (payload) => {
+        const event = createUiContextEvent(payload);
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, event);
+        if (chatInput && !chatInput.value.trim()) {
+          chatInput.value = 'Apply the queued docs assistant edits.';
+          chatInput.dispatchEvent(new Event('input'));
+        }
+        toast.success('Queued for your next docs message.');
+        return true;
+      },
+    });
+    cleanupTasks.push(() => cleanupRichActions?.());
 
     if (chatInput && btnSend) {
       const tooltip = wrapper.querySelector('#ai-focus-tooltip');
       let isChatPending = false;
+
+      const syncSendButton = () => {
+        const hasText = Boolean(chatInput.value.trim());
+        const hasUiContext = pendingUiContextEvents.length > 0;
+        btnSend.disabled = isChatPending || !(hasText || hasUiContext);
+      };
+
+      const renderFollowUps = () => {
+        if (!followUpsWrap) return;
+        const items = (Array.isArray(followUpSuggestions) ? followUpSuggestions : [])
+          .filter(Boolean)
+          .slice(0, 2);
+        replaceChildrenWithSafeHtml(
+          followUpsWrap,
+          items.map((prompt) => `
+            <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+              <span class="material-symbols-outlined">tips_and_updates</span>
+              <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
+            </button>
+          `).join('')
+        );
+      };
 
       const handleChatFocus = () => {
         if (!chatInput.value.trim()) {
@@ -673,25 +774,28 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
 
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
-        btnSend.disabled = !this.value.trim();
+        syncSendButton();
       };
 
       const sendMessage = async () => {
         const text = chatInput.value.trim();
-        if (!text || isChatPending) return;
+        const hasUiContext = pendingUiContextEvents.length > 0;
+        if ((!text && !hasUiContext) || isChatPending) return;
         isChatPending = true;
 
         chatInput.value = '';
-        btnSend.disabled = true;
+        syncSendButton();
         chatInput.style.height = '48px';
         chatInput.disabled = true;
+        const userVisibleText = text || 'Applied queued interactive edits for this docs request.';
+        const modelMessage = buildMessageWithUiContext(text, pendingUiContextEvents);
 
         // User Bubble
-        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'user', content: modelMessage || userVisibleText });
         chatMessages.insertAdjacentHTML('beforeend', `
           <div class="flex flex-col gap-1 items-end animate-message-in">
             <div class="max-w-[85%] bg-primary text-white rounded-[var(--fm-card-radius)] rounded-tr-none px-4 py-3 text-xs font-medium leading-relaxed shadow-sm">
-              ${escapeHtml(text)}
+              ${escapeHtml(userVisibleText)}
             </div>
           </div>
         `);
@@ -713,43 +817,68 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         try {
           const responseText = await generateText({
             task: 'docs_chat',
+            surface: AI_SURFACES.DOCS,
             messages: chatHistory,
             temperature: 0.6,
-            maxTokens: 512
+            maxTokens: 512,
+            context: {
+              formTitle: 'FormMate Documentation',
+            },
           });
 
-          chatHistory.push({ role: 'assistant', content: responseText.replace(/`/g, '\\`') });
+          const cleanResponse = String(responseText || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+          const displayResponse = stripFollowUpTags(cleanResponse);
+          followUpSuggestions = buildNextFollowUps({
+            surface: AI_SURFACES.DOCS,
+            responseText: cleanResponse,
+            formTitle: 'FormMate Documentation',
+          });
+          renderFollowUps();
+          chatHistory.push({ role: 'assistant', content: displayResponse.replace(/`/g, '\\`') });
 
           const typingEl = wrapper.querySelector('#' + typingId);
           if (typingEl) typingEl.remove();
 
-          chatMessages.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2">
-                ${escapeHtml(responseText).replace(/\n/g, '<br>')}
-              </div>
-            </div>
-          `);
+          const row = document.createElement('div');
+          row.className = 'flex flex-col gap-1 animate-message-in';
+          const body = document.createElement('div');
+          body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(displayResponse, {
+            interactive: false,
+            onDiagnostics: (diagnostics) => {
+              if (diagnostics.length) {
+                console.warn('[Docs Chat] Assistant message diagnostics:', diagnostics);
+              }
+            },
+          }));
+          row.appendChild(body);
+          chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
+          pendingUiContextEvents = [];
         } catch (e) {
           console.error(e);
           const typingEl = wrapper.querySelector('#' + typingId);
           if (typingEl) typingEl.remove();
           const message = getAiErrorMessage(e, 'AI service is currently unavailable. Please try again.');
-
-          chatMessages.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-col gap-1 animate-message-in">
-              <div class="max-w-[85%] bg-red-50 text-red-600 border border-red-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs leading-relaxed">
-                <div class="flex items-center gap-1.5 font-bold mb-1"><span class="material-symbols-outlined text-[14px]">error</span> AI assistant unavailable</div>
-                ${escapeHtml(message)}
-              </div>
-            </div>
-          `);
+          const row = document.createElement('div');
+          row.className = 'flex flex-col gap-1 animate-message-in';
+          const body = document.createElement('div');
+          body.className = 'max-w-[90%] bg-slate-50 border border-slate-100 rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm flex flex-col gap-2';
+          replaceChildrenWithSafeHtml(body, renderAssistantRichText(message, {
+            interactive: false,
+            onDiagnostics: (diagnostics) => {
+              if (diagnostics.length) {
+                console.warn('[Docs Chat] Assistant message diagnostics:', diagnostics);
+              }
+            },
+          }));
+          row.appendChild(body);
+          chatMessages.appendChild(row);
           chatMessages.scrollTop = chatMessages.scrollHeight;
         } finally {
           isChatPending = false;
           chatInput.disabled = false;
-          btnSend.disabled = !chatInput.value.trim();
+          syncSendButton();
           chatInput.focus();
         }
       };
@@ -761,17 +890,60 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
         }
       };
 
+      const handleFollowUpClick = (event) => {
+        const chip = event.target?.closest?.('.chat-followup-chip[data-followup-msg]');
+        if (!chip || !followUpsWrap.contains(chip)) return;
+        const prompt = String(chip.dataset.followupMsg || '').trim();
+        if (!prompt) return;
+        pendingUiContextEvents = enqueueUiContextEvent(pendingUiContextEvents, createFollowUpClickEvent(prompt));
+        chatInput.value = prompt;
+        chatInput.dispatchEvent(new Event('input'));
+        sendMessage();
+      };
+      followUpsWrap?.addEventListener('click', handleFollowUpClick);
+
       btnSend.addEventListener('click', sendMessage);
       chatInput.addEventListener('focus', handleChatFocus);
       chatInput.addEventListener('blur', handleChatBlur);
       chatInput.addEventListener('input', handleChatInput);
       chatInput.addEventListener('keydown', handleChatKeydown);
+      renderFollowUps();
+      syncSendButton();
       cleanupTasks.push(() => btnSend.removeEventListener('click', sendMessage));
       cleanupTasks.push(() => chatInput.removeEventListener('focus', handleChatFocus));
       cleanupTasks.push(() => chatInput.removeEventListener('blur', handleChatBlur));
       cleanupTasks.push(() => chatInput.removeEventListener('input', handleChatInput));
       cleanupTasks.push(() => chatInput.removeEventListener('keydown', handleChatKeydown));
+      cleanupTasks.push(() => followUpsWrap?.removeEventListener('click', handleFollowUpClick));
     }
+
+    const handleSessionClosed = () => {
+      chatHistory = [];
+      pendingUiContextEvents = [];
+      followUpSuggestions = getDefaultFollowUps(AI_SURFACES.DOCS);
+      if (chatMessages) {
+        chatMessages.innerHTML = initialDocsChatMarkup;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      if (followUpsWrap) {
+        replaceChildrenWithSafeHtml(
+          followUpsWrap,
+          followUpSuggestions.slice(0, 2).map((prompt) => `
+            <button type="button" class="chat-followup-chip" data-followup-msg="${escapeAttr(prompt)}">
+              <span class="material-symbols-outlined">tips_and_updates</span>
+              <span class="chat-followup-chip-label">${escapeHtml(prompt)}</span>
+            </button>
+          `).join('')
+        );
+      }
+      if (chatInput) {
+        chatInput.value = '';
+        chatInput.style.height = '48px';
+      }
+      if (btnSend) btnSend.disabled = true;
+    };
+    window.addEventListener(SESSION_CLOSED_EVENT, handleSessionClosed);
+    cleanupTasks.push(() => window.removeEventListener(SESSION_CLOSED_EVENT, handleSessionClosed));
 
     // --- Resizable Sidebars Logic ---
     const handleLeft = wrapper.querySelector('#handle-left');
@@ -872,6 +1044,9 @@ If the user asks something completely beyond the scope of FormMate, FormMate's f
     });
 
     return () => {
+      docsSigninBtn?.removeEventListener('mouseenter', handleDocsSigninEnter);
+      docsSigninBtn?.removeEventListener('mouseleave', handleDocsSigninLeave);
+      docsSigninBtn?.removeEventListener('animationend', handleDocsSigninAnimationEnd);
       cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();

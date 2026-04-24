@@ -16,8 +16,14 @@ import {
 } from './schema';
 import { runPlainHtmlAdapter } from './adapters/plain-html';
 import { runCaptureAdapter } from './adapters/capture';
+import { requestImageParse } from './adapters/image';
 import { chooseProvider, detectProviderFromDomSignature, detectProviderFromUrl } from './adapters/provider-detection';
 import { applyProviderAdapterOverrides } from './adapters/provider-guard';
+
+const HARD_CAPTURE_PROVIDERS = new Set([
+  PROVIDER_TYPE.GOOGLE_FORMS,
+  PROVIDER_TYPE.WORKDAY,
+]);
 
 function createParseError(code, message, details = {}) {
   const err = new Error(message);
@@ -143,8 +149,29 @@ function buildEnvelopeFromAdapter({
   parseStrategy = '',
   adapterResult,
 }) {
-  const canonicalForm = adapterResult?.canonicalForm || null;
-  const fallbackLegacy = adapterResult?.legacyFormData || (canonicalForm ? toLegacyFormData({ form: canonicalForm }) : null);
+  const canonicalForm = adapterResult?.canonicalForm
+    || (adapterResult?.legacyFormData ? legacyFormDataToCanonical(adapterResult.legacyFormData, { provider }) : null);
+  const fallbackLegacy = canonicalForm
+    ? toLegacyFormData({
+      form: canonicalForm,
+      compatibility: null,
+      acquisition: {
+        sourceUrl,
+        normalizedUrl,
+        finalUrl,
+        provider,
+        adapterKey,
+      },
+      diagnostics: {
+        ...(adapterResult?.diagnostics || {}),
+        parseStrategy: parseStrategy || adapterResult?.parseStrategy || '',
+      },
+      outcome: {
+        status: adapterResult?.parseStatus,
+        blockedReason: adapterResult?.blockedReason,
+      },
+    })
+    : adapterResult?.legacyFormData || null;
 
   const parseEnvelope = createBaseParseEnvelope({
     sourceType,
@@ -192,6 +219,52 @@ function buildEnvelopeFromAdapter({
   }
 
   return parseEnvelope;
+}
+
+function buildProviderCaptureGateEnvelope(url, provider) {
+  const providerLabel = getProviderLabel(provider);
+  const useScreenshotUpload = provider === PROVIDER_TYPE.GOOGLE_FORMS;
+  return createBaseParseEnvelope({
+    sourceType: SOURCE_TYPE.HTML,
+    sourceUrl: url,
+    normalizedUrl: url,
+    finalUrl: url,
+    provider,
+    adapterKey: `${provider}_capture_gate`,
+    fetchStrategy: 'provider_gate',
+    parseStatus: PARSE_STATUS.BLOCKED,
+    completeness: COMPLETENESS_STATUS.BLOCKED_BEFORE_FORM,
+    blockedReason: BLOCKED_REASON.INTERACTION_REQUIRED,
+    nextAction: useScreenshotUpload ? NEXT_ACTION.UPLOAD_SCREENSHOTS : NEXT_ACTION.USE_CAPTURE,
+    nextStepRequired: true,
+    nextStepHint: provider === PROVIDER_TYPE.GOOGLE_FORMS
+      ? 'Google Forms are screenshot-first in FormMate because structural access is frequently blocked by active-session requirements.'
+      : `${providerLabel} usually requires an active browser session or interactive rendering. Use Assisted Capture instead of URL-only parsing.`,
+    warnings: [
+      createParserMessage(
+        'PROVIDER_CAPTURE_GATE',
+        'warning',
+        provider === PROVIDER_TYPE.GOOGLE_FORMS
+          ? 'Google Forms are routed to screenshot parsing by default.'
+          : `${providerLabel} is routed to Assisted Capture by default.`,
+      ),
+    ],
+    confidence: {
+      overall: 0.18,
+      fieldDetection: 0.16,
+      uiClassification: 0.16,
+      semanticClassification: 0.16,
+      fillPolicy: 0.16,
+      completeness: 0.18,
+    },
+    diagnostics: {
+      authSignal: false,
+      renderSignal: true,
+      aiFallbackUsed: false,
+      extractionWarnings: [`${providerLabel} was blocked by provider policy before URL parsing.`],
+      parseStrategy: 'provider_capture_gate',
+    },
+  });
 }
 
 function buildFallbackErrorEnvelope(url, provider, err, parseStrategy = 'error') {
@@ -423,41 +496,89 @@ async function parseGenericForm(url) {
       html = await response.text();
     }
 
-    const domProvider = detectProviderFromDomSignature(html);
-    const providerSelection = chooseProvider({
-      urlProvider,
-      domProvider,
-    });
-    const selectedProvider = providerSelection.provider || initialProvider;
-    const selectedProviderLabel = getProviderLabel(selectedProvider);
-
-    let adapterResult = await runPlainHtmlAdapter({
-      html,
-      url,
-      provider: selectedProviderLabel,
-      parseStrategy: 'dom_parse',
-      parseWithAiHtml: parseFormHtml,
-    });
-    adapterResult = applyProviderAdapterOverrides({
-      provider: selectedProvider,
-      adapterResult,
-    });
-
-    return buildEnvelopeFromAdapter({
+    return parseHtmlSnapshot({
       sourceUrl: url,
       normalizedUrl,
       finalUrl,
-      provider: selectedProvider,
-      adapterKey: selectedProvider === PROVIDER_TYPE.PLAIN_HTML ? 'plain-html' : `provider-${selectedProvider}`,
+      html,
       fetchStrategy,
       httpStatus,
-      domSignatureProvider: domProvider,
-      parseStrategy: adapterResult.parseStrategy || 'dom_parse',
-      adapterResult,
     });
   } catch (err) {
     return buildFallbackErrorEnvelope(url, initialProvider, err, 'generic_error');
   }
+}
+
+export async function parseHtmlSnapshot({
+  sourceUrl,
+  normalizedUrl,
+  finalUrl,
+  html,
+  fetchStrategy = 'direct_html',
+  httpStatus = 200,
+}) {
+  const urlProvider = detectProviderFromUrl(sourceUrl);
+  const domProvider = detectProviderFromDomSignature(html);
+  const providerSelection = chooseProvider({
+    urlProvider,
+    domProvider,
+  });
+  const selectedProvider = providerSelection.provider || urlProvider || PROVIDER_TYPE.PLAIN_HTML;
+  if (HARD_CAPTURE_PROVIDERS.has(selectedProvider)) {
+    return buildProviderCaptureGateEnvelope(sourceUrl, selectedProvider);
+  }
+
+  const selectedProviderLabel = getProviderLabel(selectedProvider);
+  let adapterResult = await runPlainHtmlAdapter({
+    html,
+    url: sourceUrl,
+    provider: selectedProviderLabel,
+    parseStrategy: 'dom_parse',
+    parseWithAiHtml: parseFormHtml,
+  });
+  adapterResult = applyProviderAdapterOverrides({
+    provider: selectedProvider,
+    adapterResult,
+  });
+
+  return buildEnvelopeFromAdapter({
+    sourceUrl,
+    normalizedUrl: normalizedUrl || sourceUrl,
+    finalUrl: finalUrl || normalizedUrl || sourceUrl,
+    provider: selectedProvider,
+    adapterKey: selectedProvider === PROVIDER_TYPE.PLAIN_HTML ? 'plain-html' : `provider-${selectedProvider}`,
+    fetchStrategy,
+    httpStatus,
+    domSignatureProvider: domProvider,
+    parseStrategy: adapterResult.parseStrategy || 'dom_parse',
+    adapterResult,
+  });
+}
+
+export async function parseImageArtifacts({
+  sourceUrl = '',
+  imageArtifacts = [],
+  imageServiceUrl,
+}) {
+  const provider = detectProviderFromUrl(sourceUrl) || PROVIDER_TYPE.PLAIN_HTML;
+  const adapterResult = await requestImageParse({
+    imageArtifacts,
+    imageServiceUrl,
+    sourceUrl,
+  });
+
+  return buildEnvelopeFromAdapter({
+    sourceUrl,
+    normalizedUrl: sourceUrl,
+    finalUrl: sourceUrl,
+    provider,
+    adapterKey: provider === PROVIDER_TYPE.PLAIN_HTML ? 'image' : `provider-${provider}-image`,
+    sourceType: SOURCE_TYPE.IMAGE,
+    fetchStrategy: 'image_boundary',
+    httpStatus: 200,
+    parseStrategy: adapterResult?.parseStrategy || 'image_service',
+    adapterResult,
+  });
 }
 
 function buildDemoEnvelope(url) {
@@ -556,8 +677,9 @@ export async function parseFormUrl(url) {
     return buildDemoEnvelope(url);
   }
 
-  if (isGoogleFormUrl(url)) {
-    return parseGoogleForm(url);
+  const urlProvider = detectProviderFromUrl(url);
+  if (HARD_CAPTURE_PROVIDERS.has(urlProvider)) {
+    return buildProviderCaptureGateEnvelope(url, urlProvider);
   }
 
   return parseGenericForm(url);

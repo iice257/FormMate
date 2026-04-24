@@ -1,0 +1,38 @@
+{
+  "acquisition": {
+    "provider": "plain_html",
+    "adapterKey": "plain-html",
+    "sourceType": "html",
+    "fetchStrategy": "fixture_html"
+  },
+  "outcome": {
+    "status": "partial",
+    "completeness": "visible_step_only",
+    "blockedReason": null,
+    "unsupportedReasons": [],
+    "nextAction": "continue_to_next_step",
+    "nextStepRequired": true,
+    "nextStepHint": "This form appears to have additional steps beyond the current visible stage.",
+    "warningCodes": [
+      "HIDDEN_SECTIONS_DETECTED"
+    ]
+  },
+  "compatibility": {
+    "title": "Multi Step Intake",
+    "questionCount": 1,
+    "questions": [
+      {
+        "text": "First Name",
+        "type": "short_text",
+        "required": true,
+        "options": []
+      }
+    ]
+  },
+  "diagnostics": {
+    "parseStrategy": "dom_parse",
+    "authSignal": false,
+    "renderSignal": false,
+    "aiFallbackUsed": false
+  }
+}

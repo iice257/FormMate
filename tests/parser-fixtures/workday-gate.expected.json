@@ -1,0 +1,27 @@
+{
+  "acquisition": {
+    "provider": "workday",
+    "adapterKey": "workday_capture_gate",
+    "sourceType": "html",
+    "fetchStrategy": "provider_gate"
+  },
+  "outcome": {
+    "status": "blocked",
+    "completeness": "blocked_before_form",
+    "blockedReason": "interaction_required",
+    "unsupportedReasons": [],
+    "nextAction": "use_capture",
+    "nextStepRequired": true,
+    "nextStepHint": "Workday usually requires an active browser session or interactive rendering. Use Assisted Capture instead of URL-only parsing.",
+    "warningCodes": [
+      "PROVIDER_CAPTURE_GATE"
+    ]
+  },
+  "compatibility": null,
+  "diagnostics": {
+    "parseStrategy": "provider_capture_gate",
+    "authSignal": false,
+    "renderSignal": true,
+    "aiFallbackUsed": false
+  }
+}

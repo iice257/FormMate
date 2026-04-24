@@ -63,13 +63,18 @@ export function newFormScreen() {
       </header>
 
       <main class="flex-1 flex flex-col items-center justify-center px-6 pb-16 zen-new-form-main">
+        <div class="zen-new-form-bg-overlay" aria-hidden="true"></div>
+        <div class="zen-new-form-wave" aria-hidden="true"></div>
         <div class="max-w-[800px] w-full text-center space-y-10 relative z-10 zen-new-form-panel">
-          <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
-            Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
-          </h1>
+          <div class="new-form-hero-copy">
+            <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
+              Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
+            </h1>
+            <p class="new-form-hero-subtitle">Paste form link to analyze</p>
+          </div>
 
           <div class="w-full max-w-2xl mx-auto relative z-20 zen-new-form-form">
-            <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-primary/20">
+            <div class="new-form-input-shell bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl focus-within:ring-2 focus-within:ring-primary/20">
               <div class="flex-1 relative">
                 <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
                 <input
@@ -89,7 +94,11 @@ export function newFormScreen() {
             </div>
 
             <div class="mt-8 flex flex-col items-center gap-4 zen-new-form-secondary">
-              <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
+              <div class="new-form-divider">
+                <span></span>
+                <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
+                <span></span>
+              </div>
               <div class="flex flex-wrap justify-center gap-3">
                 <button id="nav-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
                   <span class="material-symbols-outlined text-base">explore</span> Examples
@@ -106,11 +115,6 @@ export function newFormScreen() {
         </div>
       </main>
 
-      <div class="fixed bottom-10 right-10 size-12 text-slate-300 opacity-40 pointer-events-none zen-new-form-decor">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12,0 L14,10 L24,12 L14,14 L12,24 L10,14 L0,12 L10,10 Z" />
-        </svg>
-      </div>
     </div>
   `;
 

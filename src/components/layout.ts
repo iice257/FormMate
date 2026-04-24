@@ -12,7 +12,7 @@ import { executeAction, searchActions } from '../actions/action-index';
 let _accountModalOpenFn = null;
 const ZEN_MODE_STORAGE_KEY = 'fm_zen_mode_enabled';
 const ZEN_MODE_EVENT = 'fm:zen-mode-change';
-const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'new', 'workspace', 'history', 'ai-chat', 'vault', 'examples']);
+const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'new', 'workspace', 'history', 'ai-chat', 'vault']);
 const SIDEBAR_COLLAPSED_CLASS = 'layout-shell-sidebar-collapsed';
 const ZEN_SCREEN_LABELS = {
   'dashboard': 'Dashboard',
@@ -21,7 +21,6 @@ const ZEN_SCREEN_LABELS = {
   'history': 'History',
   'workspace': 'Active Form',
   'vault': 'Vault',
-  'examples': 'Examples',
 };
 const ZEN_SCREEN_ICONS = {
   'dashboard': 'space_dashboard',
@@ -30,7 +29,6 @@ const ZEN_SCREEN_ICONS = {
   'history': 'schedule',
   'workspace': 'description',
   'vault': 'shield',
-  'examples': 'auto_stories',
 };
 
 /**
@@ -320,7 +318,11 @@ export function bindZenModeControls(wrapper, zenMode) {
       }
       setZenModeEnabled(zenScreenId, true);
       closeZenMenu();
-      navigateTo(targetScreen, false, 'forward');
+      navigateTo(targetScreen, {
+        direction: 'forward',
+        source: 'shell',
+        transition: 'shell',
+      });
     });
   });
   document.addEventListener('keydown', handleEscape);
@@ -348,7 +350,7 @@ export function bindZenModeControls(wrapper, zenMode) {
  * @returns {string} The full HTML with layout wrapper.
  */
 export function withLayout(pageId, contentHtml, options = {}) {
-  const { isAuthenticated, userProfile, tier } = getState();
+  const { isAuthenticated, userProfile } = getState();
   const zenScreenId = options.zenMode?.screenId || pageId;
   const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
@@ -380,8 +382,19 @@ export function withLayout(pageId, contentHtml, options = {}) {
     `;
   }).join('');
 
+  const mobileSidebarLinksHtml = sidebarLinks.map(link => {
+    const isActive = pageId === link.id;
+    return `
+      <button id="nav-mobile-${link.id}" class="layout-sidebar-link ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
+        ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
+        <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
+        <span class="layout-sidebar-label">${link.label}</span>
+      </button>
+    `;
+  }).join('');
+
   return `
-    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
+    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-fm-shell="app" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
       <!-- Header -->
       <header data-fm-hide-on-scroll="true" class="layout-header">
@@ -395,6 +408,11 @@ export function withLayout(pageId, contentHtml, options = {}) {
         <div class="layout-search-container">
           <span class="material-symbols-outlined layout-search-icon">search</span>
           <input type="text" class="layout-search-input" placeholder="Search pages, actions, or support" id="layout-search" autocomplete="off" aria-label="Search pages, actions, or support" />
+          <button type="button" id="btn-layout-search-shortcut" class="layout-search-kbd" aria-label="Open quick search (Control K)">
+            <span class="layout-search-kbd-key">Ctrl</span>
+            <span class="layout-search-kbd-plus">+</span>
+            <span class="layout-search-kbd-key">K</span>
+          </button>
           <button type="button" id="btn-layout-search-clear" class="layout-search-clear" aria-label="Clear search" hidden>
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -404,6 +422,9 @@ export function withLayout(pageId, contentHtml, options = {}) {
         </div>
 
         <div class="layout-header-actions">
+          <button type="button" id="btn-mobile-menu" class="layout-mobile-menu-toggle" aria-label="Open menu" aria-controls="mobile-sidebar" aria-expanded="false">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
           ${isAuthenticated ? `
           <button class="layout-header-primary-action" id="btn-header-new-form" aria-label="New Form">
             <span class="material-symbols-outlined">add_circle</span>
@@ -414,6 +435,41 @@ export function withLayout(pageId, contentHtml, options = {}) {
           `}
         </div>
       </header>
+
+      <aside id="mobile-sidebar" class="layout-mobile-sidebar" aria-hidden="true">
+        <div class="layout-mobile-sidebar-header">
+          <button type="button" class="layout-brand" id="btn-logo-home-mobile" aria-label="Go to home">
+            <div class="layout-brand-icon">
+              <img src="/logo.png" alt="FormMate Logo" />
+            </div>
+            <span class="layout-brand-text">Form<span class="text-primary">Mate</span></span>
+          </button>
+          <button type="button" id="btn-mobile-menu-close" class="layout-mobile-menu-close" aria-label="Close menu">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <nav class="layout-mobile-sidebar-nav">
+          ${mobileSidebarLinksHtml}
+          <div class="layout-sidebar-divider"></div>
+          <button id="nav-mobile-support" class="layout-sidebar-link" aria-label="Open Help Center">
+            <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
+            <span class="layout-sidebar-label">Help Center</span>
+          </button>
+        </nav>
+        <div class="layout-mobile-sidebar-footer">
+          <button id="nav-mobile-profile" class="layout-sidebar-user" type="button" aria-label="Open account">
+            <div class="layout-sidebar-avatar-wrap">
+              <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
+            </div>
+            <div class="layout-sidebar-user-info">
+              <span class="layout-sidebar-user-name">${displayName}</span>
+            </div>
+          </button>
+          <button id="btn-mobile-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
+            <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
+          </button>
+        </div>
+      </aside>
 
       <main class="layout-main">
         <!-- Sidebar Navigation -->
@@ -445,7 +501,6 @@ export function withLayout(pageId, contentHtml, options = {}) {
                 <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
                   <div class="layout-sidebar-avatar-wrap">
                     <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
-                    ${tier !== 'free' ? '<div class="layout-sidebar-pro-badge"><span class="material-symbols-outlined">bolt</span></div>' : ''}
                   </div>
                   <div class="layout-sidebar-user-info">
                     <span class="layout-sidebar-user-name">${displayName}</span>
@@ -487,17 +542,37 @@ export function initLayout(wrapper, options = {}) {
 
   links.forEach(link => {
     wrapper.querySelector(`#${link.id}`)?.addEventListener('click', () => {
-      navigateTo(link.route);
+      navigateTo(link.route, {
+        source: 'sidebar',
+        transition: 'shell',
+        direction: 'forward',
+      });
+    });
+    wrapper.querySelector(`#nav-mobile-${link.route}`)?.addEventListener('click', () => {
+      closeMobileMenu();
+      navigateTo(link.route, {
+        source: 'sidebar',
+        transition: 'shell',
+        direction: 'forward',
+      });
     });
   });
 
-  // Help Center -> docs
+  // Help Center -> account modal (help tab)
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
-    navigateTo('docs');
+    openAccountModal('help');
+  });
+  wrapper.querySelector('#nav-mobile-support')?.addEventListener('click', () => {
+    closeMobileMenu();
+    openAccountModal('help');
   });
 
   // Logo -> home
   wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => {
+    navigateTo(getHomeScreenForUser());
+  });
+  wrapper.querySelector('#btn-logo-home-mobile')?.addEventListener('click', () => {
+    closeMobileMenu();
     navigateTo(getHomeScreenForUser());
   });
 
@@ -506,6 +581,30 @@ export function initLayout(wrapper, options = {}) {
   });
 
   const layoutShell = wrapper.querySelector('.layout-shell');
+  const mobileMenuBtn = wrapper.querySelector('#btn-mobile-menu');
+  const mobileMenuCloseBtn = wrapper.querySelector('#btn-mobile-menu-close');
+  const mobileSidebar = wrapper.querySelector('#mobile-sidebar');
+  let mobileMenuOpen = false;
+  const setMobileMenuOpen = (open) => {
+    if (!layoutShell || !mobileSidebar) return;
+    mobileMenuOpen = Boolean(open);
+    layoutShell.classList.toggle('mobile-menu-open', mobileMenuOpen);
+    mobileSidebar.setAttribute('aria-hidden', mobileMenuOpen ? 'false' : 'true');
+    mobileMenuBtn?.setAttribute('aria-expanded', mobileMenuOpen ? 'true' : 'false');
+    document.body.classList.toggle('fm-mobile-menu-open', mobileMenuOpen);
+  };
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+  }
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+  const handleMobileMenuEscape = (event) => {
+    if (event.key === 'Escape' && mobileMenuOpen) {
+      closeMobileMenu();
+    }
+  };
+
   const sidebarToggleBtn = wrapper.querySelector('#btn-sidebar-toggle');
   const syncSidebarUi = (expanded) => {
     layoutShell?.classList.toggle(SIDEBAR_COLLAPSED_CLASS, !expanded);
@@ -532,8 +631,12 @@ export function initLayout(wrapper, options = {}) {
 
   sidebarToggleBtn?.addEventListener('click', handleSidebarToggle);
   syncSidebarUi(isSidebarExpanded());
+  mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+  mobileMenuCloseBtn?.addEventListener('click', closeMobileMenu);
+  document.addEventListener('keydown', handleMobileMenuEscape);
 
   const searchInput = wrapper.querySelector('#layout-search');
+  const searchShortcut = wrapper.querySelector('#btn-layout-search-shortcut');
   const searchClear = wrapper.querySelector('#btn-layout-search-clear');
   const searchResults = wrapper.querySelector('#layout-search-results');
   const searchResultsList = wrapper.querySelector('#layout-search-results-list');
@@ -555,7 +658,9 @@ export function initLayout(wrapper, options = {}) {
 
     activeSearchResults = searchActions(query, { limit: 8 });
     activeSearchIndex = 0;
-    if (searchClear) searchClear.hidden = !query.trim();
+    const hasQuery = Boolean(query.trim());
+    if (searchClear) searchClear.hidden = !hasQuery;
+    if (searchShortcut) searchShortcut.hidden = hasQuery;
 
     if (!activeSearchResults.length) {
       replaceChildrenWithSafeHtml(searchResultsList, `
@@ -583,6 +688,12 @@ export function initLayout(wrapper, options = {}) {
     `).join(''));
 
     searchResults.hidden = false;
+  };
+
+  const openSearchPalette = () => {
+    if (!searchInput) return;
+    searchInput.focus();
+    renderSearchResults(searchInput.value || '');
   };
 
   const syncActiveSearchItem = () => {
@@ -647,20 +758,53 @@ export function initLayout(wrapper, options = {}) {
     searchInput.focus();
   });
 
+  searchShortcut?.addEventListener('click', () => {
+    openSearchPalette();
+  });
+
   searchResultsList?.addEventListener('click', (event) => {
     const target = event.target.closest('.layout-search-result[data-action-id]');
     if (!target) return;
     runSearchAction(target.dataset.actionId);
   });
 
+  const handleSearchShortcut = (event) => {
+    const isShortcut = (event.metaKey || event.ctrlKey) && String(event.key || '').toLowerCase() === 'k';
+    if (!isShortcut) return;
+
+    const target = event.target;
+    const isTextEntryTarget = target instanceof HTMLElement
+      && (
+        target.tagName === 'INPUT'
+        || target.tagName === 'TEXTAREA'
+        || target.isContentEditable
+      );
+
+    if (isTextEntryTarget && target !== searchInput) {
+      return;
+    }
+
+    event.preventDefault();
+    openSearchPalette();
+  };
+
   document.addEventListener('click', handleDocumentClick);
+  document.addEventListener('keydown', handleSearchShortcut);
 
   // Sidebar user card -> account modal (profile tab)
   wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
     openAccountModal('profile');
   });
+  wrapper.querySelector('#nav-mobile-profile')?.addEventListener('click', () => {
+    closeMobileMenu();
+    openAccountModal('profile');
+  });
 
   wrapper.querySelector('#btn-sidebar-settings')?.addEventListener('click', () => {
+    openAccountModal('settings');
+  });
+  wrapper.querySelector('#btn-mobile-settings')?.addEventListener('click', () => {
+    closeMobileMenu();
     openAccountModal('settings');
   });
 
@@ -673,14 +817,24 @@ export function initLayout(wrapper, options = {}) {
   if (!zenMode) {
     return () => {
       sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+      mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
+      mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
       document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', handleSearchShortcut);
+      document.removeEventListener('keydown', handleMobileMenuEscape);
+      document.body.classList.remove('fm-mobile-menu-open');
       document.body.classList.remove('fm-zen-mode');
     };
   }
   const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
     sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+    mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
+    mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
     document.removeEventListener('click', handleDocumentClick);
+    document.removeEventListener('keydown', handleSearchShortcut);
+    document.removeEventListener('keydown', handleMobileMenuEscape);
+    document.body.classList.remove('fm-mobile-menu-open');
     cleanupZen?.();
   };
 }

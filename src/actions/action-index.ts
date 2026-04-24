@@ -76,15 +76,6 @@ const ACTIONS = [
     route: 'examples',
   },
   {
-    id: 'pricing',
-    title: 'Open Pricing',
-    description: 'Review plans and billing information.',
-    icon: 'sell',
-    keywords: ['billing', 'plans', 'subscription'],
-    kind: 'route',
-    route: 'pricing',
-  },
-  {
     id: 'docs',
     title: 'Open Documentation',
     description: 'Read product guides and support docs.',

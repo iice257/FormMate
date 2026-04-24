@@ -1,68 +1,33 @@
 // @ts-nocheck
-// ═══════════════════════════════════════════
-// FormMate — Usage Gate (Free Tier Limits)
-// ═══════════════════════════════════════════
+// FormMate — Usage Gate (single free-mode limits)
 
-import { getMonthlyUsage, incrementUsage, load } from './local-store';
+import { getMonthlyUsage, incrementUsage } from './local-store';
 
-const TIER_LIMITS = {
-  free: {
-    formsPerMonth: 5,
-    aiCallsPerMonth: 50,
-    editsPerMonth: 100,
-    features: {
-      vault: false,
-      advancedModels: false,
-      export: false,
-      analytics: false,
-      customPersonality: false,
-    },
-  },
-  pro: {
-    formsPerMonth: Infinity,
-    aiCallsPerMonth: Infinity,
-    editsPerMonth: Infinity,
-    features: {
-      vault: true,
-      advancedModels: true,
-      export: true,
-      analytics: true,
-      customPersonality: true,
-    },
-  },
-  enterprise: {
-    formsPerMonth: Infinity,
-    aiCallsPerMonth: Infinity,
-    editsPerMonth: Infinity,
-    features: {
-      vault: true,
-      advancedModels: true,
-      export: true,
-      analytics: true,
-      customPersonality: true,
-    },
+const USAGE_LIMITS = {
+  formsPerMonth: 5,
+  aiCallsPerMonth: 50,
+  editsPerMonth: 100,
+  features: {
+    vault: false,
+    advancedModels: false,
+    export: false,
+    analytics: false,
+    customPersonality: false,
   },
 };
 
 /**
- * Get the user's current tier.
+ * Limits used for the current free offering.
  */
-export function getCurrentTier() {
-  return load('subscription_tier') || 'free';
+export function getUsageLimits() {
+  return USAGE_LIMITS;
 }
 
 /**
- * Get limits for the current tier.
- */
-export function getTierLimits() {
-  return TIER_LIMITS[getCurrentTier()] || TIER_LIMITS.free;
-}
-
-/**
- * Check if a feature is available on the current tier.
+ * Check if a feature is available in the current offering.
  */
 export function canUseFeature(feature) {
-  const limits = getTierLimits();
+  const limits = getUsageLimits();
   return limits.features[feature] !== false;
 }
 
@@ -73,7 +38,7 @@ export function canUseFeature(feature) {
  */
 export function checkLimit(action) {
   const usage = getMonthlyUsage();
-  const limits = getTierLimits();
+  const limits = getUsageLimits();
 
   const limitMap = {
     formsAnalyzed: 'formsPerMonth',
@@ -110,11 +75,9 @@ export function useResource(action) {
  */
 export function getUsageSummary() {
   const usage = getMonthlyUsage();
-  const limits = getTierLimits();
-  const tier = getCurrentTier();
+  const limits = getUsageLimits();
 
   return {
-    tier,
     forms: {
       used: usage.formsAnalyzed || 0,
       limit: limits.formsPerMonth,

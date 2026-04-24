@@ -62,7 +62,7 @@ export function historyScreen() {
   }).join('');
 
   const historyContent = `
-    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth zen-history-shell">
+    <div class="flex-1 overflow-y-auto no-scrollbar scroll-smooth zen-history-shell" data-fm-transition-main="true" data-fm-scroll-region="main">
       <div class="zen-history-inner" style="max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem;">
         <div class="zen-history-header" style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.75rem;">
           <div>

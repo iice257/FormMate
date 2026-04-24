@@ -99,8 +99,18 @@ const state = {
   // Onboarding
   onboardingComplete: isOnboardingComplete(),
 
-  // Subscription tier
-  tier: 'free',
+  // Runtime health and degraded-mode truth for UX
+  appHealth: {
+    loaded: false,
+    apiReachable: false,
+    groqConfigured: false,
+    supabaseConfigured: false,
+    authAvailable: false,
+    syncAvailable: false,
+    storageMode: 'local',
+    imageParserConfigured: false,
+    degradedMode: false,
+  },
 };
 
 // ─── State Access ────────────────────────
@@ -269,7 +279,7 @@ export function addChatMessage(role, text, action = null) {
   listeners.forEach(fn => fn(state));
 }
 
-// ─── Subscription ────────────────────────
+// ─── Store Listeners ─────────────────────
 
 export function subscribe(fn) {
   listeners.add(fn);
@@ -323,4 +333,13 @@ export function updateProfile(updates) {
 
 export function updateVault(key, value) {
   setState({ vault: { ...state.vault, [key]: value } });
+}
+
+export function setRuntimeHealth(health) {
+  setState({
+    appHealth: {
+      ...state.appHealth,
+      ...(health || {}),
+    },
+  });
 }
