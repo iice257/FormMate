@@ -4583,9 +4583,21 @@ button#btn-back-login .material-symbols-outlined,
 }
 
 .auth-hero-title-accent {
+  position: relative;
+  isolation: isolate;
   display: inline-block;
   padding-bottom: 0.08em;
-  text-shadow: 0 1px 4px rgba(6, 24, 44, 0.24);
+}
+
+.auth-hero-title-accent::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  transform: translateY(0.06em);
+  color: rgba(6, 24, 44, 0.32);
+  filter: blur(4px);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .auth-hero-mate-stroke {
