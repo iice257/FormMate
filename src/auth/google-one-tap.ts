@@ -28,30 +28,29 @@ export function isGoogleIdentityConfigured() {
   return Boolean(getGoogleClientId());
 }
 
-export async function promptGoogleOneTap({
+export async function initializeGoogleIdentity({
   autoSelect = false,
   context = 'signin',
   onCredential,
-  onPromptMoment,
   cancelOnTapOutside = true,
 } = {}) {
-  if (!isBrowser()) return { started: false, reason: 'not_browser' };
+  if (!isBrowser()) return { google: null, nonce: null };
 
   const clientId = getGoogleClientId();
   if (!clientId) {
-    console.info('[GoogleOneTap] Skipping prompt because VITE_GOOGLE_CLIENT_ID is not configured.');
-    return { started: false, reason: 'missing_client_id' };
+    console.info('[GoogleOneTap] Skipping initialization because VITE_GOOGLE_CLIENT_ID is not configured.');
+    return { google: null, nonce: null };
   }
 
   if (typeof onCredential !== 'function') {
-    console.warn('[GoogleOneTap] Skipping prompt because no credential handler was provided.');
-    return { started: false, reason: 'missing_handler' };
+    console.warn('[GoogleOneTap] Skipping initialization because no credential handler was provided.');
+    return { google: null, nonce: null };
   }
 
   const google = await loadGoogleIdentityScript();
   if (!google?.accounts?.id) {
     console.warn('[GoogleOneTap] Google Identity Services did not initialize.');
-    return { started: false, reason: 'script_unavailable' };
+    return { google: null, nonce: null };
   }
 
   const { nonce, hashedNonce } = await generateNoncePair();
@@ -69,6 +68,30 @@ export async function promptGoogleOneTap({
     use_fedcm_for_prompt: true,
   });
 
+  return { google, nonce };
+}
+
+export async function promptGoogleOneTap({
+  autoSelect = false,
+  context = 'signin',
+  onCredential,
+  onPromptMoment,
+  cancelOnTapOutside = true,
+} = {}) {
+  if (!isBrowser()) return { started: false, reason: 'not_browser' };
+  const { google } = await initializeGoogleIdentity({
+    autoSelect,
+    context,
+    onCredential,
+    cancelOnTapOutside,
+  });
+  if (!google?.accounts?.id) {
+    return {
+      started: false,
+      reason: isGoogleIdentityConfigured() ? 'script_unavailable' : 'missing_client_id',
+    };
+  }
+
   google.accounts.id.prompt((notification) => {
     try {
       onPromptMoment?.(normalizePromptNotification(notification));
@@ -78,6 +101,52 @@ export async function promptGoogleOneTap({
   });
 
   return { started: true };
+}
+
+export async function renderGoogleSignInButton(
+  parent,
+  {
+    context = 'signin',
+    text = 'signin_with',
+    theme = 'outline',
+    size = 'large',
+    shape = 'pill',
+    width,
+    logoAlignment = 'left',
+    onCredential,
+  } = {},
+) {
+  if (!parent || !isBrowser()) {
+    return { rendered: false, reason: 'missing_parent' };
+  }
+
+  const { google } = await initializeGoogleIdentity({
+    autoSelect: false,
+    context,
+    onCredential,
+    cancelOnTapOutside: true,
+  });
+
+  if (!google?.accounts?.id) {
+    parent.replaceChildren();
+    return {
+      rendered: false,
+      reason: isGoogleIdentityConfigured() ? 'script_unavailable' : 'missing_client_id',
+    };
+  }
+
+  parent.replaceChildren();
+  google.accounts.id.renderButton(parent, {
+    type: 'standard',
+    theme,
+    size,
+    text,
+    shape,
+    logo_alignment: logoAlignment,
+    width,
+  });
+
+  return { rendered: true };
 }
 
 export function cancelGoogleOneTap() {

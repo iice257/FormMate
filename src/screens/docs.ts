@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { navigateTo, goBack } from '../router';
+import { navigateTo } from '../router';
 import { AI_SURFACES, generateText, getAiErrorMessage } from '../ai/ai-service';
 import { SESSION_CLOSED_EVENT } from '../auth/session-lifecycle';
 import { toast } from '../components/toast';
@@ -20,31 +20,34 @@ import {
 export function docsScreen() {
   const authed = getState().isAuthenticated;
 
-  const previousScreen = window.__fmPreviousScreen;
-  let backText = 'Back';
-  if (previousScreen === 'landing') backText = 'Back to Home';
-  else if (previousScreen === 'dashboard') backText = 'Back to Dashboard';
-
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <style>
         .docs-signin-cta-enter {
-          animation: docs-signin-shimmer-enter 850ms ease-out 1;
-        }
-
-        .docs-signin-cta-exit {
-          animation: docs-signin-shimmer-exit 700ms ease-out 1;
+          animation: docs-signin-shimmer-enter 1150ms cubic-bezier(0.22, 1, 0.36, 1) 1;
         }
 
         @keyframes docs-signin-shimmer-enter {
-          0% { background-position: 0% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.35); }
-          35% { background-position: 55% 50%; box-shadow: 0 24px 52px -24px rgba(56, 189, 248, 0.55); }
-          100% { background-position: 100% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65); }
-        }
-
-        @keyframes docs-signin-shimmer-exit {
-          0% { background-position: 100% 50%; box-shadow: 0 20px 44px -22px rgba(56, 189, 248, 0.45); }
-          100% { background-position: 0% 50%; box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65); }
+          0% {
+            background-position: 0% 50%;
+            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.35);
+            filter: brightness(1);
+          }
+          38% {
+            background-position: 78% 50%;
+            box-shadow: 0 28px 56px -24px rgba(56, 189, 248, 0.58);
+            filter: brightness(1.08);
+          }
+          68% {
+            background-position: 100% 50%;
+            box-shadow: 0 24px 48px -24px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.04);
+          }
+          100% {
+            background-position: 100% 50%;
+            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65);
+            filter: brightness(1);
+          }
         }
       </style>
       <!-- Navigation Bar -->
@@ -52,14 +55,14 @@ export function docsScreen() {
         <div class="flex-1 flex justify-start">
           <button type="button" class="docs-home-button bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
-            ${backText}
+            Back to Home
           </button>
         </div>
         
         <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
             <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Docs &amp; Help</span>
           <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
-          <div class="hidden md:block flex-1 max-w-md" id="docs-search-wrapper">
+          <div class="hidden md:block flex-1 max-w-lg lg:max-w-xl" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
@@ -504,7 +507,7 @@ export function docsScreen() {
                       <div class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.2))] flex items-center justify-center text-primary shadow-sm">
                         <span class="material-symbols-outlined text-[26px]">forum</span>
                       </div>
-                      <h3 class="text-xl font-black tracking-tight text-slate-900">Sign in to chat</h3>
+                      <h3 class="text-3xl md:text-4xl font-black tracking-tight leading-none text-slate-900">Sign in to chat</h3>
                       <p class="mt-3 text-sm font-semibold leading-6 text-slate-500">
                         Read the docs freely. When you want live help, sign in and start a guided FormMate conversation.
                       </p>
@@ -542,38 +545,22 @@ export function docsScreen() {
   `;
 
   function init(wrapper) {
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
     const docsSigninBtn = wrapper.querySelector('#btn-docs-signin');
     let docsSigninAnimating = false;
-    let docsSigninQueuedState = null;
-    let docsSigninState = 'idle';
-    const toggleDocsSigninShimmer = (active) => {
-      if (!docsSigninBtn) return;
-      const targetState = active ? 'enter' : 'exit';
-      if (docsSigninAnimating) {
-        docsSigninQueuedState = targetState;
-        return;
-      }
-      if (docsSigninState === targetState) return;
+    const playDocsSigninShimmer = () => {
+      if (!docsSigninBtn || docsSigninAnimating) return;
       docsSigninAnimating = true;
-      docsSigninState = targetState;
-      docsSigninBtn.classList.remove('docs-signin-cta-enter', 'docs-signin-cta-exit');
+      docsSigninBtn.classList.remove('docs-signin-cta-enter');
       void docsSigninBtn.offsetWidth;
-      docsSigninBtn.classList.add(targetState === 'enter' ? 'docs-signin-cta-enter' : 'docs-signin-cta-exit');
+      docsSigninBtn.classList.add('docs-signin-cta-enter');
     };
-    const handleDocsSigninEnter = () => toggleDocsSigninShimmer(true);
-    const handleDocsSigninLeave = () => toggleDocsSigninShimmer(false);
     const handleDocsSigninAnimationEnd = () => {
       docsSigninAnimating = false;
-      const nextState = docsSigninQueuedState;
-      docsSigninQueuedState = null;
-      if (nextState && nextState !== docsSigninState) {
-        toggleDocsSigninShimmer(nextState === 'enter');
-      }
+      docsSigninBtn?.classList.remove('docs-signin-cta-enter');
     };
-    docsSigninBtn?.addEventListener('mouseenter', handleDocsSigninEnter);
-    docsSigninBtn?.addEventListener('mouseleave', handleDocsSigninLeave);
+    docsSigninBtn?.addEventListener('mouseenter', playDocsSigninShimmer);
     docsSigninBtn?.addEventListener('animationend', handleDocsSigninAnimationEnd);
     wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.docsNav));

@@ -385,6 +385,7 @@ export function initRouter() {
   window.addEventListener('popstate', (e: PopStateEvent) => {
     const nextState = e.state as RouterHistoryState | null;
     const direction: NavigationDirection = nextState?.seq != null && nextState.seq < historySequence ? 'back' : 'forward';
+    const currentScreen = getState().currentScreen;
 
     if (nextState?.screen) {
       navigateTo(nextState.screen, {
@@ -395,6 +396,14 @@ export function initRouter() {
         scroll: 'restore',
         historySync: 'skip',
         incomingHistoryState: nextState,
+      });
+    } else if (currentScreen === 'privacy' || currentScreen === 'terms') {
+      navigateTo('docs', {
+        replace: true,
+        direction: 'back',
+        source: 'browser',
+        transition: 'page',
+        scroll: 'top',
       });
     } else {
       const homeScreen = getHomeScreenForUser();

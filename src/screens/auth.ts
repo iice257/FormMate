@@ -3,7 +3,7 @@
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
 import { getAuthErrorMessage, getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signInWithGoogleCredential, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
-import { promptGoogleOneTap } from '../auth/google-one-tap';
+import { initializeGoogleIdentity, promptGoogleOneTap } from '../auth/google-one-tap';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
@@ -38,7 +38,7 @@ export function authScreen() {
   const html = `
     <div class="relative flex min-h-screen w-full bg-mesh auth-shell">
       <div class="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative overflow-hidden ring-1 ring-primary/20 bg-[#0d1017] auth-hero-panel">
-        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-100" style="background-image: url('/auth-bg-image.png');"></div>
+        <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-100 auth-hero-bg" style="background-image: url('/auth-bg-image.png');"></div>
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
 
         <div class="relative z-20 flex w-full flex-col h-full auth-hero-copy">
@@ -49,9 +49,9 @@ export function authScreen() {
             <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="auth-hero-mate-solid">Mate</span></h2>
           </div>
 
-          <div class="w-full max-w-[28rem] px-4 lg:mt-72 xl:mt-56 lg:-ml-5 xl:ml-0 lg:max-w-[24rem] xl:max-w-[28rem]">
-            <h1 class="text-white text-6xl xl:text-[5.5rem] font-extrabold leading-[1.05] tracking-tight">
-              Fill forms with<br/><span class="text-link-gradient animate-gradient-x">AI magic.</span>
+          <div class="auth-hero-title-wrap">
+            <h1 class="text-white font-extrabold tracking-tight auth-hero-title">
+              Fill forms with<br/><span class="text-link-gradient animate-gradient-x auth-hero-title-accent">AI magic.</span>
             </h1>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function authScreen() {
             <div class="absolute inset-0 bg-black/25"></div>
             <div class="relative z-10 h-full flex items-center px-5 sm:px-6 md:px-7">
               <p class="max-w-[18rem] sm:max-w-[20rem] text-white text-[2.1rem] sm:text-[2.5rem] md:text-[2.8rem] font-extrabold leading-[1.08] tracking-tight">
-                Fill forms with <span class="text-link-gradient animate-gradient-x">AI magic.</span>
+                Fill forms with <span class="text-link-gradient animate-gradient-x auth-hero-title-accent">AI magic.</span>
               </p>
             </div>
           </div>
@@ -108,6 +108,7 @@ export function authScreen() {
             </div>
 
             <div class="grid grid-cols-1 gap-3">
+              <div id="google-signin-slot" class="hidden min-h-[44px]"></div>
               <button type="button" id="btn-google" class="h-11 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors btn-press" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated); color: var(--fm-text);">
                 <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Google
@@ -270,18 +271,61 @@ export function authScreen() {
       navigateAfterAuth();
     };
 
+    const handleGoogleCredential = async (response, { nonce } = {}) => {
+      try {
+        const session = await signInWithGoogleCredential(response, { nonce });
+        if (!wrapper.isConnected) return;
+        completeAuthFlow(session, 'Welcome to FormMate.');
+      } catch (err) {
+        console.warn('[Auth] Google credential sign-in failed:', err);
+        const errorEl = wrapper.querySelector('#login-error');
+        showError(errorEl, getAuthErrorMessage(err, 'Google sign-in is temporarily unavailable. Please use email sign-in for now.'));
+      }
+    };
+
+    const googleSignInSlot = wrapper.querySelector('#google-signin-slot');
+    const googleFallbackBtn = wrapper.querySelector('#btn-google');
+    const renderGoogleButton = async () => {
+      if (!googleSignInSlot) return;
+
+      try {
+        const googleIdentity = await initializeGoogleIdentity({
+          autoSelect: false,
+          context: 'signin',
+          onCredential: handleGoogleCredential,
+          cancelOnTapOutside: true,
+        });
+
+        if (!googleIdentity?.google?.accounts?.id) {
+          googleSignInSlot.classList.add('hidden');
+          googleFallbackBtn?.classList.remove('hidden');
+          return;
+        }
+
+        const slotWidth = Math.max(Math.floor(googleSignInSlot.getBoundingClientRect().width || 0), 280);
+        googleIdentity.google.accounts.id.renderButton(googleSignInSlot, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'pill',
+          logo_alignment: 'left',
+          width: slotWidth,
+        });
+        googleSignInSlot.classList.remove('hidden');
+        googleFallbackBtn?.classList.add('hidden');
+      } catch (error) {
+        console.warn('[Auth] Google sign-in button unavailable:', error);
+        googleSignInSlot.classList.add('hidden');
+        googleFallbackBtn?.classList.remove('hidden');
+      }
+    };
+
+    void renderGoogleButton();
     void promptGoogleOneTap({
       autoSelect: false,
       context: 'signin',
-      onCredential: async (response, { nonce } = {}) => {
-        try {
-          const session = await signInWithGoogleCredential(response, { nonce });
-          if (!wrapper.isConnected) return;
-          completeAuthFlow(session, 'Welcome to FormMate.');
-        } catch (err) {
-          console.warn('[Auth] Google One Tap sign-in failed:', err);
-        }
-      },
+      onCredential: handleGoogleCredential,
       onPromptMoment: (notification) => {
         if (notification?.skipped || notification?.dismissed || notification?.displayReason) {
           console.info('[Auth] Google One Tap prompt state:', notification);
@@ -488,13 +532,17 @@ export function authScreen() {
 
       try {
         btn.disabled = true;
-        btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Redirecting...';
+        btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Opening Google...';
         await signInWithGoogle();
       } catch (err) {
         console.warn('[Auth] Google sign-in failed:', err);
         showError(errorEl, getAuthErrorMessage(err, 'Google sign-in is temporarily unavailable. Please use email sign-in for now.'));
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
+      } finally {
+        setTimeout(() => {
+          if (!wrapper.isConnected) return;
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }, 1800);
       }
     });
 

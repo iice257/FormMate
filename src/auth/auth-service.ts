@@ -285,7 +285,8 @@ function clearOAuthUrlArtifacts() {
       url.searchParams.delete('error');
       url.searchParams.delete('error_description');
     }
-    window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
+    const cleanedPath = `${url.pathname}${url.search}`;
+    window.history.replaceState({}, document.title, cleanedPath);
   } catch (error) {
     console.warn('[Auth] Failed to clear OAuth artifacts:', error);
   }
@@ -318,12 +319,16 @@ async function restoreSessionFromUrl() {
   const code = url.searchParams.get('code');
   const error = url.searchParams.get('error_description') || url.searchParams.get('error');
   if (error) {
+    clearOAuthUrlArtifacts();
     throw authError(error, 'OAUTH_ERROR');
   }
 
   if (code) {
     const { data, error: exchangeError } = await client.auth.exchangeCodeForSession(code, getAuthRedirectUrl());
-    if (exchangeError) throw exchangeError;
+    if (exchangeError) {
+      clearOAuthUrlArtifacts();
+      throw exchangeError;
+    }
     const session = data?.session || null;
     if (session) {
       clearOAuthUrlArtifacts();
@@ -553,7 +558,10 @@ export async function signInWithGoogle() {
   if (!data?.url) throw authError('Google sign-in could not start.', 'OAUTH_URL_MISSING');
 
   window.location.assign(data.url);
-  return new Promise(() => {});
+  return {
+    redirected: true,
+    url: data.url,
+  };
 }
 
 export async function signInWithGoogleCredential(response, { nonce } = {}) {

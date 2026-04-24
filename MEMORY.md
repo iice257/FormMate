@@ -41,6 +41,8 @@
 - Google OAuth for FormMate must be enabled under Supabase Authentication > Providers > Google, not Supabase OAuth Server.
 - Google Identity Services should auto-sign-in on the landing page (`auto_select`) and show One Tap on the auth screen without auto-select; sign-out must call `disableAutoSelect()` to prevent re-login loops.
 - Google One Tap requires `VITE_GOOGLE_CLIENT_ID` with the same Google Web OAuth Client ID configured in Supabase.
+- Public docs/legal navigation is explicit: the main docs back button always returns to landing, while privacy/terms back routes return to docs and browser-back from legal pages should resolve back into docs instead of cycling legal tabs.
+- The primary web Google sign-in path should use Google Identity Services credentials (`signInWithIdToken`) for the visible auth flow; Supabase redirect OAuth remains fallback-only.
 - Mobile app shell should expose a hamburger beside `New Form` that opens a full-screen left menu with push-style page motion; account modal should also be full-screen on mobile.
 - Zen mode should reuse the subtle new-form background image treatment across zen screens only (same image and very low-opacity overlay), without changing non-zen screens.
 - Cloud sync degraded banners/notices should be hidden sitewide (including auth and layout-level warning surfaces).

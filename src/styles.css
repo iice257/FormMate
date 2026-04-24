@@ -4564,6 +4564,30 @@ button#btn-back-login .material-symbols-outlined,
   gap: 2rem;
 }
 
+.auth-hero-bg {
+  background-position: 58% center;
+}
+
+.auth-hero-title-wrap {
+  width: min(100%, 28rem);
+  max-width: 28rem;
+  padding-inline: 1rem;
+  margin-top: clamp(14rem, 35vh, 20rem);
+  margin-left: clamp(-1.4rem, -1.8vw, -0.3rem);
+}
+
+.auth-hero-title {
+  font-size: clamp(3.35rem, 6.6vw, 5.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.auth-hero-title-accent {
+  display: inline-block;
+  padding-bottom: 0.08em;
+  text-shadow: 0 1px 4px rgba(6, 24, 44, 0.24);
+}
+
 .auth-hero-mate-stroke {
   text-shadow: 0 1px 2px rgba(6, 24, 44, 0.38);
 }
@@ -4582,6 +4606,12 @@ button#btn-back-login .material-symbols-outlined,
 
 .auth-form-panel form {
   background: rgba(255, 255, 255, 0.62);
+}
+
+@media (min-width: 1400px) {
+  .auth-hero-bg {
+    background-position: center;
+  }
 }
 
 .otp-code-input {

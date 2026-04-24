@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getDashboardActionScreenForUser, goBack, navigateTo } from '../router';
+import { getDashboardActionScreenForUser, navigateTo } from '../router';
 import { getState } from '../state';
 
 function renderLegalTabs(active) {
@@ -138,11 +138,19 @@ export function privacyScreen() {
   });
 
   function init(wrapper) {
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('docs', {
+      replace: true,
+      direction: 'back',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    }));
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelectorAll('[data-legal-nav]').forEach((button) => {
-      button.addEventListener('click', () => navigateTo(button.dataset.legalNav));
+      button.addEventListener('click', () => navigateTo(button.dataset.legalNav, {
+        replace: true,
+      }));
     });
   }
 
@@ -193,10 +201,19 @@ export function termsScreen() {
   });
 
   function init(wrapper) {
-    wrapper.querySelector('#btn-home')?.addEventListener('click', () => goBack());
+    wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('docs', {
+      replace: true,
+      direction: 'back',
+      source: 'app',
+      transition: 'page',
+      scroll: 'top',
+    }));
+    wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelectorAll('[data-legal-nav]').forEach((button) => {
-      button.addEventListener('click', () => navigateTo(button.dataset.legalNav));
+      button.addEventListener('click', () => navigateTo(button.dataset.legalNav, {
+        replace: true,
+      }));
     });
   }
 

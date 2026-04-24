@@ -194,21 +194,23 @@ function createAuthAdapter() {
 
     async exchangeCodeForSession(code, redirectTo = getAuthRedirectUrl()) {
       const verifier = isBrowser() ? sessionStorage.getItem(PKCE_VERIFIER_KEY) : null;
-      const data = await authRequest('/auth/v1/token?grant_type=pkce', {
-        method: 'POST',
-        body: {
-          auth_code: code,
-          code_verifier: verifier || undefined,
-          redirect_uri: redirectTo || undefined,
-        },
-        form: true,
-      });
+      try {
+        const data = await authRequest('/auth/v1/token?grant_type=pkce', {
+          method: 'POST',
+          body: {
+            auth_code: code,
+            code_verifier: verifier || undefined,
+            redirect_uri: redirectTo || undefined,
+          },
+          form: true,
+        });
 
-      if (isBrowser()) {
-        sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+        return normalizeAuthResponse(data);
+      } finally {
+        if (isBrowser()) {
+          sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+        }
       }
-
-      return normalizeAuthResponse(data);
     },
 
     async refreshSession(refreshToken) {
