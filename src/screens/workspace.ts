@@ -548,13 +548,16 @@ export function workspaceScreen() {
     const applyRadioSelection = (questionId, selectedValue) => {
       wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="radio"]`).forEach((el) => {
         const isSelected = el.dataset.value === selectedValue;
+        el.classList.toggle('is-selected', isSelected);
         el.classList.toggle('border-primary', isSelected);
         el.classList.toggle('bg-primary/5', isSelected);
         el.classList.toggle('border-slate-100', !isSelected);
+        el.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         const dot = el.querySelector('.radio-dot');
         if (dot) dot.classList.toggle('hidden', !isSelected);
-        const ring = el.querySelector('.size-4');
+        const ring = el.querySelector('.question-card-option-indicator, .size-4');
         if (ring) { ring.classList.toggle('border-primary', isSelected); ring.classList.toggle('border-slate-300', !isSelected); }
+        ring?.classList.toggle('is-selected', isSelected);
       });
     };
 
@@ -562,13 +565,16 @@ export function workspaceScreen() {
       const set = new Set(selectedValues);
       wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="checkbox"]`).forEach((el) => {
         const isChecked = set.has(el.dataset.value);
+        el.classList.toggle('is-selected', isChecked);
         el.classList.toggle('border-primary', isChecked);
         el.classList.toggle('bg-primary/5', isChecked);
         el.classList.toggle('border-slate-100', !isChecked);
+        el.setAttribute('aria-checked', isChecked ? 'true' : 'false');
         const mark = el.querySelector('.check-mark');
         if (mark) mark.classList.toggle('hidden', !isChecked);
-        const box = el.querySelector('.size-4');
+        const box = el.querySelector('.question-card-option-indicator, .size-4');
         if (box) { box.classList.toggle('border-primary', isChecked); box.classList.toggle('bg-primary', isChecked); box.classList.toggle('border-slate-300', !isChecked); }
+        box?.classList.toggle('is-selected', isChecked);
       });
     };
 
@@ -596,7 +602,8 @@ export function workspaceScreen() {
         updateAnswer(qId, String(val), 'user');
         wrapper.querySelectorAll(`.scale-btn[data-question-id="${qId}"]`).forEach((b) => {
           const isActive = b.dataset.value === String(val);
-          b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
+          b.classList.toggle('is-selected', isActive); b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
+          b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
         updateAnsweredCount(); syncUndoRedoButtons();
         return;

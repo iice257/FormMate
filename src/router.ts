@@ -341,12 +341,21 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     }
 
     if (currentCleanup) {
-      currentCleanup();
+      try {
+        currentCleanup();
+      } catch (error) {
+        console.error('[router] Screen cleanup failed; continuing navigation.', error);
+      }
       currentCleanup = null;
     }
 
     if (init) {
-      currentCleanup = init(wrapper) || null;
+      try {
+        currentCleanup = init(wrapper) || null;
+      } catch (error) {
+        console.error('[router] Screen initialization failed.', error);
+        throw error;
+      }
     }
     return wrapper;
   };

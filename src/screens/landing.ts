@@ -433,21 +433,20 @@ export function landingScreen() {
         <!-- Footer -->
         <footer class="px-6 md:px-20 lg:px-40 py-12 border-t border-slate-100 bg-white">
           <div class="max-w-[1100px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-            <div class="flex items-center gap-2.5 shrink-0">
+            <button type="button" id="btn-footer-logo-home" class="flex items-center gap-2.5 shrink-0 bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
               <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
               <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
-            </div>
+            </button>
             
             <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
               <button type="button" id="btn-footer-privacy" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Privacy Policy</button>
               <button type="button" id="btn-footer-terms" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Terms of Service</button>
-              <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0">Cookie Settings</button>
               <button type="button" class="hover:text-primary transition-colors cursor-pointer bg-transparent border-0 p-0" id="btn-footer-help">Help Center</button>
             </div>
             
-            <div class="text-xs text-slate-400 shrink-0">(c) 2026 FormMate</div>
+            <div class="text-xs text-slate-400 shrink-0">© FormMate 2026</div>
           </div>
         </footer>
 
@@ -461,6 +460,7 @@ export function landingScreen() {
     wrapper.querySelector('#btn-footer-help')?.addEventListener('click', () => navigateTo('docs'));
     wrapper.querySelector('#btn-footer-privacy')?.addEventListener('click', () => navigateTo('privacy'));
     wrapper.querySelector('#btn-footer-terms')?.addEventListener('click', () => navigateTo('terms'));
+    wrapper.querySelector('#btn-footer-logo-home')?.addEventListener('click', () => navigateTo('landing'));
 
     wrapper.querySelector('#btn-hero-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#btn-hero-chat')?.addEventListener('click', () => navigateTo('ai-chat'));

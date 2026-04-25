@@ -2,7 +2,7 @@
 
 import { getState, setState } from '../state';
 import { getDashboardActionScreenForUser, navigateTo } from '../router';
-import { getAuthErrorMessage, getDevTestUsers, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signInWithGoogleCredential, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
+import { ensureAuthBootstrapped, getAuthErrorMessage, getDevTestUsers, getSession, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signInWithGoogleCredential, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
 import { initializeGoogleIdentity, promptGoogleOneTap } from '../auth/google-one-tap';
 import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
@@ -42,17 +42,27 @@ export function authScreen() {
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
 
         <div class="relative z-20 flex w-full flex-col h-full auth-hero-copy">
-          <div class="flex items-center gap-3 self-start">
+          <button type="button" id="auth-logo-home" class="flex items-center gap-3 self-end bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-[2rem] font-black tracking-tighter text-white">Form<span class="auth-hero-mate-solid">Mate</span></h2>
-          </div>
+            <h2 class="text-[2rem] font-black tracking-tighter" style="color: #07154a;">Form<span class="auth-hero-mate-solid">Mate</span></h2>
+          </button>
 
           <div class="auth-hero-title-wrap">
-            <h1 class="text-white font-extrabold tracking-tight auth-hero-title">
-              Fill forms with<br/><span class="text-link-gradient animate-gradient-x auth-hero-title-accent" data-text="AI magic.">AI magic.</span>
+            <h1 class="auth-hero-title">
+              <span>Fill forms</span>
+              <span>with</span>
+              <span class="auth-hero-title-accent" data-text="AI magic.">AI magic.</span>
             </h1>
+            <div class="auth-hero-proof">
+              <div class="auth-hero-proof-icon">
+                <span class="material-symbols-outlined">description</span>
+                <span class="auth-hero-proof-spark material-symbols-outlined">auto_awesome</span>
+              </div>
+              <div class="auth-hero-proof-divider"></div>
+              <p>Smarter. Faster.<br />Better results.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -63,17 +73,17 @@ export function authScreen() {
             <div class="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100" style="background-image: url('/auth-bg-image.png');"></div>
             <div class="absolute inset-0 bg-black/25"></div>
             <div class="relative z-10 h-full flex items-center px-5 sm:px-6 md:px-7 md:-translate-y-12">
-              <p class="max-w-[18rem] sm:max-w-[20rem] text-white text-[2.1rem] sm:text-[2.5rem] md:text-[2.8rem] font-extrabold leading-[1.08] tracking-tight">
-                Fill forms with <span class="text-link-gradient animate-gradient-x auth-hero-title-accent" data-text="AI magic.">AI magic.</span>
+              <p class="auth-mobile-title">
+                Fill forms with <span class="auth-hero-title-accent" data-text="AI magic.">AI magic.</span>
               </p>
             </div>
           </div>
-          <div class="lg:hidden flex items-center gap-3 mb-10">
+          <button type="button" id="auth-mobile-logo-home" class="lg:hidden flex items-center gap-3 mb-10 bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
             <div class="size-10 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
             <h2 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h2>
-          </div>
+          </button>
 
           <form id="login-form" novalidate>
             <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Continue to FormMate</h2>
@@ -244,6 +254,8 @@ export function authScreen() {
     wrapper.querySelector('#btn-to-signup').addEventListener('click', () => {
       showForm(signupForm);
     });
+    wrapper.querySelector('#auth-logo-home')?.addEventListener('click', () => navigateTo('landing'));
+    wrapper.querySelector('#auth-mobile-logo-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#btn-to-login').addEventListener('click', () => showForm(loginForm));
     wrapper.querySelector('#btn-forgot').addEventListener('click', () => {
       showForm(forgotForm);
@@ -267,9 +279,35 @@ export function authScreen() {
 
     const completeAuthFlow = (session, successMessage) => {
       applySessionState(session);
-      toast.success(successMessage);
+      if (successMessage) toast.success(successMessage);
       navigateAfterAuth();
     };
+
+    const completePendingOAuthCallback = async () => {
+      const hasOAuthCallback = window.location.search.includes('code=')
+        || window.location.search.includes('error=')
+        || window.location.hash.includes('access_token=');
+
+      try {
+        const session = await ensureAuthBootstrapped();
+        const activeSession = session?.user?.id ? session : getSession();
+        if (!activeSession?.user?.id || !wrapper.isConnected) return;
+
+        completeAuthFlow(
+          activeSession,
+          hasOAuthCallback ? `Welcome back, ${activeSession.user.name || activeSession.user.email || 'there'}.` : '',
+        );
+      } catch (error) {
+        if (!hasOAuthCallback || !wrapper.isConnected) return;
+        console.warn('[Auth] OAuth callback completion failed:', error);
+        showError(
+          wrapper.querySelector('#login-error'),
+          getAuthErrorMessage(error, 'Google sign-in did not finish. Please try again.'),
+        );
+      }
+    };
+
+    void completePendingOAuthCallback();
 
     const handleGoogleCredential = async (response, { nonce } = {}) => {
       try {

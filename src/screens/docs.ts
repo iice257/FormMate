@@ -17,37 +17,103 @@ import {
   stripFollowUpTags,
 } from '../ai/chat-interactions';
 
+const DOCS_KNOWLEDGE = [
+  { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate helps users fill out tedious, long, and complex online forms by reading form questions, using saved Vault/profile context, and drafting answers for review.', type: 'guide' },
+  { id: 'first-form', title: 'Filling Your First Form', text: 'Start from the Dashboard or New Form screen, paste a form URL, analyze the form, review the generated workspace answers, then copy or submit with user approval.', type: 'guide' },
+  { id: 'vault', title: 'The Information Vault', text: 'The Vault stores reusable personal context such as education, work history, project details, portfolio links, preferences, and other data the AI can reference when drafting answers.', type: 'guide' },
+  { id: 'copilot', title: 'Using the Form Copilot', text: 'The Form Copilot helps refine workspace answers, rewrite tone, shorten responses, explain field categories, and apply targeted edits to active form answers.', type: 'guide' },
+  { id: 'editing', title: 'Reviewing & Editing', text: 'Users should review every generated answer in the Workspace, edit fields manually when needed, regenerate AI-supported answers, and confirm outputs before submission.', type: 'guide' },
+  { id: 'account', title: 'Managing Your Account', text: 'Account settings, profile details, vault data, preferences, and supported account-backed storage are managed in the Accounts Center.', type: 'guide' },
+  { id: 'history', title: 'Form History', text: 'Form History lets users reopen recently analyzed forms and continue from previous context when stored history is available.', type: 'guide' },
+  { id: 'faqs', title: 'Free Access FAQ', text: 'FormMate is currently available as a free offering while the product is in active development.', type: 'faq' },
+  { id: 'faqs', title: 'Multi-step FAQ', text: 'FormMate can support multi-step forms when the parser can access the visible form state and the user remains in control of each step.', type: 'faq' },
+  { id: 'faqs', title: 'Security FAQ', text: 'Vault data is private to the user session/account context and is used only where relevant to FormMate features. Users should avoid adding unnecessary sensitive data.', type: 'faq' },
+  { id: 'feedback', title: 'Review & Feedback', text: 'Users can share feedback from the Docs feedback section to help improve FormMate.', type: 'guide' },
+  { id: 'contact', title: 'Contact Us', text: 'Users can contact support from the Docs contact section with questions, bugs, or partnership inquiries.', type: 'guide' },
+  { id: 'privacy', title: 'Privacy Policy', text: 'FormMate may process account profile details, vault data, form structure, screenshots supplied by the user, and prompts needed for AI-powered form workflows.', type: 'legal' },
+  { id: 'terms', title: 'Terms of Service', text: 'Users are responsible for reviewing generated outputs before use and may not use FormMate for abuse, deception, unlawful bypassing, or unrelated inference at scale.', type: 'legal' },
+];
+
+function tokenizeDocsText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2);
+}
+
+function getRelevantDocsSnippets(query, limit = 4) {
+  const terms = new Set(tokenizeDocsText(query));
+  const scored = DOCS_KNOWLEDGE.map((entry) => {
+    const haystack = `${entry.title} ${entry.text}`.toLowerCase();
+    let score = 0;
+    terms.forEach((term) => {
+      if (entry.title.toLowerCase().includes(term)) score += 4;
+      if (haystack.includes(term)) score += 1;
+    });
+    return { entry, score };
+  })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ entry }) => `### ${entry.title}\n${entry.text}`);
+
+  if (scored.length) return scored;
+
+  return DOCS_KNOWLEDGE
+    .filter((entry) => ['welcome', 'first-form', 'vault', 'copilot'].includes(entry.id))
+    .slice(0, limit)
+    .map((entry) => `### ${entry.title}\n${entry.text}`);
+}
+
 export function docsScreen() {
   const authed = getState().isAuthenticated;
 
   const html = `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
       <style>
-        .docs-signin-cta-enter {
-          animation: docs-signin-shimmer-enter 1150ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+        .docs-signin-cta {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          border: 1px solid transparent;
+          background:
+            linear-gradient(var(--fm-primary), var(--fm-primary)) padding-box,
+            linear-gradient(115deg, rgba(255,255,255,0.32), rgba(139,249,249,0.78), rgba(34,152,218,0.55), rgba(255,255,255,0.24)) border-box;
+          box-shadow: 0 16px 34px -22px rgba(34, 152, 218, 0.95);
+          transform: translateZ(0);
+          transition:
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            filter 160ms ease;
         }
 
-        @keyframes docs-signin-shimmer-enter {
-          0% {
-            background-position: 0% 50%;
-            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.35);
-            filter: brightness(1);
-          }
-          38% {
-            background-position: 78% 50%;
-            box-shadow: 0 28px 56px -24px rgba(56, 189, 248, 0.58);
-            filter: brightness(1.08);
-          }
-          68% {
-            background-position: 100% 50%;
-            box-shadow: 0 24px 48px -24px rgba(56, 189, 248, 0.4);
-            filter: brightness(1.04);
-          }
-          100% {
-            background-position: 100% 50%;
-            box-shadow: 0 18px 40px -22px rgba(29, 78, 216, 0.65);
-            filter: brightness(1);
-          }
+        .docs-signin-cta::after {
+          content: "";
+          position: absolute;
+          inset: -2px;
+          z-index: -1;
+          background: linear-gradient(110deg, transparent 0 20%, rgba(255,255,255,0.7) 38%, rgba(139,249,249,0.86) 50%, rgba(255,255,255,0.52) 62%, transparent 80% 100%);
+          transform: translateX(-130%);
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .docs-signin-cta:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.03);
+          box-shadow: 0 18px 42px -22px rgba(34, 152, 218, 1);
+        }
+
+        .docs-signin-cta:hover::after,
+        .docs-signin-cta-enter::after {
+          opacity: 1;
+          animation: docs-signin-shimmer 1450ms cubic-bezier(0.16, 1, 0.3, 1) 1;
+        }
+
+        @keyframes docs-signin-shimmer {
+          from { transform: translateX(-130%); }
+          to { transform: translateX(130%); }
         }
       </style>
       <!-- Navigation Bar -->
@@ -487,9 +553,9 @@ export function docsScreen() {
         <div id="handle-right" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block"></div>
         
         <!-- AI Docs Chat (Right Sidebar) -->
-        <aside id="docs-sidebar-right" class="w-80 border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex">
+        <aside id="docs-sidebar-right" class="border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex" style="width: 357px;">
           <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
-            <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs Chat</span>
+            <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs AI</span>
             ${authed ? '<span class="mt-1 block text-sm font-semibold text-slate-500">Ask about FormMate features and workflows</span>' : ''}
           </div>
 
@@ -509,7 +575,7 @@ export function docsScreen() {
                       </div>
                       <h3 class="text-3xl md:text-4xl font-black tracking-tight leading-none text-slate-900">Sign in to chat</h3>
                       <p class="mt-3 text-sm font-semibold leading-6 text-slate-500">
-                        Read the docs freely. When you want live help, sign in and start a guided FormMate conversation.
+                        Sign in to learn more, or to ask questions about how FormMate works.
                       </p>
                     </div>
                   </div>
@@ -534,8 +600,8 @@ export function docsScreen() {
                 </button>
               </div>
             ` : `
-              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl border border-primary/20 bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_35%,#38bdf8_55%,#1d4ed8_72%,#0f172a_100%)] bg-[length:220%_220%] text-white px-4 py-3 text-sm font-black tracking-tight shadow-[0_18px_40px_-22px_rgba(29,78,216,0.65)] hover:brightness-110 transition-all btn-press docs-signin-cta">
-                Sign in to chat
+              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl text-white px-4 py-3 text-sm font-black tracking-tight btn-press docs-signin-cta">
+                <span class="relative z-10">Sign in to chat</span>
               </button>
             `}
           </div>
@@ -547,21 +613,6 @@ export function docsScreen() {
   function init(wrapper) {
     wrapper.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#btn-docs-signin')?.addEventListener('click', () => navigateTo('auth'));
-    const docsSigninBtn = wrapper.querySelector('#btn-docs-signin');
-    let docsSigninAnimating = false;
-    const playDocsSigninShimmer = () => {
-      if (!docsSigninBtn || docsSigninAnimating) return;
-      docsSigninAnimating = true;
-      docsSigninBtn.classList.remove('docs-signin-cta-enter');
-      void docsSigninBtn.offsetWidth;
-      docsSigninBtn.classList.add('docs-signin-cta-enter');
-    };
-    const handleDocsSigninAnimationEnd = () => {
-      docsSigninAnimating = false;
-      docsSigninBtn?.classList.remove('docs-signin-cta-enter');
-    };
-    docsSigninBtn?.addEventListener('mouseenter', playDocsSigninShimmer);
-    docsSigninBtn?.addEventListener('animationend', handleDocsSigninAnimationEnd);
     wrapper.querySelectorAll('[data-docs-nav]').forEach((button) => {
       button.addEventListener('click', () => navigateTo(button.dataset.docsNav));
     });
@@ -582,20 +633,7 @@ export function docsScreen() {
     const followUpsWrap = wrapper.querySelector('#docs-chat-followups');
     const cleanupTasks = [];
 
-    const searchIndex = [
-      { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate is your intelligent assistant for filling out tedious, long, and complex online forms.', type: 'guide' },
-      { id: 'first-form', title: 'Filling Your First Form', text: 'On the Dashboard, paste the URL of the form you want to fill into the input box.', type: 'guide' },
-      { id: 'vault', title: 'The Information Vault', text: 'The Vault is your secure, personal database inside FormMate. Think of it as your brain\'s notepad.', type: 'guide' },
-      { id: 'copilot', title: 'Using the Form Copilot', text: 'On the right side of the Workspace screen sits your Form Copilot conversational assistant.', type: 'guide' },
-      { id: 'editing', title: 'Reviewing & Editing', text: 'In your Workspace center screen, you\'ll notice a list of question cards.', type: 'guide' },
-      { id: 'account', title: 'Managing Your Account', text: 'All of your preferences, data, and account-backed settings are handled in the Accounts Center.', type: 'guide' },
-      { id: 'history', title: 'Form History', text: 'Accidentally closed a tab? Need to review an application you submitted last week?', type: 'guide' },
-      { id: 'faqs', title: 'Free Access FAQ', text: 'Is FormMate free to use? Yes. FormMate is currently available as a free offering.', type: 'faq' },
-      { id: 'faqs', title: 'Multi-step FAQ', text: 'Can FormMate handle multi-step forms? Absolutely.', type: 'faq' },
-      { id: 'faqs', title: 'Security FAQ', text: 'How safe is my Vault data? Your data is stored locally and used only for your sessions.', type: 'faq' },
-      { id: 'feedback', title: 'Review & Feedback', text: 'Share your feedback, rate your experience, and help us improve FormMate.', type: 'guide' },
-      { id: 'contact', title: 'Contact Us', text: 'Reach out to our support team with questions or partnership inquiries.', type: 'guide' }
-    ];
+    const searchIndex = DOCS_KNOWLEDGE;
 
     searchInput?.addEventListener('input', (e) => {
       const query = e.target.value.toLowerCase().trim();
@@ -815,12 +853,22 @@ export function docsScreen() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
+          const relevantDocs = getRelevantDocsSnippets(modelMessage || userVisibleText);
+          const docsAttachments = relevantDocs.length
+            ? [{
+              type: 'docs_context',
+              name: 'Relevant FormMate docs',
+              text: relevantDocs.join('\n\n'),
+            }]
+            : [];
+          const recentMessages = chatHistory.slice(-6);
           const responseText = await generateText({
             task: 'docs_chat',
             surface: AI_SURFACES.DOCS,
-            messages: chatHistory,
+            messages: recentMessages,
             temperature: 0.6,
             maxTokens: 512,
+            attachments: docsAttachments,
             context: {
               formTitle: 'FormMate Documentation',
             },
@@ -1044,14 +1092,11 @@ export function docsScreen() {
     });
 
     return () => {
-      docsSigninBtn?.removeEventListener('mouseenter', handleDocsSigninEnter);
-      docsSigninBtn?.removeEventListener('mouseleave', handleDocsSigninLeave);
-      docsSigninBtn?.removeEventListener('animationend', handleDocsSigninAnimationEnd);
       cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
       observer.disconnect();
-      cleanupLeft();
-      cleanupRight();
+      cleanupLeft?.();
+      cleanupRight?.();
     };
   }
 

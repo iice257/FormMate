@@ -3465,26 +3465,37 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 .question-card-option {
+  width: 100%;
   display: flex;
   align-items: center;
+  text-align: left;
   gap: 0.75rem;
   padding: 0.9rem 1rem;
   border: 1px solid var(--fm-interactive-strike);
   border-radius: 1rem;
   background: rgba(248, 250, 252, 0.88);
+  font-family: inherit;
   font-size: 0.9rem;
   color: var(--fm-text);
+  cursor: pointer;
   transition:
     border-color var(--fm-transition-fast),
     background-color var(--fm-transition-fast),
-    transform var(--fm-transition-fast);
+    transform var(--fm-transition-fast),
+    box-shadow var(--fm-transition-fast);
 }
 
-.question-card-option:hover {
+.question-card-option:hover,
+.question-card-option:focus-visible {
   transform: translateY(-1px);
   border-color: var(--fm-interactive-strike-strong);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: var(--fm-interactive-glow-soft);
+}
+
+.question-card-option:focus-visible {
+  outline: 2px solid rgba(var(--fm-primary-rgb), 0.35);
+  outline-offset: 3px;
 }
 
 .question-card-option.is-selected {
@@ -3555,6 +3566,11 @@ input[type="range"]:active::-moz-range-thumb {
 .question-card-scale-btn:hover {
   border-color: var(--fm-interactive-strike-strong);
   box-shadow: var(--fm-interactive-glow-soft);
+}
+
+.question-card-scale-btn:focus-visible {
+  outline: 2px solid rgba(var(--fm-primary-rgb), 0.35);
+  outline-offset: 3px;
 }
 
 .question-card-scale-btn.is-selected {
@@ -4569,35 +4585,109 @@ button#btn-back-login .material-symbols-outlined,
 }
 
 .auth-hero-title-wrap {
-  width: min(100%, 28rem);
-  max-width: 28rem;
-  padding-inline: 1rem;
-  margin-top: clamp(14rem, 35vh, 20rem);
-  margin-left: clamp(-1.4rem, -1.8vw, -0.3rem);
+  width: min(100%, 34rem);
+  max-width: 34rem;
+  padding-inline: clamp(0.6rem, 1.5vw, 1.2rem);
+  margin-top: auto;
+  margin-bottom: clamp(1.4rem, 6vh, 4rem);
+  margin-left: clamp(-1.2rem, -1.2vw, -0.2rem);
 }
 
 .auth-hero-title {
-  font-size: clamp(3.35rem, 6.6vw, 5.5rem);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05em;
+  color: #07154a;
+  font-size: clamp(4.4rem, 8.2vw, 7.8rem);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  font-weight: 950;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.48);
 }
 
 .auth-hero-title-accent {
   position: relative;
   isolation: isolate;
   display: inline-block;
-  padding-bottom: 0.08em;
+  padding-bottom: 0.07em;
+  color: #03bfd0;
+  background: linear-gradient(135deg, #0798ff 0%, #14d6e0 62%, #03b8c7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0.08em 0.06em rgba(0, 77, 143, 0.28));
 }
 
 .auth-hero-title-accent::before {
   content: attr(data-text);
   position: absolute;
   inset: 0;
-  transform: translateY(0.06em);
-  color: rgba(6, 24, 44, 0.32);
-  filter: blur(4px);
+  transform: translateY(0.055em);
+  color: rgba(0, 55, 121, 0.22);
+  -webkit-text-fill-color: rgba(0, 55, 121, 0.22);
+  filter: blur(5px);
   z-index: -1;
   pointer-events: none;
+}
+
+.auth-hero-proof {
+  display: flex;
+  align-items: center;
+  gap: 1.45rem;
+  margin-top: clamp(1.2rem, 2.8vh, 2rem);
+}
+
+.auth-hero-proof-icon {
+  position: relative;
+  width: clamp(4.3rem, 6.2vw, 5.4rem);
+  height: clamp(4.3rem, 6.2vw, 5.4rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #07154a;
+  box-shadow: 0 16px 32px rgba(7, 21, 74, 0.18), inset 0 0 0 1px rgba(220, 233, 249, 0.9);
+}
+
+.auth-hero-proof-icon > .material-symbols-outlined:first-child {
+  font-size: clamp(2.25rem, 3.2vw, 2.9rem);
+  font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+}
+
+.auth-hero-proof-spark {
+  position: absolute;
+  right: -0.18rem;
+  top: 0.55rem;
+  color: #13d8d0;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 24;
+}
+
+.auth-hero-proof-divider {
+  width: 2px;
+  height: clamp(4.4rem, 5vw, 5.1rem);
+  background: rgba(7, 21, 74, 0.2);
+}
+
+.auth-hero-proof p {
+  margin: 0;
+  color: #07154a;
+  font-size: clamp(1.6rem, 2.9vw, 2.35rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.auth-mobile-title {
+  max-width: 20rem;
+  margin: 0;
+  color: #07154a;
+  font-size: clamp(2.35rem, 10vw, 3.7rem);
+  font-weight: 950;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
 }
 
 .auth-hero-mate-stroke {

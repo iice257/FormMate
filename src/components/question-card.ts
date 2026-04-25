@@ -129,24 +129,25 @@ function renderInput(question, answerText) {
 
     case 'radio':
       return `
-        <div class="question-card-option-list">
+        <div class="question-card-option-list" role="radiogroup" aria-label="${escapeAttr(text)}">
           ${options.map((option) => {
             const selected = answerText === option;
             return `
-              <div
+              <button
+                type="button"
                 class="option-select question-card-option ${selected ? 'is-selected' : ''}"
-                role="button"
-                tabindex="0"
+                role="radio"
+                aria-checked="${selected ? 'true' : 'false'}"
                 aria-label="${escapeAttr(`Select option: ${option}`)}"
                 data-question-id="${id}"
                 data-value="${escapeAttr(option)}"
                 data-type="radio"
               >
-                <div class="question-card-option-indicator question-card-option-indicator-radio ${selected ? 'is-selected' : ''}">
+                <span class="question-card-option-indicator question-card-option-indicator-radio ${selected ? 'is-selected' : ''}" aria-hidden="true">
                   <div class="radio-dot ${selected ? '' : 'hidden'}"></div>
-                </div>
+                </span>
                 <span>${escapeHtml(option)}</span>
-              </div>
+              </button>
             `;
           }).join('')}
         </div>
@@ -155,24 +156,25 @@ function renderInput(question, answerText) {
     case 'checkbox': {
       const selectedItems = answerText ? answerText.split(', ') : [];
       return `
-        <div class="question-card-option-list">
+        <div class="question-card-option-list" role="group" aria-label="${escapeAttr(text)}">
           ${options.map((option) => {
             const checked = selectedItems.includes(option);
             return `
-              <div
+              <button
+                type="button"
                 class="option-select question-card-option ${checked ? 'is-selected' : ''}"
-                role="button"
-                tabindex="0"
+                role="checkbox"
+                aria-checked="${checked ? 'true' : 'false'}"
                 aria-label="${escapeAttr(`Toggle option: ${option}`)}"
                 data-question-id="${id}"
                 data-value="${escapeAttr(option)}"
                 data-type="checkbox"
               >
-                <div class="question-card-option-indicator question-card-option-indicator-checkbox ${checked ? 'is-selected' : ''}">
+                <span class="question-card-option-indicator question-card-option-indicator-checkbox ${checked ? 'is-selected' : ''}" aria-hidden="true">
                   <span class="check-mark material-symbols-outlined ${checked ? '' : 'hidden'}">check</span>
-                </div>
+                </span>
                 <span>${escapeHtml(option)}</span>
-              </div>
+              </button>
             `;
           }).join('')}
         </div>
@@ -212,6 +214,7 @@ function renderInput(question, answerText) {
               class="scale-btn question-card-scale-btn ${value === selectedValue ? 'is-selected' : ''}"
               data-question-id="${id}"
               data-value="${value}"
+              aria-pressed="${value === selectedValue ? 'true' : 'false'}"
               aria-label="${escapeAttr(`Answer: ${text} - ${value}`)}"
             >${value}</button>
           `).join('')}
