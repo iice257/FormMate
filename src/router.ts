@@ -54,6 +54,16 @@ const APP_SHELL_SCREENS = new Set([
   'vault',
 ]);
 
+const AUTH_ENTRY_REASON_KEY = 'formmate_auth_entry_reason';
+
+function setAuthEntryReason(reason: 'gated') {
+  try {
+    window.sessionStorage?.setItem(AUTH_ENTRY_REASON_KEY, reason);
+  } catch {
+    // Session storage can be unavailable in hardened browser modes.
+  }
+}
+
 export function getHomeScreenForUser() {
   if (!isAuthenticated()) return 'landing';
   return isOnboardingComplete() ? 'dashboard' : 'onboarding';
@@ -246,6 +256,7 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
   }
 
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
+    setAuthEntryReason('gated');
     screen = 'auth';
     path = '/auth';
     replace = true;
@@ -451,6 +462,9 @@ export function initRouter() {
   const initialScreen = path || 'landing';
 
   if (!authenticated) {
+    if (!PUBLIC_SCREENS.includes(initialScreen)) {
+      setAuthEntryReason('gated');
+    }
     navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', {
       replace: true,
       direction: 'forward',

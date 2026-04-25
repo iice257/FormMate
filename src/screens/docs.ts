@@ -7,6 +7,7 @@ import { getState } from '../state';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -68,9 +69,11 @@ function getRelevantDocsSnippets(query, limit = 4) {
 
 export function docsScreen() {
   const authed = getState().isAuthenticated;
+  const defaultLeftSidebarWidth = Number(getAnonymousPref('docs.leftSidebarWidth', 256)) || 256;
+  const defaultRightSidebarWidth = Number(getAnonymousPref('docs.rightSidebarWidth', 357)) || 357;
 
   const html = `
-    <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
+    <div class="flex flex-col h-screen bg-white font-sans overflow-hidden" style="--docs-left-sidebar-width: ${defaultLeftSidebarWidth}px; --docs-right-sidebar-width: ${defaultRightSidebarWidth}px;">
       <style>
         .docs-signin-cta {
           position: relative;
@@ -119,13 +122,13 @@ export function docsScreen() {
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
-          <button type="button" class="docs-home-button bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press" id="btn-home">
+          <button type="button" class="docs-home-button bg-primary text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all btn-press" id="btn-home">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
             Back to Home
           </button>
         </div>
         
-        <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
+        <div class="docs-topbar-center flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
             <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Docs &amp; Help</span>
           <div class="w-px h-6 bg-slate-200 hidden md:block"></div>
           <div class="hidden md:block flex-1 max-w-lg lg:max-w-xl" id="docs-search-wrapper">
@@ -158,7 +161,7 @@ export function docsScreen() {
       <!-- Layout -->
       <div class="flex flex-1 overflow-hidden relative">
         <!-- Sidebar -->
-        <aside id="docs-sidebar-left" class="w-64 border-r border-slate-200 bg-slate-50 shrink-0 hidden md:flex flex-col py-6 overflow-y-auto no-scrollbar relative">
+        <aside id="docs-sidebar-left" class="border-r border-slate-200 bg-slate-50 shrink-0 hidden md:flex flex-col py-6 overflow-y-auto no-scrollbar relative" style="width: ${defaultLeftSidebarWidth}px;">
           <nav class="space-y-6 px-4" id="docs-nav-sidebar">
              <div>
                 <h4 class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-3">Getting Started</h4>
@@ -553,14 +556,14 @@ export function docsScreen() {
         <div id="handle-right" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block"></div>
         
         <!-- AI Docs Chat (Right Sidebar) -->
-        <aside id="docs-sidebar-right" class="border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex" style="width: 357px;">
+        <aside id="docs-sidebar-right" class="border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex" style="width: ${defaultRightSidebarWidth}px;">
           <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
-            <span class="block text-[11px] font-black uppercase tracking-[0.22em] text-primary">Docs AI</span>
+            <span class="block text-[12px] font-black tracking-[0.08em] text-primary">Docs AI</span>
             ${authed ? '<span class="mt-1 block text-sm font-semibold text-slate-500">Ask about FormMate features and workflows</span>' : ''}
           </div>
 
           <div id="docs-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-transparent">
-            <div class="flex flex-col gap-1 animate-message-in">
+            <div class="flex h-full min-h-0 flex-col justify-center gap-1 animate-message-in">
               ${authed
                 ? `
                   <div class="max-w-[85%] bg-white rounded-[var(--fm-card-radius)] rounded-tl-none p-3 text-xs text-slate-700 leading-relaxed shadow-sm border border-slate-200/70">
@@ -568,7 +571,7 @@ export function docsScreen() {
                   </div>
                 `
                 : `
-                  <div class="flex min-h-[calc(100vh-24rem)] items-center justify-center px-4 py-12">
+                  <div class="flex items-center justify-center px-4 py-8">
                     <div class="w-full rounded-[2rem] border border-white/70 bg-white/80 px-6 py-10 text-center shadow-[0_30px_80px_-40px_rgba(37,99,235,0.35)] backdrop-blur-xl">
                       <div class="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.2))] flex items-center justify-center text-primary shadow-sm">
                         <span class="material-symbols-outlined text-[26px]">forum</span>
@@ -600,7 +603,7 @@ export function docsScreen() {
                 </button>
               </div>
             ` : `
-              <button id="btn-docs-signin" type="button" class="w-full rounded-2xl text-white px-4 py-3 text-sm font-black tracking-tight btn-press docs-signin-cta">
+              <button id="btn-docs-signin" type="button" class="mx-auto block w-[min(100%,280px)] rounded-2xl text-white px-4 py-3 text-sm font-black tracking-tight btn-press docs-signin-cta">
                 <span class="relative z-10">Sign in to chat</span>
               </button>
             `}
@@ -707,30 +710,51 @@ export function docsScreen() {
       }
     });
 
-    // Highlight active link simple logic
-    const sections = wrapper.querySelectorAll('article[id]');
-    const navLinks = wrapper.querySelectorAll('.sidebar-link');
+    const docsContent = wrapper.querySelector('#docs-content');
+    const sections = Array.from(wrapper.querySelectorAll('article[id]'));
+    const navLinks = Array.from(wrapper.querySelectorAll('.sidebar-link'));
 
-    // Using Intersection Observer to trigger scroll spy
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const id = entry.target.id;
-          navLinks.forEach(link => {
-            const href = link.getAttribute('href').substring(1);
-            if (href === id) {
-              link.classList.add('bg-slate-200/50', 'text-slate-900', 'font-semibold');
-              link.classList.remove('text-slate-600', 'font-medium');
-            } else {
-              link.classList.remove('bg-slate-200/50', 'text-slate-900', 'font-semibold');
-              link.classList.add('text-slate-600', 'font-medium');
-            }
-          });
+    const setActiveSection = (id) => {
+      navLinks.forEach(link => {
+        const href = link.getAttribute('href')?.substring(1);
+        if (href === id) {
+          link.classList.add('docs-sidebar-link-active');
+          link.classList.remove('text-slate-600', 'font-medium');
+        } else {
+          link.classList.remove('docs-sidebar-link-active');
+          link.classList.add('text-slate-600', 'font-medium');
         }
       });
-    }, { rootMargin: '-10% 0px -80% 0px' });
+    };
 
-    sections.forEach(section => observer.observe(section));
+    const updateActiveSection = () => {
+      if (!sections.length) return;
+      const containerTop = docsContent?.getBoundingClientRect?.().top ?? 0;
+      const activationLine = containerTop + 84;
+      let activeSection = sections[0];
+
+      sections.forEach((section) => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= activationLine) {
+          activeSection = section;
+        }
+      });
+
+      const firstSectionRect = sections[0].getBoundingClientRect();
+      if (firstSectionRect.top > activationLine) {
+        activeSection = sections[0];
+      }
+
+      setActiveSection(activeSection.id);
+    };
+
+    docsContent?.addEventListener('scroll', updateActiveSection, { passive: true });
+    window.addEventListener('resize', updateActiveSection);
+    requestAnimationFrame(updateActiveSection);
+    cleanupTasks.push(() => {
+      docsContent?.removeEventListener('scroll', updateActiveSection);
+      window.removeEventListener('resize', updateActiveSection);
+    });
 
     // Setup smooth scrolling for hash links within this view
     wrapper.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1002,11 +1026,12 @@ export function docsScreen() {
     const setupResizer = (handle, target, direction) => {
       if (!handle || !target) return;
 
-      let startX, startWidth;
+      let startX, startWidth, activeWidth;
 
       const onMouseDown = (e) => {
         startX = e.clientX;
         startWidth = parseInt(getComputedStyle(target).width, 10);
+        activeWidth = startWidth;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
 
@@ -1017,10 +1042,15 @@ export function docsScreen() {
       const onMouseMove = (e) => {
         const delta = direction === 'left' ? e.clientX - startX : startX - e.clientX;
         const newWidth = Math.max(200, Math.min(600, startWidth + delta));
+        activeWidth = newWidth;
         target.style.width = `${newWidth}px`;
+        wrapper.style.setProperty(`--docs-${direction}-sidebar-width`, `${newWidth}px`);
       };
 
       const onMouseUp = () => {
+        if (Number.isFinite(activeWidth)) {
+          setAnonymousPref(`docs.${direction}SidebarWidth`, activeWidth);
+        }
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         window.removeEventListener('mousemove', onMouseMove);

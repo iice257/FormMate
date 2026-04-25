@@ -8,8 +8,24 @@ import { isOnboardingComplete } from '../storage/local-store';
 import { toast } from '../components/toast';
 import { escapeHtml } from '../utils/escape';
 
+const AUTH_ENTRY_REASON_KEY = 'formmate_auth_entry_reason';
+
+function consumeAuthEntryReason() {
+  try {
+    const reason = window.sessionStorage?.getItem(AUTH_ENTRY_REASON_KEY) || '';
+    window.sessionStorage?.removeItem(AUTH_ENTRY_REASON_KEY);
+    return reason;
+  } catch {
+    return '';
+  }
+}
+
 export function authScreen() {
   const devTestUsers = getDevTestUsers();
+  const authEntryReason = consumeAuthEntryReason();
+  const authGatePromptHtml = authEntryReason === 'gated'
+    ? '<p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Sign up or Log in to continue.</p>'
+    : '';
   const devAccessHtml = devTestUsers.length ? `
             <div class="mt-5 rounded-2xl p-4" style="border: 1px solid var(--fm-border); background: var(--fm-bg-elevated);">
               <div class="flex items-start justify-between gap-3">
@@ -42,11 +58,11 @@ export function authScreen() {
         <div class="absolute inset-0 z-10 pointer-events-none rounded-br-2xl shadow-[inset_0_0_0_1px_rgba(91,155,255,0.2)]"></div>
 
         <div class="relative z-20 flex w-full flex-col h-full auth-hero-copy">
-          <button type="button" id="auth-logo-home" class="flex items-center gap-3 self-end bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
-            <div class="size-10 flex shrink-0 items-center justify-center">
+          <button type="button" id="auth-logo-home" class="flex items-center gap-3 self-start bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
+            <div class="size-8 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-[2rem] font-black tracking-tighter" style="color: #07154a;">Form<span class="auth-hero-mate-solid">Mate</span></h2>
+            <h2 class="text-[1.45rem] font-black tracking-tighter" style="color: #07154a;">Form<span class="auth-hero-mate-solid">Mate</span></h2>
           </button>
 
           <div class="auth-hero-title-wrap">
@@ -56,12 +72,7 @@ export function authScreen() {
               <span class="auth-hero-title-accent" data-text="AI magic.">AI magic.</span>
             </h1>
             <div class="auth-hero-proof">
-              <div class="auth-hero-proof-icon">
-                <span class="material-symbols-outlined">description</span>
-                <span class="auth-hero-proof-spark material-symbols-outlined">auto_awesome</span>
-              </div>
-              <div class="auth-hero-proof-divider"></div>
-              <p>Smarter. Faster.<br />Better results.</p>
+              <p>Smarter. Faster. Better results.</p>
             </div>
           </div>
         </div>
@@ -79,15 +90,15 @@ export function authScreen() {
             </div>
           </div>
           <button type="button" id="auth-mobile-logo-home" class="lg:hidden flex items-center gap-3 mb-10 bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
-            <div class="size-10 flex shrink-0 items-center justify-center">
+            <div class="size-8 flex shrink-0 items-center justify-center">
               <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
             </div>
-            <h2 class="text-xl font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h2>
+            <h2 class="text-lg font-black tracking-tighter" style="color: var(--fm-text);">Form<span class="text-primary">Mate</span></h2>
           </button>
 
           <form id="login-form" novalidate>
             <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color: var(--fm-text);">Continue to FormMate</h2>
-            <p class="text-sm mb-8" style="color: var(--fm-text-tertiary);">Please sign in or register to proceed.</p>
+            ${authGatePromptHtml}
 
             <div class="space-y-4">
               <div>

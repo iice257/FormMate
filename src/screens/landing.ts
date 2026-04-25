@@ -34,11 +34,11 @@ export function landingScreen() {
         <!-- Navigation -->
         <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
           <div class="flex-1 flex items-center justify-start">
-            <button type="button" class="flex items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0" id="btn-logo-home" aria-label="Go to home">
+            <button type="button" class="flex min-w-0 items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0 overflow-visible leading-none" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
-              <h2 class="text-slate-900 text-2xl font-black tracking-tighter" style="font-family: var(--fm-font-sans)">Form<span class="text-primary">Mate</span></h2>
+              <h2 class="text-slate-900 text-2xl font-black tracking-tighter leading-none overflow-visible" style="font-family: var(--fm-font-sans)">Form<span class="text-primary">Mate</span></h2>
             </button>
           </div>
           
@@ -433,11 +433,11 @@ export function landingScreen() {
         <!-- Footer -->
         <footer class="px-6 md:px-20 lg:px-40 py-12 border-t border-slate-100 bg-white">
           <div class="max-w-[1100px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-            <button type="button" id="btn-footer-logo-home" class="flex items-center gap-2.5 shrink-0 bg-transparent border-0 p-0 cursor-pointer btn-press" aria-label="Go to landing page">
+            <button type="button" id="btn-footer-logo-home" class="flex items-center gap-2.5 shrink-0 bg-transparent border-0 p-0 cursor-pointer btn-press leading-none overflow-visible" aria-label="Go to landing page">
               <div class="size-8 flex shrink-0 items-center justify-center">
             <img src="/logo.png" alt="FormMate Logo" class="w-full h-full object-contain" />
               </div>
-              <span class="font-bold text-lg tracking-tighter text-slate-900">Form<span class="text-primary">Mate</span></span>
+              <span class="font-bold text-lg tracking-tighter leading-none text-slate-900 overflow-visible">Form<span class="text-primary">Mate</span></span>
             </button>
             
             <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-slate-500 font-medium">
@@ -544,16 +544,7 @@ export function landingScreen() {
     // Demo links
     wrapper.querySelectorAll('[data-demo]').forEach(el => {
       el.addEventListener('click', () => {
-        const demoType = el.dataset.demo;
-        const urls = {
-          'job-application': 'demo://job-application',
-          'customer-feedback': 'demo://customer-feedback',
-          'travel-visa': 'demo://travel-visa',
-          'scholarship': 'demo://scholarship'
-        };
-        urlInput.value = urls[demoType] || urls['customer-feedback'];
-        setState({ formUrl: urlInput.value, capturePayload: null, imageArtifacts: null, parseResult: null, formData: null });
-        navigateTo('analyzing');
+        navigateTo('examples');
       });
     });
 
