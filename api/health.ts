@@ -37,6 +37,12 @@ function buildConfigHealth() {
   };
 }
 
+function shouldExposeConfigHealth() {
+  const explicit = String(process.env.FORMMATE_EXPOSE_HEALTH_CONFIG || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(explicit)) return true;
+  return process.env.NODE_ENV !== 'production' && !process.env.VERCEL_URL;
+}
+
 export default function handler(req, res) {
   const origin = getRequestOrigin(req);
   if (origin && isAllowedOrigin(origin)) {
@@ -51,11 +57,16 @@ export default function handler(req, res) {
     return res.status(200).end();
   }
 
-  res.status(200).json({
+  const payload = {
     status: 'ok',
     uptime: 'ready',
     apiReachable: true,
     apiVersion: FORM_MATE_API_VERSION,
-    config: buildConfigHealth(),
-  });
+  };
+
+  if (shouldExposeConfigHealth()) {
+    payload.config = buildConfigHealth();
+  }
+
+  res.status(200).json(payload);
 }

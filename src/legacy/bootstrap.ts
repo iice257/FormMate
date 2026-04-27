@@ -21,6 +21,7 @@ import { aiChatScreen } from '../screens/ai-chat';
 import { historyScreen } from '../screens/history';
 import { vaultScreen } from '../screens/vault';
 import { captureScreen } from '../screens/capture';
+import { notFoundScreen } from '../screens/not-found';
 import { initSessionLifecycle } from '../auth/session-lifecycle';
 import { loadRuntimeHealth } from '../app/runtime-health';
 
@@ -53,6 +54,7 @@ function registerScreens() {
   registerScreen('history', historyScreen);
   registerScreen('vault', vaultScreen);
   registerScreen('capture', captureScreen);
+  registerScreen('not-found', notFoundScreen);
 
   screensRegistered = true;
 }

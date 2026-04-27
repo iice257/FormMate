@@ -32,7 +32,7 @@ export function landingScreen() {
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+        <header data-fm-hide-on-scroll="true" class="landing-header flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
           <div class="flex-1 flex items-center justify-start">
             <button type="button" class="flex min-w-0 items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0 overflow-visible leading-none" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
@@ -42,10 +42,11 @@ export function landingScreen() {
             </button>
           </div>
           
-          <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
+          <nav class="landing-top-nav hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs &amp; Help</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-terms">Terms</button>
           </nav>
  
           <div class="flex-1 flex items-center justify-end gap-3">
@@ -56,11 +57,6 @@ export function landingScreen() {
         <main class="flex-1 flex flex-col items-center px-6 pt-24 pb-16 md:pt-40 z-10">
           <!-- Hero Section -->
           <div class="max-w-[800px] w-full text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest border border-primary/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-105 cursor-default">
-              <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
-              Form Copilot
-            </div>
-
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
               Fill Any Form<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">in Seconds.</span>
             </h1>
@@ -565,11 +561,10 @@ export function landingScreen() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    wrapper.querySelector('#nav-forms')?.addEventListener('click', () => {
-      navigateTo(getDashboardActionScreenForUser());
-    });
+    wrapper.querySelector('#nav-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
+    wrapper.querySelector('#nav-terms')?.addEventListener('click', () => navigateTo('terms'));
     wrapper.querySelector('#btn-login')?.addEventListener('click', () => navigateTo('auth'));
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
 

@@ -15,7 +15,7 @@ import { bindRichActionClicks, renderAssistantRichText } from '../actions/action
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
-import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
+import { clampSidebarWidth } from '../utils/sidebar-sizing';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -110,7 +110,7 @@ export function workspaceScreen() {
   const rightSidebarWidth = Number(getAnonymousPref('workspace.rightSidebarWidth', 320)) || 320;
 
   if (!formData) {
-    navigateTo('landing');
+    navigateTo('dashboard');
     return { html: '', init: () => { } };
   }
 
@@ -192,7 +192,7 @@ export function workspaceScreen() {
       </button>
 
       <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel detached-right-sidebar ${rightSidebarOpen ? '' : 'is-hidden'}" data-fm-right-sidebar="true" data-fm-transition-panel="true" style="width: ${rightSidebarWidth}px; flex-direction: column; flex-shrink: 0; z-index: 20;" ${rightSidebarOpen ? '' : 'hidden'}>
-        <div class="detached-sidebar-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize assistant sidebar" aria-valuenow="${rightSidebarWidth}"></div>
+        <div class="detached-sidebar-resizer" aria-hidden="true"></div>
         <div class="detached-sidebar-header">
           <span class="detached-sidebar-title">Assistant Sidebar</span>
           <button id="btn-hide-workspace-sidebar" type="button" class="detached-sidebar-hide-btn" aria-label="Hide sidebar">
@@ -398,10 +398,6 @@ export function workspaceScreen() {
       if (!rightPanel) return 0;
       const nextWidth = clampSidebarWidth(width, { oppositeWidth: getMainSidebarWidth() });
       rightPanel.style.width = `${nextWidth}px`;
-      const range = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-      rightPanelResizer?.setAttribute('aria-valuemin', String(range.min));
-      rightPanelResizer?.setAttribute('aria-valuemax', String(range.max));
-      rightPanelResizer?.setAttribute('aria-valuenow', String(nextWidth));
       setAnonymousPref('workspace.rightSidebarWidth', nextWidth);
       return nextWidth;
     };
@@ -424,27 +420,7 @@ export function workspaceScreen() {
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     };
-    const handleRightSidebarKeydown = (event) => {
-      const currentWidth = rightPanel?.getBoundingClientRect?.().width || rightSidebarWidth;
-      const step = event.shiftKey ? 24 : 8;
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        applyRightSidebarWidth(currentWidth + step);
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        applyRightSidebarWidth(currentWidth - step);
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        const { min } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-        applyRightSidebarWidth(min);
-      } else if (event.key === 'End') {
-        event.preventDefault();
-        const { max } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-        applyRightSidebarWidth(max);
-      }
-    };
     rightPanelResizer?.addEventListener('pointerdown', handleRightSidebarPointerDown);
-    rightPanelResizer?.addEventListener('keydown', handleRightSidebarKeydown);
     const handleRightSidebarResize = () => {
       if (!rightPanel || rightPanel.hidden) return;
       applyRightSidebarWidth(rightPanel.getBoundingClientRect().width);
@@ -452,7 +428,6 @@ export function workspaceScreen() {
     window.addEventListener('resize', handleRightSidebarResize);
     cleanupSidebarControls.push(() => {
       rightPanelResizer?.removeEventListener('pointerdown', handleRightSidebarPointerDown);
-      rightPanelResizer?.removeEventListener('keydown', handleRightSidebarKeydown);
       window.removeEventListener('resize', handleRightSidebarResize);
     });
     applyRightSidebarWidth(rightPanel?.getBoundingClientRect?.().width || rightSidebarWidth);

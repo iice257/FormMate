@@ -5,6 +5,8 @@ import { getAuthRedirectUrl, getSupabaseClient, isSupabaseConfigured } from './s
 import { disableGoogleAutoSelect } from './google-one-tap';
 
 const AUTH_KEY = 'auth_session';
+const AUTH_STORAGE_KEY = `formmate_${AUTH_KEY}`;
+const AUTH_PERSISTENCE_KEY = 'formmate_auth_persistence';
 const DEV_TEST_USERS = [
   {
     id: 'dev-admin',
@@ -54,11 +56,11 @@ function readStoredSession() {
   if (!isBrowser()) return inMemorySession;
 
   const sessionStorageRef = getSessionStorage();
-  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+  const localStorageRef = getLocalStorage();
 
   if (sessionStorageRef) {
     try {
-      const raw = sessionStorageRef.getItem(sessionStorageKey);
+      const raw = sessionStorageRef.getItem(AUTH_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         inMemorySession = parsed?.value ?? parsed ?? null;
@@ -66,7 +68,21 @@ function readStoredSession() {
       }
     } catch (error) {
       console.warn('[Auth] Failed to parse session storage cache:', error);
-      sessionStorageRef.removeItem(sessionStorageKey);
+      sessionStorageRef.removeItem(AUTH_STORAGE_KEY);
+    }
+  }
+
+  if (localStorageRef) {
+    try {
+      const raw = localStorageRef.getItem(AUTH_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        inMemorySession = parsed?.value ?? parsed ?? null;
+        return inMemorySession;
+      }
+    } catch (error) {
+      console.warn('[Auth] Failed to parse persistent auth cache:', error);
+      localStorageRef.removeItem(AUTH_STORAGE_KEY);
     }
   }
 
@@ -80,29 +96,49 @@ function readStoredSession() {
   return inMemorySession;
 }
 
-function writeStoredSession(session) {
+function writeStoredSession(session, options = {}) {
   inMemorySession = session || null;
 
   if (!isBrowser()) return;
 
   const sessionStorageRef = getSessionStorage();
-  const sessionStorageKey = `formmate_${AUTH_KEY}`;
+  const localStorageRef = getLocalStorage();
+  const persistence = options.persistence || readAuthPersistencePreference();
 
   if (sessionStorageRef) {
     try {
-      if (!session) {
-        sessionStorageRef.removeItem(sessionStorageKey);
-        remove(AUTH_KEY);
-      } else {
-        sessionStorageRef.setItem(sessionStorageKey, JSON.stringify({
-          value: session,
-          timestamp: Date.now(),
-          ttl: null,
-        }));
-      }
+      sessionStorageRef.removeItem(AUTH_STORAGE_KEY);
+    } catch (error) {
+      console.warn('[Auth] Failed to clear session auth cache:', error);
+    }
+  }
+
+  if (localStorageRef) {
+    try {
+      localStorageRef.removeItem(AUTH_STORAGE_KEY);
+    } catch (error) {
+      console.warn('[Auth] Failed to clear persistent auth cache:', error);
+    }
+  }
+
+  if (!session) {
+    remove(AUTH_KEY);
+    setAuthPersistencePreference(false);
+    return;
+  }
+
+  const targetStorage = persistence === 'persistent' ? localStorageRef : sessionStorageRef;
+  if (targetStorage) {
+    try {
+      targetStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+        value: session,
+        timestamp: Date.now(),
+        ttl: null,
+      }));
+      setAuthPersistencePreference(persistence === 'persistent');
       return;
     } catch (error) {
-      console.warn('[Auth] Failed to write session storage cache:', error);
+      console.warn('[Auth] Failed to write auth cache:', error);
     }
   }
 
@@ -110,8 +146,37 @@ function writeStoredSession(session) {
 }
 
 export function isDevAuthEnabled() {
-  const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  return Boolean(import.meta.env.DEV) || host === 'localhost' || host === '127.0.0.1';
+  return Boolean(import.meta.env.DEV);
+}
+
+function getLocalStorage() {
+  if (!isBrowser()) return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readAuthPersistencePreference() {
+  try {
+    return getLocalStorage()?.getItem(AUTH_PERSISTENCE_KEY) === 'persistent' ? 'persistent' : 'session';
+  } catch {
+    return 'session';
+  }
+}
+
+export function setAuthPersistencePreference(persistent = false) {
+  try {
+    if (persistent) getLocalStorage()?.setItem(AUTH_PERSISTENCE_KEY, 'persistent');
+    else getLocalStorage()?.removeItem(AUTH_PERSISTENCE_KEY);
+  } catch {
+    // Storage can be unavailable in hardened browser modes.
+  }
+}
+
+export function getAuthPersistencePreference() {
+  return readAuthPersistencePreference();
 }
 
 export function getDevTestUsers() {
@@ -263,7 +328,7 @@ async function hydrateAccountData(session, { seedIfMissing = true } = {}) {
   }
 }
 
-function storeSession(session) {
+function storeSession(session, options = {}) {
   if (!session) {
     writeStoredSession(null);
     notifyListeners(null);
@@ -271,7 +336,7 @@ function storeSession(session) {
   }
 
   const normalized = normalizeSession(session);
-  writeStoredSession(normalized);
+  writeStoredSession(normalized, options);
   notifyListeners(normalized);
   return normalized;
 }
@@ -456,7 +521,7 @@ export async function startOtpSignUp(email, password, name = '') {
   };
 }
 
-export async function verifyOtpSignUp(email, token, { password = '', name = '' } = {}) {
+export async function verifyOtpSignUp(email, token, { password = '', name = '', remember = false } = {}) {
   if (!email || !token) {
     throw authError('Email and verification code are required.', 'INVALID_OTP');
   }
@@ -480,7 +545,7 @@ export async function verifyOtpSignUp(email, token, { password = '', name = '' }
   }
 
   const session = normalizeSession(data.session);
-  storeSession(session);
+  storeSession(session, { persistence: remember ? 'persistent' : 'session' });
 
   if (password || String(name || '').trim()) {
     try {
@@ -518,7 +583,7 @@ export async function resendOtpSignUp(email, name = '') {
   return { email };
 }
 
-export async function signIn(email, password) {
+export async function signIn(email, password, { remember = false } = {}) {
   if (!email || !password) {
     throw authError('Email and password are required.', 'INVALID_CREDENTIALS');
   }
@@ -527,7 +592,7 @@ export async function signIn(email, password) {
 
   const devUser = resolveDevTestUser(email, password);
   if (devUser) {
-    return signInWithDevTestUser(devUser.id);
+    return signInWithDevTestUser(devUser.id, { remember });
   }
 
   const client = getClientOrThrow();
@@ -538,12 +603,13 @@ export async function signIn(email, password) {
   }
 
   const session = normalizeSession(data.session);
-  storeSession(session);
+  storeSession(session, { persistence: remember ? 'persistent' : 'session' });
   await hydrateAccountData(session, { seedIfMissing: true });
   return session;
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle({ remember = false } = {}) {
+  setAuthPersistencePreference(Boolean(remember));
   const client = getClientOrThrow();
   const redirectTo = getAuthRedirectUrl();
   const { data, error } = await client.auth.signInWithOAuth({
@@ -564,7 +630,7 @@ export async function signInWithGoogle() {
   };
 }
 
-export async function signInWithGoogleCredential(response, { nonce } = {}) {
+export async function signInWithGoogleCredential(response, { nonce, remember = false } = {}) {
   const token = String(response?.credential || '').trim();
   if (!token) {
     throw authError('Google did not return a sign-in credential.', 'GOOGLE_CREDENTIAL_MISSING');
@@ -586,12 +652,12 @@ export async function signInWithGoogleCredential(response, { nonce } = {}) {
     ...data.session,
     provider: 'google',
   });
-  storeSession(session);
+  storeSession(session, { persistence: remember ? 'persistent' : 'session' });
   await hydrateAccountData(session, { seedIfMissing: true });
   return session;
 }
 
-export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id) {
+export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id, { remember = false } = {}) {
   if (!isDevAuthEnabled()) {
     throw authError('Dev test access is only available in local development.', 'DEV_AUTH_DISABLED');
   }
@@ -614,7 +680,7 @@ export async function signInWithDevTestUser(userId = DEV_TEST_USERS[0]?.id) {
     },
   });
 
-  storeSession(session);
+  storeSession(session, { persistence: remember ? 'persistent' : 'session' });
   await hydrateAccountData(session, { seedIfMissing: true });
   return session;
 }

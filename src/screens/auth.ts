@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import { getState, setState } from '../state';
-import { getDashboardActionScreenForUser, navigateTo } from '../router';
+import { consumePendingAuthRoute, getDashboardActionScreenForUser, navigateTo } from '../router';
 import { ensureAuthBootstrapped, getAuthErrorMessage, getDevTestUsers, getSession, resendOtpSignUp, resetPassword, signIn, signInWithDevTestUser, signInWithGoogle, signInWithGoogleCredential, startOtpSignUp, verifyOtpSignUp } from '../auth/auth-service';
 import { initializeGoogleIdentity, promptGoogleOneTap } from '../auth/google-one-tap';
 import { isOnboardingComplete } from '../storage/local-store';
@@ -114,6 +114,14 @@ export function authScreen() {
                 <button type="button" id="btn-forgot" class="text-xs font-semibold hover:underline transition-colors" style="color: var(--fm-primary);">Forgot password?</button>
               </div>
 
+              <label class="auth-remember-row">
+                <input id="login-remember" type="checkbox" class="auth-remember-input" />
+                <span>
+                  <span class="auth-remember-title">Remember this browser</span>
+                  <span class="auth-remember-copy">Keep me signed in on this trusted device.</span>
+                </span>
+              </label>
+
               <button type="submit" id="btn-login" class="w-full h-12 rounded-xl text-sm font-bold text-white btn-press flex items-center justify-center gap-2" style="background: var(--fm-gradient-primary); box-shadow: var(--fm-shadow-primary);">
                 Sign In
                 <span class="material-symbols-outlined text-lg">arrow_forward</span>
@@ -207,6 +215,14 @@ export function authScreen() {
                 <span class="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
 
+              <label class="auth-remember-row">
+                <input id="signup-remember" type="checkbox" class="auth-remember-input" />
+                <span>
+                  <span class="auth-remember-title">Remember this browser</span>
+                  <span class="auth-remember-copy">Use persistent sign-in after verification.</span>
+                </span>
+              </label>
+
               <div id="otp-error" class="hidden text-xs font-medium text-center p-3 rounded-lg" role="alert" aria-live="polite" style="background: var(--fm-error-light); color: var(--fm-error);"></div>
             </div>
 
@@ -254,6 +270,10 @@ export function authScreen() {
     const otpEmailLabel = wrapper.querySelector('#otp-email-label');
     const otpInputs = Array.from(wrapper.querySelectorAll('.otp-code-input'));
     let pendingOtpSignup = null;
+    const shouldRememberBrowser = () => Boolean(
+      wrapper.querySelector('#login-remember')?.checked
+      || wrapper.querySelector('#signup-remember')?.checked,
+    );
 
     const showForm = (targetForm) => {
       loginForm.classList.toggle('hidden', targetForm !== loginForm);
@@ -322,7 +342,10 @@ export function authScreen() {
 
     const handleGoogleCredential = async (response, { nonce } = {}) => {
       try {
-        const session = await signInWithGoogleCredential(response, { nonce });
+        const session = await signInWithGoogleCredential(response, {
+          nonce,
+          remember: shouldRememberBrowser(),
+        });
         if (!wrapper.isConnected) return;
         completeAuthFlow(session, 'Welcome to FormMate.');
       } catch (err) {
@@ -400,7 +423,7 @@ export function authScreen() {
       btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Signing in...';
 
       try {
-        const session = await signIn(email, password);
+        const session = await signIn(email, password, { remember: shouldRememberBrowser() });
         completeAuthFlow(session, 'Welcome back, ' + (session.user.name || session.user.email) + '!');
       } catch (err) {
         console.warn('[Auth] Email sign-in failed:', err);
@@ -507,6 +530,7 @@ export function authScreen() {
         const session = await verifyOtpSignUp(pendingOtpSignup.email, code, {
           password: pendingOtpSignup.password,
           name: pendingOtpSignup.name,
+          remember: shouldRememberBrowser(),
         });
         pendingOtpSignup = null;
         completeAuthFlow(session, 'Account verified. Welcome to FormMate.');
@@ -582,7 +606,7 @@ export function authScreen() {
       try {
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Opening Google...';
-        await signInWithGoogle();
+        await signInWithGoogle({ remember: shouldRememberBrowser() });
       } catch (err) {
         console.warn('[Auth] Google sign-in failed:', err);
         showError(errorEl, getAuthErrorMessage(err, 'Google sign-in is temporarily unavailable. Please use email sign-in for now.'));
@@ -603,7 +627,9 @@ export function authScreen() {
         try {
           button.disabled = true;
           button.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Signing in...';
-          const session = await signInWithDevTestUser(button.dataset.devTestUser);
+          const session = await signInWithDevTestUser(button.dataset.devTestUser, {
+            remember: shouldRememberBrowser(),
+          });
           completeAuthFlow(session, `Signed in as ${session.user.name || 'Dev user'}.`);
         } catch (err) {
           console.warn('[Auth] Dev sign-in failed:', err);
@@ -627,6 +653,12 @@ function navigateAfterAuth() {
   const { capturePayload } = getState();
   if (capturePayload) {
     navigateTo('analyzing');
+    return;
+  }
+
+  const pendingRoute = consumePendingAuthRoute();
+  if (pendingRoute) {
+    navigateTo(pendingRoute);
     return;
   }
 

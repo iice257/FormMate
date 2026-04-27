@@ -44,7 +44,9 @@ const routes: Record<string, ScreenRenderer> = {};
 let currentCleanup: null | (() => void) = null;
 let historySequence = 0;
 
-const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'examples', 'privacy', 'terms'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'help', 'examples', 'privacy', 'terms', 'not-found'];
+const PUBLIC_DIRECT_SCREENS = new Set(['landing', 'auth', 'docs', 'help', 'examples', 'privacy', 'terms']);
+const WORKFLOW_STATE_SCREENS = new Set(['analyzing', 'workspace', 'review', 'success']);
 const APP_SHELL_SCREENS = new Set([
   'dashboard',
   'new',
@@ -55,6 +57,7 @@ const APP_SHELL_SCREENS = new Set([
 ]);
 
 const AUTH_ENTRY_REASON_KEY = 'formmate_auth_entry_reason';
+const PENDING_ROUTE_KEY = 'formmate_pending_auth_route';
 
 function setAuthEntryReason(reason: 'gated') {
   try {
@@ -62,6 +65,107 @@ function setAuthEntryReason(reason: 'gated') {
   } catch {
     // Session storage can be unavailable in hardened browser modes.
   }
+}
+
+function getBrowserSessionStorage() {
+  try {
+    return window.sessionStorage || null;
+  } catch {
+    return null;
+  }
+}
+
+function hasValidCaptureToken() {
+  try {
+    const token = new URLSearchParams(window.location.search || '').get('t') || '';
+    return /^cap_[a-z0-9]+_[a-z0-9]+$/i.test(token.trim());
+  } catch {
+    return false;
+  }
+}
+
+function normalizeScreenName(screen: string | null | undefined) {
+  const normalized = String(screen || '').replace(/^\/+/, '').replace(/\/+$/, '') || 'landing';
+  return normalized === '' ? 'landing' : normalized;
+}
+
+function hasRequiredWorkflowState(screen: string) {
+  if (!WORKFLOW_STATE_SCREENS.has(screen)) return true;
+  const state = getState();
+  if (screen === 'analyzing') {
+    return Boolean(state.formUrl || state.capturePayload || state.imageArtifacts);
+  }
+  if (screen === 'workspace' || screen === 'review') {
+    return Boolean(state.formData);
+  }
+  if (screen === 'success') {
+    return Boolean(state.formData || state.formHistory?.length);
+  }
+  return true;
+}
+
+function storePendingAuthRoute(screen: string) {
+  if (!routes[screen] || PUBLIC_SCREENS.includes(screen) || screen === 'auth') return;
+  const storage = getBrowserSessionStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(PENDING_ROUTE_KEY, JSON.stringify({
+      screen,
+      createdAt: Date.now(),
+    }));
+  } catch {
+    // Session storage can be unavailable in hardened browser modes.
+  }
+}
+
+export function consumePendingAuthRoute() {
+  const storage = getBrowserSessionStorage();
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(PENDING_ROUTE_KEY);
+    storage.removeItem(PENDING_ROUTE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const screen = normalizeScreenName(parsed?.screen);
+    if (!routes[screen] || PUBLIC_SCREENS.includes(screen)) return null;
+    if (Date.now() - Number(parsed?.createdAt || 0) > 30 * 60 * 1000) return null;
+    return screen;
+  } catch {
+    return null;
+  }
+}
+
+function resolveInitialScreen(initialScreen: string, authenticated: boolean, onboarded: boolean) {
+  const screen = normalizeScreenName(initialScreen);
+
+  if (!routes[screen]) {
+    return 'not-found';
+  }
+
+  if (screen === 'capture') {
+    return hasValidCaptureToken() ? 'capture' : 'not-found';
+  }
+
+  if (PUBLIC_DIRECT_SCREENS.has(screen)) {
+    if (authenticated && screen === 'auth') return onboarded ? 'dashboard' : 'onboarding';
+    return screen;
+  }
+
+  if (!authenticated) {
+    storePendingAuthRoute(screen);
+    setAuthEntryReason('gated');
+    return 'auth';
+  }
+
+  if (!onboarded && screen !== 'onboarding') {
+    return 'onboarding';
+  }
+
+  if (!hasRequiredWorkflowState(screen)) {
+    return 'dashboard';
+  }
+
+  return screen;
 }
 
 export function getHomeScreenForUser() {
@@ -243,6 +347,11 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     return;
   }
 
+  screen = normalizeScreenName(screen);
+  if (!routes[screen]) {
+    screen = 'not-found';
+  }
+
   const requestedScreen = screen;
   const authed = isAuthenticated();
   const onboardingComplete = isOnboardingComplete();
@@ -257,6 +366,7 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
 
   if (!authed && !PUBLIC_SCREENS.includes(screen)) {
     setAuthEntryReason('gated');
+    storePendingAuthRoute(screen);
     screen = 'auth';
     path = '/auth';
     replace = true;
@@ -267,6 +377,10 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
   } else if (authed && screen === 'auth') {
     screen = onboardingComplete ? 'dashboard' : 'onboarding';
     path = onboardingComplete ? '/dashboard' : '/onboarding';
+    replace = true;
+  } else if (authed && !hasRequiredWorkflowState(screen)) {
+    screen = 'dashboard';
+    path = '/dashboard';
     replace = true;
   }
 
@@ -318,7 +432,8 @@ function performNavigation(screen: string, options: ReturnType<typeof normalizeN
     'ai-chat': 'AI Chat | FormMate',
     'history': 'History | FormMate',
     'vault': 'Vault | FormMate',
-    'capture': 'Assisted Capture | FormMate'
+    'capture': 'Assisted Capture | FormMate',
+    'not-found': '404 | FormMate'
   };
   document.title = titleMap[screen] || 'FormMate AI - AI-Assisted Form Companion';
 
@@ -460,51 +575,13 @@ export function initRouter() {
 
   const path = window.location.pathname.replace(/^\/+/, '');
   const initialScreen = path || 'landing';
-
-  if (!authenticated) {
-    if (!PUBLIC_SCREENS.includes(initialScreen)) {
-      setAuthEntryReason('gated');
-    }
-    navigateTo(PUBLIC_SCREENS.includes(initialScreen) ? initialScreen : 'auth', {
-      replace: true,
-      direction: 'forward',
-      source: 'app',
-      transition: 'page',
-      scroll: 'top',
-    });
-  } else if (!onboarded) {
-    navigateTo(initialScreen === 'capture' ? 'capture' : 'onboarding', {
-      replace: true,
-      direction: 'forward',
-      source: 'app',
-      transition: 'page',
-      scroll: 'top',
-    });
-  } else if (initialScreen === 'landing' || initialScreen === 'auth') {
-    navigateTo('dashboard', {
-      replace: true,
-      direction: 'forward',
-      source: 'app',
-      transition: 'page',
-      scroll: 'top',
-    });
-  } else if (routes[initialScreen]) {
-    navigateTo(initialScreen, {
-      replace: true,
-      direction: 'forward',
-      source: 'app',
-      transition: 'page',
-      scroll: 'top',
-    });
-  } else {
-    navigateTo('dashboard', {
-      replace: true,
-      direction: 'forward',
-      source: 'app',
-      transition: 'page',
-      scroll: 'top',
-    });
-  }
+  navigateTo(resolveInitialScreen(initialScreen, authenticated, onboarded), {
+    replace: true,
+    direction: 'forward',
+    source: 'app',
+    transition: 'page',
+    scroll: 'top',
+  });
 }
 
 export function goBack() {
