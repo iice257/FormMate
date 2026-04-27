@@ -69,9 +69,6 @@ export function historyScreen() {
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--fm-text); letter-spacing: -0.02em; margin-bottom: 0.35rem;">Form History</h1>
             <p style="font-size: 0.85rem; color: #64748b;">Review your analyzed forms and the metadata captured for each run.</p>
           </div>
-          <button id="btn-export-all" class="btn-press" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.55rem 1rem; background: #fff; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-md); font-size: 0.8rem; font-weight: 600; color: var(--fm-text); cursor: pointer;">
-            <span class="material-symbols-outlined" style="font-size: 17px;">arrow_back</span> Back to Dashboard
-          </button>
         </div>
 
         <div class="history-zen-hide" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
@@ -185,10 +182,6 @@ export function historyScreen() {
     };
 
     searchInput?.addEventListener('input', applySearch);
-    wrapper.querySelector('#btn-export-all')?.addEventListener('click', () => {
-      navigateTo('dashboard');
-    });
-
     wrapper.querySelectorAll('.btn-open-history').forEach((button) => {
       button.addEventListener('click', () => reopenForm(button.dataset.formUrl));
     });

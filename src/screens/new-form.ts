@@ -107,7 +107,7 @@ export function newFormScreen() {
                   <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
                 </button>
                 <button id="nav-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
-                  <span class="material-symbols-outlined text-base">menu_book</span> Docs &amp; Help
+                  <span class="material-symbols-outlined text-base">help</span> Docs &amp; Help
                 </button>
               </div>
             </div>

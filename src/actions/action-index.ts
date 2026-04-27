@@ -28,10 +28,10 @@ const ACTIONS = [
   },
   {
     id: 'new-form',
-    title: 'Create New Form',
+    title: 'Analyze New Form',
     description: 'Paste a form link and start a new analysis.',
     icon: 'add_circle',
-    keywords: ['analyze', 'paste link', 'start form', 'create form'],
+    keywords: ['analyze', 'paste link', 'start form'],
     featured: true,
     kind: 'route',
     route: 'new',

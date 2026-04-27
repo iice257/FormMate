@@ -4,7 +4,7 @@ import { navigateTo } from '../router';
 import { MOCK_FORMS } from '../parser/mock-forms';
 import { toast } from '../components/toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
-import { openAccountModal } from '../components/layout';
+import { initLayout, openAccountModal, withLayout } from '../components/layout';
 
 export function examplesScreen() {
   const { isAuthenticated, userProfile } = getState();
@@ -134,7 +134,56 @@ export function examplesScreen() {
     yellow: 'bg-amber-50 text-amber-600 border-amber-100',
   };
 
-  const html = `
+  const examplesMainHtml = `
+        <main class="flex-1 px-6 pb-16 pt-8 md:px-12 lg:px-16 lg:pt-12 overflow-y-auto" data-fm-transition-main="true" data-fm-scroll-region="main">
+          <div class="mx-auto max-w-6xl">
+            <div class="mb-12 text-center">
+              <h1 class="mt-6 text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.05]">
+                Explore Real FormMate
+                <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">Use Cases</span>
+              </h1>
+              <p class="mt-5 text-base md:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                Browse the catalog freely. When you are ready to try one, sign in and launch any example instantly.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="examples-grid">
+              ${demos.map((demo) => `
+                <button type="button" class="demo-card relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 text-left shadow-[0_20px_60px_-35px_rgba(37,99,235,0.25)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_-32px_rgba(37,99,235,0.35)] group" data-url="${demo.url}" aria-label="Use demo: ${escapeAttr(demo.title)}">
+                  <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary/8 via-sky-100/50 to-transparent pointer-events-none"></div>
+                  <div class="relative">
+                    <div class="mb-5 flex items-start justify-between gap-4">
+                      <div class="flex items-center justify-center size-12 rounded-2xl border ${colorClasses[demo.color]} shadow-sm">
+                        <span class="material-symbols-outlined text-2xl">${demo.icon}</span>
+                      </div>
+                      <span class="material-symbols-outlined text-slate-300 transition-all group-hover:text-primary group-hover:translate-x-1">arrow_forward</span>
+                    </div>
+
+                    <div class="mb-5">
+                      <p class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400 mb-2">${demo.company}</p>
+                      <h3 class="text-xl font-black text-slate-900 tracking-tight leading-tight mb-3 group-hover:text-primary transition-colors">${demo.title}</h3>
+                      <p class="text-sm text-slate-500 leading-relaxed">${demo.desc}</p>
+                    </div>
+
+                    <div class="mb-4 flex flex-wrap gap-2">
+                      ${(demo.tags || []).map((tag) => `<span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">${tag}</span>`).join('')}
+                      ${demo.fields ? `<span class="rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">${demo.fields} fields</span>` : ''}
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50/90 px-3 py-2 text-xs font-mono text-slate-500 truncate">
+                      ${demo.url.startsWith('demo://') ? demo.url : demo.url.replace('https://', '')}
+                    </div>
+                  </div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </main>
+  `;
+
+  const html = isAuthenticated
+    ? withLayout('examples', examplesMainHtml, { contentClassName: 'examples-layout-content' })
+    : `
     <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
       <div class="layout-container flex h-full grow flex-col">
         <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
@@ -206,6 +255,7 @@ export function examplesScreen() {
   `;
 
   function init(wrapper) {
+    const cleanupLayout = isAuthenticated ? initLayout(wrapper) : null;
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#nav-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#nav-docs')?.addEventListener('click', () => navigateTo('docs'));
@@ -223,6 +273,7 @@ export function examplesScreen() {
         navigateTo('analyzing');
       });
     });
+    return () => cleanupLayout?.();
   }
 
   return { html, init };

@@ -14,6 +14,8 @@ import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
+import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -104,6 +106,8 @@ function buildTypingIndicator() {
 
 export function workspaceScreen() {
   const { formData, answers, aiDiagnostics } = getState();
+  const rightSidebarOpen = getAnonymousPref('workspace.rightSidebarOpen', true) !== false;
+  const rightSidebarWidth = Number(getAnonymousPref('workspace.rightSidebarWidth', 320)) || 320;
 
   if (!formData) {
     navigateTo('landing');
@@ -183,7 +187,19 @@ export function workspaceScreen() {
       </div>
 
       <!-- Right Panel: AI Chat / AI Actions (Toggle) -->
-      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel" data-fm-transition-panel="true" style="width: 320px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; flex-shrink: 0; z-index: 20;">
+      <button id="btn-show-workspace-sidebar" type="button" class="detached-sidebar-show-btn ${rightSidebarOpen ? '' : 'is-visible'}" aria-label="Show sidebar" title="Show sidebar">
+        <span class="material-symbols-outlined">right_panel_open</span>
+      </button>
+
+      <aside id="right-panel" class="hidden md:flex zen-workspace-sidepanel detached-right-sidebar ${rightSidebarOpen ? '' : 'is-hidden'}" data-fm-right-sidebar="true" data-fm-transition-panel="true" style="width: ${rightSidebarWidth}px; flex-direction: column; flex-shrink: 0; z-index: 20;" ${rightSidebarOpen ? '' : 'hidden'}>
+        <div class="detached-sidebar-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize assistant sidebar" aria-valuenow="${rightSidebarWidth}"></div>
+        <div class="detached-sidebar-header">
+          <span class="detached-sidebar-title">Assistant Sidebar</span>
+          <button id="btn-hide-workspace-sidebar" type="button" class="detached-sidebar-hide-btn" aria-label="Hide sidebar">
+            <span>Hide Sidebar</span>
+            <span class="material-symbols-outlined">right_panel_close</span>
+          </button>
+        </div>
         
         <!-- Panel Toggle Tabs -->
         <div class="workspace-zen-panel-tabs" role="tablist" aria-label="Workspace AI panels" style="display: flex; border-bottom: 1px solid var(--fm-border-light); flex-shrink: 0;">
@@ -352,6 +368,95 @@ export function workspaceScreen() {
     const toggleChat = wrapper.querySelector('#toggle-ai-chat');
     const toggleActions = wrapper.querySelector('#toggle-ai-actions');
     const btnFabAi = wrapper.querySelector('#btn-fab-ai');
+    const rightPanel = wrapper.querySelector('#right-panel');
+    const rightPanelResizer = wrapper.querySelector('#right-panel .detached-sidebar-resizer');
+    const showSidebarBtn = wrapper.querySelector('#btn-show-workspace-sidebar');
+    const hideSidebarBtn = wrapper.querySelector('#btn-hide-workspace-sidebar');
+    const cleanupSidebarControls = [];
+
+    const setRightSidebarOpen = (open) => {
+      if (!rightPanel) return;
+      rightPanel.hidden = !open;
+      rightPanel.classList.toggle('is-hidden', !open);
+      showSidebarBtn?.classList.toggle('is-visible', !open);
+      showSidebarBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      hideSidebarBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      setAnonymousPref('workspace.rightSidebarOpen', open);
+    };
+
+    const handleShowSidebar = () => setRightSidebarOpen(true);
+    const handleHideSidebar = () => setRightSidebarOpen(false);
+    showSidebarBtn?.addEventListener('click', handleShowSidebar);
+    hideSidebarBtn?.addEventListener('click', handleHideSidebar);
+    cleanupSidebarControls.push(() => {
+      showSidebarBtn?.removeEventListener('click', handleShowSidebar);
+      hideSidebarBtn?.removeEventListener('click', handleHideSidebar);
+    });
+
+    const getMainSidebarWidth = () => wrapper.querySelector('#sidebar')?.getBoundingClientRect?.().width || 0;
+    const applyRightSidebarWidth = (width) => {
+      if (!rightPanel) return 0;
+      const nextWidth = clampSidebarWidth(width, { oppositeWidth: getMainSidebarWidth() });
+      rightPanel.style.width = `${nextWidth}px`;
+      const range = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+      rightPanelResizer?.setAttribute('aria-valuemin', String(range.min));
+      rightPanelResizer?.setAttribute('aria-valuemax', String(range.max));
+      rightPanelResizer?.setAttribute('aria-valuenow', String(nextWidth));
+      setAnonymousPref('workspace.rightSidebarWidth', nextWidth);
+      return nextWidth;
+    };
+    const handleRightSidebarPointerDown = (event) => {
+      const rect = rightPanel.getBoundingClientRect();
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = rect.width;
+      const onMove = (moveEvent) => {
+        applyRightSidebarWidth(startWidth + startX - moveEvent.clientX);
+      };
+      const onUp = () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
+    const handleRightSidebarKeydown = (event) => {
+      const currentWidth = rightPanel?.getBoundingClientRect?.().width || rightSidebarWidth;
+      const step = event.shiftKey ? 24 : 8;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        applyRightSidebarWidth(currentWidth + step);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        applyRightSidebarWidth(currentWidth - step);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        const { min } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+        applyRightSidebarWidth(min);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        const { max } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+        applyRightSidebarWidth(max);
+      }
+    };
+    rightPanelResizer?.addEventListener('pointerdown', handleRightSidebarPointerDown);
+    rightPanelResizer?.addEventListener('keydown', handleRightSidebarKeydown);
+    const handleRightSidebarResize = () => {
+      if (!rightPanel || rightPanel.hidden) return;
+      applyRightSidebarWidth(rightPanel.getBoundingClientRect().width);
+    };
+    window.addEventListener('resize', handleRightSidebarResize);
+    cleanupSidebarControls.push(() => {
+      rightPanelResizer?.removeEventListener('pointerdown', handleRightSidebarPointerDown);
+      rightPanelResizer?.removeEventListener('keydown', handleRightSidebarKeydown);
+      window.removeEventListener('resize', handleRightSidebarResize);
+    });
+    applyRightSidebarWidth(rightPanel?.getBoundingClientRect?.().width || rightSidebarWidth);
+    setRightSidebarOpen(!rightPanel?.hidden);
 
     const workspaceTabs = [toggleChat, toggleActions].filter(Boolean);
     const setWorkspacePanel = (panel) => {
@@ -1036,6 +1141,7 @@ export function workspaceScreen() {
       if (getRecordingState().isRecording) cancelRecording();
       sortableInstance?.destroy?.();
       cleanupRichActions?.();
+      cleanupSidebarControls.forEach((task) => task());
       cleanupLayout?.();
     };
   }

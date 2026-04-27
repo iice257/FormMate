@@ -8,6 +8,7 @@ import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
+import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -207,7 +208,7 @@ export function docsScreen() {
         </aside>
 
         <!-- Left Resize Handle -->
-        <div id="handle-left" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden md:block"></div>
+        <div id="handle-left" class="docs-sidebar-resizer w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden md:block" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize docs navigation sidebar" aria-valuenow="${defaultLeftSidebarWidth}"></div>
 
         <!-- Content -->
         <main class="flex-1 overflow-y-auto bg-white scroll-smooth relative" id="docs-content">
@@ -553,10 +554,10 @@ export function docsScreen() {
         </main>
 
         <!-- Right Resize Handle -->
-        <div id="handle-right" class="w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block"></div>
+        <div id="handle-right" class="docs-sidebar-resizer w-1.5 hover:bg-primary/20 cursor-col-resize shrink-0 z-40 transition-colors hidden lg:block" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize docs assistant sidebar" aria-valuenow="${defaultRightSidebarWidth}"></div>
         
         <!-- AI Docs Chat (Right Sidebar) -->
-        <aside id="docs-sidebar-right" class="border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex" style="width: ${defaultRightSidebarWidth}px;">
+        <aside id="docs-sidebar-right" class="border-l border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,249,255,0.98))] flex flex-col shrink-0 z-20 shadow-[-16px_0_48px_rgba(37,99,235,0.08)] hidden lg:flex" data-fm-right-sidebar="true" style="width: ${defaultRightSidebarWidth}px;">
           <div class="p-5 border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0">
             <span class="block text-[12px] font-black tracking-[0.08em] text-primary">Docs AI</span>
             ${authed ? '<span class="mt-1 block text-sm font-semibold text-slate-500">Ask about FormMate features and workflows</span>' : ''}
@@ -1027,6 +1028,21 @@ export function docsScreen() {
       if (!handle || !target) return;
 
       let startX, startWidth, activeWidth;
+      const getOppositeWidth = () => direction === 'left'
+        ? sidebarRight?.getBoundingClientRect?.().width || 0
+        : sidebarLeft?.getBoundingClientRect?.().width || 0;
+      const applyWidth = (width) => {
+        const oppositeWidth = getOppositeWidth();
+        const newWidth = clampSidebarWidth(width, { oppositeWidth });
+        activeWidth = newWidth;
+        target.style.width = `${newWidth}px`;
+        wrapper.style.setProperty(`--docs-${direction}-sidebar-width`, `${newWidth}px`);
+        const range = getSidebarRange({ oppositeWidth });
+        handle.setAttribute('aria-valuemin', String(range.min));
+        handle.setAttribute('aria-valuemax', String(range.max));
+        handle.setAttribute('aria-valuenow', String(newWidth));
+        return newWidth;
+      };
 
       const onMouseDown = (e) => {
         startX = e.clientX;
@@ -1041,10 +1057,7 @@ export function docsScreen() {
 
       const onMouseMove = (e) => {
         const delta = direction === 'left' ? e.clientX - startX : startX - e.clientX;
-        const newWidth = Math.max(200, Math.min(600, startWidth + delta));
-        activeWidth = newWidth;
-        target.style.width = `${newWidth}px`;
-        wrapper.style.setProperty(`--docs-${direction}-sidebar-width`, `${newWidth}px`);
+        applyWidth(startWidth + delta);
       };
 
       const onMouseUp = () => {
@@ -1057,9 +1070,38 @@ export function docsScreen() {
         window.removeEventListener('mouseup', onMouseUp);
       };
 
+      const onKeyDown = (event) => {
+        const currentWidth = target.getBoundingClientRect().width;
+        const step = event.shiftKey ? 24 : 8;
+        const sign = direction === 'left' ? 1 : -1;
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          setAnonymousPref(`docs.${direction}SidebarWidth`, applyWidth(currentWidth - (step * sign)));
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          setAnonymousPref(`docs.${direction}SidebarWidth`, applyWidth(currentWidth + (step * sign)));
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          const { min } = getSidebarRange({ oppositeWidth: getOppositeWidth() });
+          setAnonymousPref(`docs.${direction}SidebarWidth`, applyWidth(min));
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          const { max } = getSidebarRange({ oppositeWidth: getOppositeWidth() });
+          setAnonymousPref(`docs.${direction}SidebarWidth`, applyWidth(max));
+        }
+      };
+      const onResize = () => {
+        setAnonymousPref(`docs.${direction}SidebarWidth`, applyWidth(target.getBoundingClientRect().width));
+      };
+
+      applyWidth(target.getBoundingClientRect().width);
       handle.addEventListener('mousedown', onMouseDown);
+      handle.addEventListener('keydown', onKeyDown);
+      window.addEventListener('resize', onResize);
       return () => {
         handle.removeEventListener('mousedown', onMouseDown);
+        handle.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('resize', onResize);
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
         document.body.style.cursor = '';

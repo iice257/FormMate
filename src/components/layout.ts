@@ -7,6 +7,8 @@ import { getHomeScreenForUser, navigateTo } from '../router';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { executeAction, searchActions } from '../actions/action-index';
+import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
+import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
 
 // Global account modal state
 let _accountModalOpenFn = null;
@@ -14,6 +16,8 @@ const ZEN_MODE_STORAGE_KEY = 'fm_zen_mode_enabled';
 const ZEN_MODE_EVENT = 'fm:zen-mode-change';
 const SUPPORTED_ZEN_SCREENS = new Set(['dashboard', 'new', 'workspace', 'history', 'ai-chat', 'vault']);
 const SIDEBAR_COLLAPSED_CLASS = 'layout-shell-sidebar-collapsed';
+const MAIN_SIDEBAR_DEFAULT_WIDTH = 218;
+const MAIN_SIDEBAR_COLLAPSED_WIDTH = 72;
 const ZEN_SCREEN_LABELS = {
   'dashboard': 'Dashboard',
   'ai-chat': 'AI Chat',
@@ -355,6 +359,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
   const supportsZenOnPage = options.zenMode && isZenModeSupported(zenScreenId);
   const zenModeEnabled = options.zenMode ? isZenModeEnabled(zenScreenId) : false;
   const sidebarExpanded = isSidebarExpanded();
+  const sidebarWidth = Number(getAnonymousPref('shell.leftSidebarWidth', MAIN_SIDEBAR_DEFAULT_WIDTH)) || MAIN_SIDEBAR_DEFAULT_WIDTH;
   const activeWorkspace = hasActiveWorkspace();
   const displayName = escapeHtml(userProfile?.name || 'User');
   const avatarFromProfile = safeHttpUrl(userProfile?.avatar);
@@ -394,7 +399,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
   }).join('');
 
   return `
-    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-fm-shell="app" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}">
+    <div class="layout-shell ${options.shellClassName || ''} ${zenModeEnabled ? 'is-zen-mode' : ''} ${sidebarExpanded ? '' : SIDEBAR_COLLAPSED_CLASS}" data-fm-shell="app" data-zen-shell="${options.zenMode ? 'true' : 'false'}" data-zen-screen="${options.zenMode ? escapeHtml(zenScreenId) : ''}" style="--layout-sidebar-width: ${sidebarWidth}px; --layout-sidebar-collapsed-width: ${MAIN_SIDEBAR_COLLAPSED_WIDTH}px;">
       ${options.zenMode ? getZenModeExitButtonHtml(zenScreenId) : ''}
       <!-- Header -->
       <header data-fm-hide-on-scroll="true" class="layout-header">
@@ -452,7 +457,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
           ${mobileSidebarLinksHtml}
           <div class="layout-sidebar-divider"></div>
           <button id="nav-mobile-support" class="layout-sidebar-link" aria-label="Open Help Center">
-            <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
+            <span class="material-symbols-outlined layout-sidebar-icon">help</span>
             <span class="layout-sidebar-label">Help Center</span>
           </button>
         </nav>
@@ -480,7 +485,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
             <div class="layout-sidebar-divider"></div>
             
             <button id="nav-support" class="layout-sidebar-link" aria-label="Open Help Center">
-              <span class="material-symbols-outlined layout-sidebar-icon">menu_book</span>
+              <span class="material-symbols-outlined layout-sidebar-icon">help</span>
               <span class="layout-sidebar-label">Help Center</span>
             </button>
           </nav>
@@ -514,6 +519,15 @@ export function withLayout(pageId, contentHtml, options = {}) {
             </div>
           </div>
         </aside>
+        <div
+          id="layout-sidebar-resizer"
+          class="layout-sidebar-resizer"
+          role="separator"
+          tabindex="0"
+          aria-orientation="vertical"
+          aria-label="Resize navigation sidebar"
+          aria-valuenow="${sidebarWidth}"
+        ></div>
 
         <!-- Main Content Area -->
         <div class="layout-content ${pageId !== 'ai-chat' ? 'layout-content-scrollable' : ''} ${options.contentClassName || ''}" id="internal-page-container">
@@ -606,6 +620,9 @@ export function initLayout(wrapper, options = {}) {
   };
 
   const sidebarToggleBtn = wrapper.querySelector('#btn-sidebar-toggle');
+  const mainSidebar = wrapper.querySelector('#sidebar');
+  const sidebarResizer = wrapper.querySelector('#layout-sidebar-resizer');
+  let cleanupSidebarResize = null;
   const syncSidebarUi = (expanded) => {
     layoutShell?.classList.toggle(SIDEBAR_COLLAPSED_CLASS, !expanded);
 
@@ -631,6 +648,80 @@ export function initLayout(wrapper, options = {}) {
 
   sidebarToggleBtn?.addEventListener('click', handleSidebarToggle);
   syncSidebarUi(isSidebarExpanded());
+  if (mainSidebar && sidebarResizer) {
+    let startX = 0;
+    let startWidth = 0;
+    let activeWidth = 0;
+    const getOppositeWidth = () => Array.from(wrapper.querySelectorAll('[data-fm-right-sidebar="true"]:not([hidden])'))
+      .reduce((sum, panel) => sum + panel.getBoundingClientRect().width, 0);
+    const applySidebarWidth = (width) => {
+      activeWidth = clampSidebarWidth(width, { oppositeWidth: getOppositeWidth() });
+      mainSidebar.style.width = `${activeWidth}px`;
+      layoutShell?.style.setProperty('--layout-sidebar-width', `${activeWidth}px`);
+      const { min, max } = getSidebarRange({ oppositeWidth: getOppositeWidth() });
+      sidebarResizer.setAttribute('aria-valuemin', String(min));
+      sidebarResizer.setAttribute('aria-valuemax', String(max));
+      sidebarResizer.setAttribute('aria-valuenow', String(activeWidth));
+      return activeWidth;
+    };
+    const onMouseMove = (event) => {
+      applySidebarWidth(startWidth + event.clientX - startX);
+    };
+    const onMouseUp = () => {
+      if (Number.isFinite(activeWidth) && activeWidth > 0) {
+        setAnonymousPref('shell.leftSidebarWidth', activeWidth);
+      }
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    const handleSidebarResizeStart = (event) => {
+      if (!isSidebarExpanded()) return;
+      startX = event.clientX;
+      startWidth = mainSidebar.getBoundingClientRect().width;
+      activeWidth = startWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    };
+    const handleSidebarResizeKeydown = (event) => {
+      if (!isSidebarExpanded()) return;
+      const step = event.shiftKey ? 24 : 8;
+      const currentWidth = mainSidebar.getBoundingClientRect().width;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setAnonymousPref('shell.leftSidebarWidth', applySidebarWidth(currentWidth - step));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setAnonymousPref('shell.leftSidebarWidth', applySidebarWidth(currentWidth + step));
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        const { min } = getSidebarRange({ oppositeWidth: getOppositeWidth() });
+        setAnonymousPref('shell.leftSidebarWidth', applySidebarWidth(min));
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        const { max } = getSidebarRange({ oppositeWidth: getOppositeWidth() });
+        setAnonymousPref('shell.leftSidebarWidth', applySidebarWidth(max));
+      }
+    };
+    const handleSidebarResizeWindow = () => {
+      if (!isSidebarExpanded()) return;
+      setAnonymousPref('shell.leftSidebarWidth', applySidebarWidth(mainSidebar.getBoundingClientRect().width));
+    };
+    applySidebarWidth(mainSidebar.getBoundingClientRect().width);
+    sidebarResizer.addEventListener('mousedown', handleSidebarResizeStart);
+    sidebarResizer.addEventListener('keydown', handleSidebarResizeKeydown);
+    window.addEventListener('resize', handleSidebarResizeWindow);
+    cleanupSidebarResize = () => {
+      sidebarResizer.removeEventListener('mousedown', handleSidebarResizeStart);
+      sidebarResizer.removeEventListener('keydown', handleSidebarResizeKeydown);
+      window.removeEventListener('resize', handleSidebarResizeWindow);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }
   mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
   mobileMenuCloseBtn?.addEventListener('click', closeMobileMenu);
   document.addEventListener('keydown', handleMobileMenuEscape);
@@ -817,6 +908,7 @@ export function initLayout(wrapper, options = {}) {
   if (!zenMode) {
     return () => {
       sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+      cleanupSidebarResize?.();
       mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
       mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
       document.removeEventListener('click', handleDocumentClick);
@@ -829,6 +921,7 @@ export function initLayout(wrapper, options = {}) {
   const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
     sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+    cleanupSidebarResize?.();
     mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
     mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
     document.removeEventListener('click', handleDocumentClick);

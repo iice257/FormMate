@@ -10,6 +10,8 @@ import { toast } from '../components/toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
+import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
+import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -90,6 +92,8 @@ export function aiChatScreen() {
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const sessions = loadSessions();
   const avatarSrc = safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
+  const rightSidebarOpen = getAnonymousPref('aiChat.rightSidebarOpen', true) !== false;
+  const rightSidebarWidth = Number(getAnonymousPref('aiChat.rightSidebarWidth', 280)) || 280;
 
   const chatContent = `
     <div class="flex-1 flex overflow-hidden zen-chat-shell" data-fm-transition-main="true">
@@ -152,7 +156,19 @@ export function aiChatScreen() {
         </div>
       </div>
 
-      <div class="hidden lg:flex zen-chat-sidebar no-scrollbar" data-fm-transition-panel="true" data-zen-hide="always" style="width: 280px; border-left: 1px solid var(--fm-border-light); background: #fff; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;">
+      <button id="btn-show-chat-sidebar" type="button" class="detached-sidebar-show-btn ${rightSidebarOpen ? '' : 'is-visible'}" aria-label="Show sidebar" title="Show sidebar">
+        <span class="material-symbols-outlined">right_panel_open</span>
+      </button>
+
+      <div id="chat-right-sidebar" class="hidden lg:flex zen-chat-sidebar no-scrollbar detached-right-sidebar ${rightSidebarOpen ? '' : 'is-hidden'}" data-fm-right-sidebar="true" data-fm-transition-panel="true" data-zen-hide="always" style="width: ${rightSidebarWidth}px; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;" ${rightSidebarOpen ? '' : 'hidden'}>
+        <div class="detached-sidebar-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize chat sidebar" aria-valuenow="${rightSidebarWidth}"></div>
+        <div class="detached-sidebar-header">
+          <span class="detached-sidebar-title">Chat Sidebar</span>
+          <button id="btn-hide-chat-sidebar" type="button" class="detached-sidebar-hide-btn" aria-label="Hide sidebar">
+            <span>Hide Sidebar</span>
+            <span class="material-symbols-outlined">right_panel_close</span>
+          </button>
+        </div>
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${escapeAttr(avatarSrc)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
           <div>
@@ -193,6 +209,92 @@ export function aiChatScreen() {
 
   function init(wrapper) {
     const cleanupLayout = initLayout(wrapper, { zenMode: { screenId: 'ai-chat' } });
+    const rightSidebar = wrapper.querySelector('#chat-right-sidebar');
+    const rightSidebarResizer = wrapper.querySelector('#chat-right-sidebar .detached-sidebar-resizer');
+    const showSidebarBtn = wrapper.querySelector('#btn-show-chat-sidebar');
+    const hideSidebarBtn = wrapper.querySelector('#btn-hide-chat-sidebar');
+    const cleanupSidebarControls = [];
+    const setRightSidebarOpen = (open) => {
+      if (!rightSidebar) return;
+      rightSidebar.hidden = !open;
+      rightSidebar.classList.toggle('is-hidden', !open);
+      showSidebarBtn?.classList.toggle('is-visible', !open);
+      showSidebarBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      hideSidebarBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      setAnonymousPref('aiChat.rightSidebarOpen', open);
+    };
+    const handleShowSidebar = () => setRightSidebarOpen(true);
+    const handleHideSidebar = () => setRightSidebarOpen(false);
+    showSidebarBtn?.addEventListener('click', handleShowSidebar);
+    hideSidebarBtn?.addEventListener('click', handleHideSidebar);
+    cleanupSidebarControls.push(() => {
+      showSidebarBtn?.removeEventListener('click', handleShowSidebar);
+      hideSidebarBtn?.removeEventListener('click', handleHideSidebar);
+    });
+    const getMainSidebarWidth = () => wrapper.querySelector('#sidebar')?.getBoundingClientRect?.().width || 0;
+    const applyRightSidebarWidth = (width) => {
+      if (!rightSidebar) return 0;
+      const nextWidth = clampSidebarWidth(width, { oppositeWidth: getMainSidebarWidth() });
+      rightSidebar.style.width = `${nextWidth}px`;
+      const range = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+      rightSidebarResizer?.setAttribute('aria-valuemin', String(range.min));
+      rightSidebarResizer?.setAttribute('aria-valuemax', String(range.max));
+      rightSidebarResizer?.setAttribute('aria-valuenow', String(nextWidth));
+      setAnonymousPref('aiChat.rightSidebarWidth', nextWidth);
+      return nextWidth;
+    };
+    const handleRightSidebarPointerDown = (event) => {
+      const rect = rightSidebar.getBoundingClientRect();
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = rect.width;
+      const onMove = (moveEvent) => {
+        applyRightSidebarWidth(startWidth + startX - moveEvent.clientX);
+      };
+      const onUp = () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
+    const handleRightSidebarKeydown = (event) => {
+      const currentWidth = rightSidebar?.getBoundingClientRect?.().width || rightSidebarWidth;
+      const step = event.shiftKey ? 24 : 8;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        applyRightSidebarWidth(currentWidth + step);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        applyRightSidebarWidth(currentWidth - step);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        const { min } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+        applyRightSidebarWidth(min);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        const { max } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
+        applyRightSidebarWidth(max);
+      }
+    };
+    rightSidebarResizer?.addEventListener('pointerdown', handleRightSidebarPointerDown);
+    rightSidebarResizer?.addEventListener('keydown', handleRightSidebarKeydown);
+    const handleRightSidebarResize = () => {
+      if (!rightSidebar || rightSidebar.hidden) return;
+      applyRightSidebarWidth(rightSidebar.getBoundingClientRect().width);
+    };
+    window.addEventListener('resize', handleRightSidebarResize);
+    cleanupSidebarControls.push(() => {
+      rightSidebarResizer?.removeEventListener('pointerdown', handleRightSidebarPointerDown);
+      rightSidebarResizer?.removeEventListener('keydown', handleRightSidebarKeydown);
+      window.removeEventListener('resize', handleRightSidebarResize);
+    });
+    applyRightSidebarWidth(rightSidebar?.getBoundingClientRect?.().width || rightSidebarWidth);
+    setRightSidebarOpen(!rightSidebar?.hidden);
     const chatInput = wrapper.querySelector('#chat-input');
     const btnSend = wrapper.querySelector('#btn-send');
     const btnAttach = wrapper.querySelector('#btn-chat-attach');
@@ -602,6 +704,7 @@ export function aiChatScreen() {
     return () => {
       if (getRecordingState().isRecording) cancelRecording();
       cleanupRichActions?.();
+      cleanupSidebarControls.forEach((task) => task());
       cleanupLayout?.();
     };
   }
