@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveSafeRedirect, validateSafeHttpUrl } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveResolvedSafeRedirect, validateResolvedSafeHttpUrl, validateSafeHttpUrl } from '../_shared/request-security.js';
 
 export const config = {
   maxDuration: 10,
@@ -80,8 +80,7 @@ function normalizeGoogleFormUrl(rawUrl, formId) {
   return parsed.toString();
 }
 
-export function validateGoogleFormUrl(rawUrl) {
-  const checked = validateSafeHttpUrl(rawUrl);
+function enforceGoogleFormHost(checked) {
   if (!checked.ok) return checked;
 
   try {
@@ -99,10 +98,18 @@ export function validateGoogleFormUrl(rawUrl) {
   }
 }
 
-export function resolveGoogleFormRedirect(currentUrl, locationHeader) {
-  const nextTarget = resolveSafeRedirect(currentUrl, locationHeader);
+export function validateGoogleFormUrl(rawUrl) {
+  return enforceGoogleFormHost(validateSafeHttpUrl(rawUrl));
+}
+
+export async function validateResolvedGoogleFormUrl(rawUrl) {
+  return enforceGoogleFormHost(await validateResolvedSafeHttpUrl(rawUrl));
+}
+
+export async function resolveGoogleFormRedirect(currentUrl, locationHeader) {
+  const nextTarget = await resolveResolvedSafeRedirect(currentUrl, locationHeader);
   if (!nextTarget.ok) return nextTarget;
-  return validateGoogleFormUrl(nextTarget.url);
+  return validateResolvedGoogleFormUrl(nextTarget.url);
 }
 
 async function fetchGoogleFormHtml(startUrl, fetchHeaders) {
@@ -138,7 +145,7 @@ async function fetchGoogleFormHtml(startUrl, fetchHeaders) {
       };
     }
 
-    const nextTarget = resolveGoogleFormRedirect(currentUrl, location);
+    const nextTarget = await resolveGoogleFormRedirect(currentUrl, location);
     if (!nextTarget.ok) {
       return {
         error: {
@@ -211,7 +218,7 @@ export default async function handler(req, res) {
     if (!normalizedUrl) {
       return res.status(400).json({ error: 'BAD_REQUEST', message: 'Only Google Forms URLs are allowed.', authRequired: false });
     }
-    const checkedUrl = validateGoogleFormUrl(normalizedUrl);
+    const checkedUrl = await validateResolvedGoogleFormUrl(normalizedUrl);
     if (!checkedUrl.ok) {
       return res.status(400).json({ error: 'BAD_REQUEST', message: checkedUrl.reason, authRequired: false });
     }

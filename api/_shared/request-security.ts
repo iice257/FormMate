@@ -1,5 +1,6 @@
 // @ts-nocheck
 import net from 'node:net';
+import dns from 'node:dns/promises';
 
 const DEFAULT_ALLOWED_ORIGINS = new Set([
   'http://localhost:3000',
@@ -208,6 +209,42 @@ function isLoopbackAddress(rawIp) {
   return false;
 }
 
+function isPrivateIpAddress(rawIp) {
+  const normalized = String(rawIp || '').trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized === '::1' || normalized === '::ffff:127.0.0.1') return true;
+
+  const ipType = net.isIP(normalized);
+  if (!ipType) return false;
+
+  if (ipType === 6) {
+    if (normalized.startsWith('::ffff:')) {
+      return isPrivateIpAddress(normalized.replace(/^::ffff:/, ''));
+    }
+    if (normalized === '::') return true;
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+    if (normalized.startsWith('fe80')) return true;
+    return false;
+  }
+
+  const parts = normalized.split('.').map((part) => Number.parseInt(part, 10));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) return true;
+
+  const [a, b] = parts;
+  if (a === 0) return true;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a === 192 && b === 0) return true;
+  if (a === 198 && (b === 18 || b === 19)) return true;
+  if (a >= 224) return true;
+
+  return false;
+}
+
 function getOriginHost(origin) {
   if (!origin) return '';
   try {
@@ -247,25 +284,7 @@ export function isPrivateHost(host) {
   const ipType = net.isIP(normalized);
   if (!ipType) return false;
 
-  if (ipType === 6) {
-    if (normalized === '::1') return true;
-    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
-    if (normalized.startsWith('fe80')) return true;
-    return false;
-  }
-
-  const parts = normalized.split('.').map((part) => Number.parseInt(part, 10));
-  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) return true;
-
-  const [a, b] = parts;
-  if (a === 0) return true;
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-
-  return false;
+  return isPrivateIpAddress(normalized);
 }
 
 export function validateSafeHttpUrl(rawUrl) {
@@ -287,10 +306,52 @@ export function validateSafeHttpUrl(rawUrl) {
   return { ok: true, url: parsed.toString(), host };
 }
 
+export async function validateResolvedSafeHttpUrl(rawUrl, lookup = dns.lookup) {
+  const checked = validateSafeHttpUrl(rawUrl);
+  if (!checked.ok) return checked;
+
+  if (net.isIP(checked.host)) {
+    return checked;
+  }
+
+  let records = [];
+  try {
+    records = await lookup(checked.host, {
+      all: true,
+      verbatim: true,
+    });
+  } catch {
+    return { ok: false, reason: 'DNS lookup failed' };
+  }
+
+  if (!records.length) {
+    return { ok: false, reason: 'DNS lookup returned no addresses' };
+  }
+
+  const blocked = records.find((record) => isPrivateIpAddress(record?.address));
+  if (blocked) {
+    return { ok: false, reason: 'Resolved to a private address' };
+  }
+
+  return {
+    ...checked,
+    addresses: records.map((record) => record.address),
+  };
+}
+
 export function resolveSafeRedirect(currentUrl, locationHeader) {
   try {
     const nextUrl = new URL(String(locationHeader || ''), String(currentUrl || ''));
     return validateSafeHttpUrl(nextUrl.toString());
+  } catch {
+    return { ok: false, reason: 'Invalid redirect target' };
+  }
+}
+
+export async function resolveResolvedSafeRedirect(currentUrl, locationHeader) {
+  try {
+    const nextUrl = new URL(String(locationHeader || ''), String(currentUrl || ''));
+    return validateResolvedSafeHttpUrl(nextUrl.toString());
   } catch {
     return { ok: false, reason: 'Invalid redirect target' };
   }

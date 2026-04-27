@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { assertTrustedAppSignal } from '../api/_shared/request-security.ts';
+import { assertTrustedAppSignal, validateResolvedSafeHttpUrl } from '../api/_shared/request-security.ts';
 
 function createResponse() {
   return {
@@ -73,6 +73,16 @@ async function run() {
 
     assert.equal(devAuthAllowed, true, 'local dev auth header should still work for loopback development');
     assert.equal(devAuthRes.payload, null);
+
+    const privateLiteral = await validateResolvedSafeHttpUrl('http://127.0.0.1/admin');
+    assert.equal(privateLiteral.ok, false, 'private IP literals must be blocked');
+
+    const privateResolved = await validateResolvedSafeHttpUrl(
+      'http://public-looking.example/admin',
+      (async () => [{ address: '127.0.0.1', family: 4 }]) as never,
+    );
+    assert.equal(privateResolved.ok, false, 'public-looking hostnames that resolve to private IPs must be blocked');
+    assert.match(privateResolved.reason, /private address/i);
   } finally {
     Object.entries(originalEnv).forEach(([key, value]) => {
       if (value === undefined) {

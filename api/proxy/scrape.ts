@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveSafeRedirect, validateSafeHttpUrl } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveResolvedSafeRedirect, validateResolvedSafeHttpUrl } from '../_shared/request-security.js';
 
 export const config = {
   maxDuration: 10,
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: 'BAD_REQUEST', message: 'URL is required.' });
 
-    const checked = validateSafeHttpUrl(url);
+    const checked = await validateResolvedSafeHttpUrl(url);
     if (!checked.ok) {
       return res.status(400).json({ error: 'BAD_REQUEST', message: `Blocked URL: ${checked.reason}` });
     }
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const nextTarget = resolveSafeRedirect(currentUrl, location);
+      const nextTarget = await resolveResolvedSafeRedirect(currentUrl, location);
       if (!nextTarget.ok) {
         return res.status(400).json({
           error: 'BAD_REQUEST',

@@ -78,13 +78,24 @@ The signed-out surface audit findings were fixed and the follow-up route/session
 - Impact: `npm audit` reported advisories mostly under the development-only Vercel CLI dependency tree.
 - Fix: `npm audit fix` was run twice and updated available non-breaking lockfile entries. `npm audit --audit-level=moderate` still reports 30 advisories through Vercel CLI transitive packages (`@tootallnate/once`, `ajv`, `minimatch`, `path-to-regexp`, `smol-toml`, `srvx`, `tar`, `undici`). I did not run force upgrades because npm's non-force fix path was exhausted and a forced Vercel toolchain jump should be reviewed separately.
 
+### 8. SSRF DNS Resolution Gap
+
+- Severity: Medium
+- Status: Fixed
+- Location: `api/_shared/request-security.ts`, `api/proxy/scrape.ts`, `api/proxy/google-form.ts`
+- Impact: URL proxy endpoints blocked obvious private hostnames/IP literals and re-checked redirects, but did not resolve public-looking hostnames before fetching. A hostname controlled by an attacker could resolve to a loopback/private/link-local address and attempt server-side access to internal resources.
+- Fix: Server-side URL validation now performs DNS resolution before fetches and redirect follow-ups, rejects any resolved private, loopback, link-local, carrier-grade NAT, benchmark, multicast, or otherwise non-public IP address, and keeps protocol/hostname checks in place. Regression coverage uses an injected resolver to simulate a public-looking hostname resolving to `127.0.0.1`.
+
 ## Verification
 
 - `npm run typecheck`
 - `npm test`
 - `npm run test:e2e`
+- `npm run build`
 - `npm audit fix` (twice; residual Vercel CLI advisories remain)
 - `npm audit --audit-level=moderate` (fails on residual Vercel CLI transitive advisories)
+- Manual repo/build scan: `.env.local` contains only Supabase URL, publishable/anon key, and `VITE_STORAGE_PROVIDER`; production text bundle scan found no `GROQ_API_KEY`, service-role key, Stripe/Resend secret, database URL, private key, or webhook signing secret. Public Supabase client routes/anon headers are present by design and rely on RLS.
+- Supabase schema review: `public.formmate_user_data` has RLS enabled with owner-only select/insert/update/delete policies.
 - Same-origin signed-out browser/API replay: `POST /api/ai/chat` now returns `401 AUTH_REQUIRED`.
 - Loopback dev auth replay: `X-FormMate-Dev-Auth: 1` still reaches route validation in local development.
 - Capture DOM replay: malicious `t` parameter no longer injects overlay CSS or stray anchor attributes.
