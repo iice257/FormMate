@@ -13,9 +13,10 @@
     "preview": "vite preview --configLoader native",
     "env:pull": "vercel env pull .env.local --yes",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:chat-contract && npm run test:parser-fixtures",
+    "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:request-security",
     "test:chat-contract": "tsx tests/chat-contract.ts",
     "test:parser-fixtures": "tsx tests/parser-fixtures.ts",
+    "test:request-security": "tsx tests/request-security.ts",
     "test:e2e": "playwright test",
     "test:storage": "npx tsx test-local-store.ts"
   },

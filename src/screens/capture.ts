@@ -3,12 +3,18 @@ import { getState, setState } from '../state';
 import { navigateTo } from '../router';
 import { toast } from '../components/toast';
 import { capturedPayloadToFormData } from '../parser/capture-parser';
+import { escapeHtml } from '../utils/escape';
 
 const MAX_SCREENSHOTS = 5;
 const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 
 function randomToken() {
   return `cap_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeCaptureToken(value) {
+  const token = String(value || '').trim();
+  return /^cap_[a-z0-9]+_[a-z0-9]+$/i.test(token) ? token : randomToken();
 }
 
 function fileToDataUrl(file) {
@@ -143,9 +149,10 @@ function buildBookmarklet(appOrigin, token) {
 
 export function captureScreen() {
   const params = new URLSearchParams(window.location.search || '');
-  const token = (params.get('t') || '').trim() || randomToken();
+  const token = normalizeCaptureToken(params.get('t'));
   const appOrigin = window.location.origin;
   const bookmarklet = buildBookmarklet(appOrigin, token);
+  const safeToken = escapeHtml(token);
 
   const html = `
     <div class="min-h-screen w-full bg-mesh flex flex-col">
@@ -180,22 +187,17 @@ export function captureScreen() {
           <section class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
             <h2 class="text-lg font-bold text-slate-900 mb-2">1) Add the bookmarklet</h2>
             <p class="text-sm text-slate-500 leading-relaxed mb-4">
-              Drag this link to your bookmarks bar, or copy it and create a new bookmark.
+              Copy the bookmarklet and create a new browser bookmark with it as the URL.
             </p>
 
             <div class="flex flex-col gap-3">
-              <a href="${bookmarklet}" class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 text-white font-bold text-sm btn-press">
-                <span class="material-symbols-outlined text-[18px]">bookmark_add</span>
-                FormMate Capture
-              </a>
-
-              <button id="btn-copy-bookmarklet" class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 text-slate-900 font-bold text-sm hover:bg-slate-200 transition-colors btn-press">
+              <button id="btn-copy-bookmarklet" class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors btn-press">
                 <span class="material-symbols-outlined text-[18px]">content_copy</span>
                 Copy bookmarklet
               </button>
 
               <div class="text-[11px] text-slate-400">
-                Token: <span class="font-mono">${token}</span>
+                Token: <span class="font-mono">${safeToken}</span>
               </div>
             </div>
           </section>
@@ -260,7 +262,7 @@ export function captureScreen() {
         await navigator.clipboard.writeText(bookmarklet);
         toast.success('Bookmarklet copied');
       } catch {
-        toast.error('Copy failed — please drag the link to your bookmarks bar.');
+        toast.error('Copy failed. Create a bookmark manually and paste the copied script as its URL.');
       }
     });
 
