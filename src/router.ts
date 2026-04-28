@@ -44,7 +44,7 @@ const routes: Record<string, ScreenRenderer> = {};
 let currentCleanup: null | (() => void) = null;
 let historySequence = 0;
 
-const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'help', 'examples', 'privacy', 'terms', 'not-found'];
+const PUBLIC_SCREENS = ['auth', 'landing', 'capture', 'docs', 'help', 'examples', 'privacy', 'terms'];
 const PUBLIC_DIRECT_SCREENS = new Set(['landing', 'auth', 'docs', 'help', 'examples', 'privacy', 'terms']);
 const WORKFLOW_STATE_SCREENS = new Set(['analyzing', 'workspace', 'review', 'success']);
 const APP_SHELL_SCREENS = new Set([
@@ -105,7 +105,7 @@ function hasRequiredWorkflowState(screen: string) {
 }
 
 function storePendingAuthRoute(screen: string) {
-  if (!routes[screen] || PUBLIC_SCREENS.includes(screen) || screen === 'auth') return;
+  if (!routes[screen] || PUBLIC_SCREENS.includes(screen) || screen === 'auth' || screen === 'not-found') return;
   const storage = getBrowserSessionStorage();
   if (!storage) return;
   try {
@@ -139,6 +139,10 @@ function resolveInitialScreen(initialScreen: string, authenticated: boolean, onb
   const screen = normalizeScreenName(initialScreen);
 
   if (!routes[screen]) {
+    if (!authenticated) {
+      setAuthEntryReason('gated');
+      return 'auth';
+    }
     return 'not-found';
   }
 

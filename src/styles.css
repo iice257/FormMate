@@ -4978,6 +4978,8 @@ button#btn-back-login .material-symbols-outlined,
 }
 
 .not-found-code {
+  position: relative;
+  z-index: 4;
   margin: clamp(0.4rem, 1.4vh, 0.85rem) 0 0;
   color: #06184a;
   font-size: clamp(7.2rem, 21vw, 15.5rem);
@@ -5000,8 +5002,9 @@ button#btn-back-login .material-symbols-outlined,
 
 .not-found-form-plane {
   position: absolute;
+  z-index: 2;
   left: 50%;
-  bottom: 0;
+  bottom: clamp(0.4rem, 2.5vh, 1.7rem);
   width: min(74vw, 34rem);
   aspect-ratio: 2.25;
   transform: translateX(-50%) rotate(6deg);
@@ -5183,6 +5186,7 @@ button#btn-back-login .material-symbols-outlined,
 
   .not-found-form-plane {
     width: min(90vw, 28rem);
+    bottom: 1.2rem;
   }
 
   .not-found-plane-body {

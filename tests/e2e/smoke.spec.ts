@@ -155,7 +155,9 @@ test('ai contract sanity: regenerate uses text output and updates UI', async ({ 
   await expect(page.locator(`.answer-textarea[data-question-id="${qId}"]`)).toHaveValue('Mock regenerated answer');
 });
 
-test('public routes and branded 404 are directly reachable', async ({ page }) => {
+test('public routes are directly reachable and signed-out unknown routes require auth', async ({ page }) => {
+  await seedOnboardingComplete(page);
+
   await page.goto('/docs');
   await expect(page.getByRole('heading', { name: /Welcome to FormMate/i })).toBeVisible();
 
@@ -169,9 +171,21 @@ test('public routes and branded 404 are directly reachable', async ({ page }) =>
   await expect(page.getByRole('heading', { name: /Explore Real FormMate/i })).toBeVisible();
 
   await page.goto('/totally-fake');
+  await page.waitForURL('**/auth');
+  await expect(page.getByText('Sign up or Log in to continue.')).toBeVisible();
+  await page.click('[data-dev-test-user]');
+  await page.waitForURL('**/dashboard');
+  await expect(page.locator('#nav-dashboard')).toBeVisible();
+});
+
+test('signed-in unknown routes render branded 404', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await login(page);
+
+  await page.goto('/totally-fake');
   await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
   await expect(page.getByText('LOST IN THE FORM FLOW')).toBeVisible();
-  await expect(page.locator('#nav-home, #nav-dashboard')).toBeVisible();
+  await expect(page.locator('#nav-dashboard')).toBeVisible();
   await expect(page.locator('#nav-examples')).toBeVisible();
   await expect(page.locator('#nav-docs')).toContainText('Docs & Help');
   await expect(page.locator('#nav-terms')).toBeVisible();
