@@ -1044,8 +1044,7 @@ export function docsScreen() {
     });
 
     return () => {
-      docsSigninBtn?.removeEventListener('mouseenter', handleDocsSigninEnter);
-      docsSigninBtn?.removeEventListener('mouseleave', handleDocsSigninLeave);
+      docsSigninBtn?.removeEventListener('mouseenter', playDocsSigninShimmer);
       docsSigninBtn?.removeEventListener('animationend', handleDocsSigninAnimationEnd);
       cleanupTasks.forEach((task) => task());
       sections.forEach(s => observer.unobserve(s));
