@@ -4949,7 +4949,7 @@ button#btn-back-login .material-symbols-outlined,
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: clamp(7rem, 16vh, 11rem);
+  padding-bottom: clamp(19rem, 39vh, 22rem);
   text-align: center;
 }
 
@@ -4998,6 +4998,73 @@ button#btn-back-login .material-symbols-outlined,
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.not-found-recovery {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: clamp(0.75rem, 2vh, 1.15rem);
+  color: #617493;
+  font-size: clamp(0.82rem, 1.35vw, 0.95rem);
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+.not-found-action {
+  display: inline-flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.72rem;
+  padding: 0 1.15rem;
+  font-size: 0.82rem;
+  font-weight: 850;
+  transition:
+    transform var(--fm-transition-fast),
+    box-shadow var(--fm-transition-fast),
+    background-color var(--fm-transition-fast);
+}
+
+.not-found-action:hover {
+  transform: translateY(-1px);
+}
+
+.not-found-action .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.not-found-action-primary {
+  border: 1px solid rgba(var(--fm-primary-rgb), 0.58);
+  background: var(--fm-primary);
+  color: white;
+  box-shadow: 0 14px 30px rgba(var(--fm-primary-rgb), 0.26);
+}
+
+.not-found-action-primary:hover {
+  background: var(--fm-primary-dark);
+}
+
+.not-found-action-secondary {
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  color: #233755;
+  box-shadow: 0 12px 28px rgba(15, 70, 129, 0.1);
+}
+
+.not-found-action-secondary:hover {
+  background: white;
 }
 
 .not-found-form-plane {
@@ -5171,7 +5238,7 @@ button#btn-back-login .material-symbols-outlined,
 
 @media (max-width: 760px) {
   .not-found-stage {
-    padding-bottom: 8.5rem;
+    padding-bottom: 16rem;
   }
 
   .not-found-badge {
@@ -5186,7 +5253,11 @@ button#btn-back-login .material-symbols-outlined,
 
   .not-found-form-plane {
     width: min(90vw, 28rem);
-    bottom: 1.2rem;
+    bottom: 0.85rem;
+  }
+
+  .not-found-actions {
+    gap: 0.65rem;
   }
 
   .not-found-plane-body {

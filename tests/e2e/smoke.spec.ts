@@ -189,6 +189,9 @@ test('signed-in unknown routes render branded 404', async ({ page }) => {
   await expect(page.locator('#nav-examples')).toBeVisible();
   await expect(page.locator('#nav-docs')).toContainText('Docs & Help');
   await expect(page.locator('#nav-terms')).toBeVisible();
+  await expect(page.getByText('The link may be broken, moved, or never existed.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Go Home/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Explore Examples/i })).toBeVisible();
 });
 
 test('docs home button routes signed-in users back to public home', async ({ page }) => {

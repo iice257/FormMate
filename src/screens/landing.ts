@@ -32,7 +32,7 @@ export function landingScreen() {
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header data-fm-hide-on-scroll="true" class="landing-header flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
           <div class="flex-1 flex items-center justify-start">
             <button type="button" class="flex min-w-0 items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0 overflow-visible leading-none" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
@@ -42,11 +42,10 @@ export function landingScreen() {
             </button>
           </div>
           
-          <nav class="landing-top-nav hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
+          <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
+            ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
             <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs &amp; Help</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-terms">Terms</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
           </nav>
  
           <div class="flex-1 flex items-center justify-end gap-3">

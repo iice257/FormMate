@@ -70,6 +70,19 @@ export function notFoundScreen() {
             Lost in the form flow
           </div>
           <h1 class="not-found-code">404</h1>
+          <div class="not-found-recovery">
+            <p>The link may be broken, moved, or never existed.<br />Let's get you back on track.</p>
+            <div class="not-found-actions">
+              <button type="button" id="btn-go-home" class="not-found-action not-found-action-primary">
+                <span class="material-symbols-outlined">home</span>
+                Go Home
+              </button>
+              <button type="button" id="btn-explore-examples" class="not-found-action not-found-action-secondary">
+                <span class="material-symbols-outlined">grid_view</span>
+                Explore Examples
+              </button>
+            </div>
+          </div>
           <div class="not-found-form-plane" aria-hidden="true">
             <div class="not-found-plane-bar">
               <span></span><span></span><span></span>
@@ -94,6 +107,8 @@ export function notFoundScreen() {
 
   function init(wrapper) {
     wrapper.querySelector('#btn-logo-home')?.addEventListener('click', () => navigateTo(isAuthenticated ? getDashboardActionScreenForUser() : 'landing'));
+    wrapper.querySelector('#btn-go-home')?.addEventListener('click', () => navigateTo(isAuthenticated ? getDashboardActionScreenForUser() : 'landing'));
+    wrapper.querySelector('#btn-explore-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-home')?.addEventListener('click', () => navigateTo('landing'));
     wrapper.querySelector('#nav-dashboard')?.addEventListener('click', () => navigateTo(getDashboardActionScreenForUser()));
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
