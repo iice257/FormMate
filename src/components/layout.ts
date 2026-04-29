@@ -3,7 +3,7 @@
 
 
 import { getState, setState } from '../state';
-import { getHomeScreenForUser, navigateTo } from '../router';
+import { getHomeScreenForUser, goBack, navigateTo } from '../router';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { executeAction, searchActions } from '../actions/action-index';
@@ -131,16 +131,12 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
 
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
-  const switchTargets = ZEN_MENU_ORDER
-    .filter((candidate) => SUPPORTED_ZEN_SCREENS.has(candidate))
-    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
-    .map((candidate) => {
-      const isCurrent = candidate === screenId;
-      const isPrimaryAction = candidate === 'new';
-      return `
+  const buildZenMenuItem = (candidate, extraClass = '') => {
+    const isCurrent = candidate === screenId;
+    return `
       <button
         type="button"
-        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''} ${isPrimaryAction ? 'zen-mode-menu-item-primary' : ''}"
+        class="zen-mode-menu-item ${extraClass} ${isCurrent ? 'is-current' : ''}"
         data-zen-target="${escapeHtml(candidate)}"
         aria-current="${isCurrent ? 'page' : 'false'}"
         aria-label="${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}${isCurrent ? ' (Current)' : ''}"
@@ -149,10 +145,30 @@ function getZenModeExitButtonHtml(screenId) {
         <span class="zen-mode-menu-item-label">${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}</span>
       </button>
     `;
+  };
+
+  const primaryTarget = SUPPORTED_ZEN_SCREENS.has('new') ? buildZenMenuItem('new', 'zen-mode-menu-item-primary') : '';
+  const switchTargets = ZEN_MENU_ORDER
+    .filter((candidate) => SUPPORTED_ZEN_SCREENS.has(candidate))
+    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
+    .filter((candidate) => candidate !== 'new')
+    .map((candidate) => {
+      return buildZenMenuItem(candidate);
     })
     .join('');
 
   return `
+    <button
+      type="button"
+      id="btn-zen-back"
+      class="zen-mode-back-btn ${isActive ? 'visible' : ''}"
+      aria-label="Go back"
+      title="Back"
+      ${isActive ? '' : 'hidden'}
+    >
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+
     <div class="zen-mode-fab-stack ${isActive ? 'visible' : ''}" ${isActive ? '' : 'hidden'}>
       <button
         type="button"
@@ -162,7 +178,7 @@ function getZenModeExitButtonHtml(screenId) {
         aria-label="Exit Zen Mode"
       >
         <span class="material-symbols-outlined">close</span>
-        <span class="zen-mode-fab-label">Close Zen</span>
+        <span class="zen-mode-fab-label">Exit Zen Mode</span>
       </button>
 
       <div class="zen-mode-menu-wrap">
@@ -179,16 +195,39 @@ function getZenModeExitButtonHtml(screenId) {
         </button>
 
         <div id="zen-mode-menu" class="zen-mode-menu" hidden>
-          ${switchTargets}
-          <button
-            type="button"
-            class="zen-mode-menu-item zen-mode-menu-item-separate"
-            data-zen-settings="true"
-            aria-label="Open settings"
-          >
-            <span class="material-symbols-outlined zen-mode-menu-item-icon">settings</span>
-            <span class="zen-mode-menu-item-label">Settings</span>
-          </button>
+          ${primaryTarget}
+          <div class="zen-mode-menu-group" aria-label="Main pages">
+            ${switchTargets}
+          </div>
+          <div class="zen-mode-menu-group zen-mode-menu-group-account" aria-label="Account actions">
+            <button
+              type="button"
+              class="zen-mode-menu-item"
+              data-zen-profile="true"
+              aria-label="Open profile"
+            >
+              <span class="material-symbols-outlined zen-mode-menu-item-icon">account_circle</span>
+              <span class="zen-mode-menu-item-label">Profile</span>
+            </button>
+            <button
+              type="button"
+              class="zen-mode-menu-item"
+              data-zen-settings="true"
+              aria-label="Open settings"
+            >
+              <span class="material-symbols-outlined zen-mode-menu-item-icon">settings</span>
+              <span class="zen-mode-menu-item-label">Settings</span>
+            </button>
+            <button
+              type="button"
+              class="zen-mode-menu-item"
+              data-zen-help="true"
+              aria-label="Open help"
+            >
+              <span class="material-symbols-outlined zen-mode-menu-item-icon">help</span>
+              <span class="zen-mode-menu-item-label">Help</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -225,12 +264,15 @@ export function bindZenModeControls(wrapper, zenMode) {
   const zenScreenId = zenMode.screenId;
   const zenShell = wrapper.querySelector('[data-zen-shell="true"]');
   const zenToggleButtons = Array.from(wrapper.querySelectorAll('[data-zen-toggle-btn="true"]'));
+  const zenBackBtn = wrapper.querySelector('#btn-zen-back');
   const zenExitBtn = wrapper.querySelector('#btn-zen-exit');
   const zenFabStack = wrapper.querySelector('.zen-mode-fab-stack');
   const zenMenuBtn = wrapper.querySelector('#btn-zen-menu');
   const zenMenu = wrapper.querySelector('#zen-mode-menu');
   const zenMenuItems = wrapper.querySelectorAll('[data-zen-target]');
+  const zenProfileBtn = wrapper.querySelector('[data-zen-profile="true"]');
   const zenSettingsBtn = wrapper.querySelector('[data-zen-settings="true"]');
+  const zenHelpBtn = wrapper.querySelector('[data-zen-help="true"]');
 
   const syncZenUi = (enabled) => {
     zenShell?.classList.toggle('is-zen-mode', enabled);
@@ -248,6 +290,11 @@ export function bindZenModeControls(wrapper, zenMode) {
 
     if (zenExitBtn) {
       zenExitBtn.classList.toggle('visible', enabled);
+    }
+
+    if (zenBackBtn) {
+      zenBackBtn.hidden = !enabled;
+      zenBackBtn.classList.toggle('visible', enabled);
     }
 
     if (zenFabStack) {
@@ -273,6 +320,10 @@ export function bindZenModeControls(wrapper, zenMode) {
   };
 
   const handleZenExit = () => setZenMode(false);
+  const handleZenBack = () => {
+    closeZenMenu();
+    goBack();
+  };
   const handleZenMenuToggle = () => {
     if (!zenMenu || !zenMenuBtn) return;
     const nextOpen = zenMenu.hidden;
@@ -313,6 +364,14 @@ export function bindZenModeControls(wrapper, zenMode) {
     closeZenMenu();
     openAccountModal('settings');
   };
+  const handleZenProfileClick = () => {
+    closeZenMenu();
+    openAccountModal('profile');
+  };
+  const handleZenHelpClick = () => {
+    closeZenMenu();
+    openAccountModal('help');
+  };
   const handleZenMenuClickAway = (event) => {
     if (!zenMenu || !zenMenuBtn) return;
     const target = event.target;
@@ -323,6 +382,7 @@ export function bindZenModeControls(wrapper, zenMode) {
   zenToggleButtons.forEach((zenToggleBtn) => {
     zenToggleBtn.addEventListener('click', handleZenToggle);
   });
+  zenBackBtn?.addEventListener('click', handleZenBack);
   zenExitBtn?.addEventListener('click', handleZenExit);
   zenMenuBtn?.addEventListener('click', handleZenMenuToggle);
   zenMenuItems.forEach((item) => {
@@ -342,7 +402,9 @@ export function bindZenModeControls(wrapper, zenMode) {
       });
     });
   });
+  zenProfileBtn?.addEventListener('click', handleZenProfileClick);
   zenSettingsBtn?.addEventListener('click', handleZenSettingsClick);
+  zenHelpBtn?.addEventListener('click', handleZenHelpClick);
   document.addEventListener('keydown', handleEscape);
   document.addEventListener('click', handleZenMenuClickAway);
   window.addEventListener(ZEN_MODE_EVENT, handleZenChange);
@@ -352,9 +414,12 @@ export function bindZenModeControls(wrapper, zenMode) {
     zenToggleButtons.forEach((zenToggleBtn) => {
       zenToggleBtn.removeEventListener('click', handleZenToggle);
     });
+    zenBackBtn?.removeEventListener('click', handleZenBack);
     zenExitBtn?.removeEventListener('click', handleZenExit);
     zenMenuBtn?.removeEventListener('click', handleZenMenuToggle);
+    zenProfileBtn?.removeEventListener('click', handleZenProfileClick);
     zenSettingsBtn?.removeEventListener('click', handleZenSettingsClick);
+    zenHelpBtn?.removeEventListener('click', handleZenHelpClick);
     document.removeEventListener('keydown', handleEscape);
     document.removeEventListener('click', handleZenMenuClickAway);
     window.removeEventListener(ZEN_MODE_EVENT, handleZenChange);
@@ -390,16 +455,21 @@ export function withLayout(pageId, contentHtml, options = {}) {
     { id: 'examples', icon: 'auto_stories', label: 'Examples', route: 'examples' },
   ].filter(Boolean);
 
-  const sidebarLinksHtml = sidebarLinks.map(link => {
+  const renderSidebarLink = (link, extraClass = '') => {
     const isActive = pageId === link.id;
     return `
-      <button id="nav-${link.id}" class="layout-sidebar-link ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
+      <button id="nav-${link.id}" class="layout-sidebar-link ${extraClass} ${isActive ? 'active' : ''}" aria-current="${isActive ? 'page' : 'false'}">
         ${isActive ? '<div class="layout-sidebar-active-bar"></div>' : ''}
         <span class="material-symbols-outlined layout-sidebar-icon">${link.icon}</span>
         <span class="layout-sidebar-label">${link.label}</span>
       </button>
     `;
-  }).join('');
+  };
+
+  const sidebarNewLink = sidebarLinks.find((link) => link.id === 'new');
+  const sidebarPageLinks = sidebarLinks.filter((link) => link.id !== 'new');
+  const sidebarNewLinkHtml = sidebarNewLink ? renderSidebarLink(sidebarNewLink, 'layout-sidebar-link-primary') : '';
+  const sidebarLinksHtml = sidebarPageLinks.map((link) => renderSidebarLink(link)).join('');
 
   const mobileSidebarLinksHtml = sidebarLinks.map(link => {
     const isActive = pageId === link.id;
@@ -494,14 +564,10 @@ export function withLayout(pageId, contentHtml, options = {}) {
         <!-- Sidebar Navigation -->
         <aside id="sidebar" class="layout-sidebar">
           <nav class="layout-sidebar-nav">
-            ${sidebarLinksHtml}
-
-            <div class="layout-sidebar-divider"></div>
-            
-            <button id="nav-support" class="layout-sidebar-link" aria-label="Open Help Center">
-              <span class="material-symbols-outlined layout-sidebar-icon">help</span>
-              <span class="layout-sidebar-label">Help Center</span>
-            </button>
+            ${sidebarNewLinkHtml}
+            <div class="layout-sidebar-section">
+              ${sidebarLinksHtml}
+            </div>
           </nav>
           
           <!-- Bottom Section: Account -->
@@ -517,17 +583,22 @@ export function withLayout(pageId, contentHtml, options = {}) {
             <div class="layout-sidebar-account-block">
               <div class="layout-sidebar-account-shell">
                 <div class="layout-sidebar-account-row">
-                <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
-                  <div class="layout-sidebar-avatar-wrap">
-                    <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
-                  </div>
-                  <div class="layout-sidebar-user-info">
-                    <span class="layout-sidebar-user-name">${displayName}</span>
-                  </div>
-                </button>
-                <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
-                  <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
-                </button>
+                  <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
+                    <div class="layout-sidebar-avatar-wrap">
+                      <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
+                    </div>
+                    <div class="layout-sidebar-user-info">
+                      <span class="layout-sidebar-user-name">${displayName}</span>
+                    </div>
+                  </button>
+                  <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
+                    <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
+                    <span class="layout-sidebar-label">Settings</span>
+                  </button>
+                  <button id="nav-support" class="layout-sidebar-settings-inline" type="button" aria-label="Open Help Center">
+                    <span class="material-symbols-outlined layout-sidebar-icon">help</span>
+                    <span class="layout-sidebar-label">Help</span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -26,9 +26,21 @@ export function newFormScreen() {
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
 
   const zenActive = isZenModeEnabled('new');
+  const showZenSubtitle = !zenActive || Boolean(String(formUrl || '').trim());
 
   const html = `
     <div class="relative flex h-screen w-full flex-col overflow-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
+      <button
+        type="button"
+        id="btn-zen-back"
+        class="zen-mode-back-btn ${zenActive ? 'visible' : ''}"
+        aria-label="Go back"
+        title="Back"
+        ${zenActive ? '' : 'hidden'}
+      >
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+
       <button
         type="button"
         id="btn-zen-exit"
@@ -36,7 +48,7 @@ export function newFormScreen() {
         aria-label="Exit Zen Mode"
       >
         <span class="material-symbols-outlined">close</span>
-        <span>Close</span>
+        <span class="zen-mode-fab-label">Exit Zen Mode</span>
       </button>
 
       <div id="aurora-bg" class="aurora-container bg-white zen-new-form-aurora"></div>
@@ -70,7 +82,7 @@ export function newFormScreen() {
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
               Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
             </h1>
-            <p class="new-form-hero-subtitle">Paste form link to analyze</p>
+            ${showZenSubtitle ? `<p class="new-form-hero-subtitle">Paste form link to analyze</p>` : ''}
           </div>
 
           <div class="w-full max-w-2xl mx-auto relative z-20 zen-new-form-form">
@@ -122,6 +134,7 @@ export function newFormScreen() {
     const urlInput = wrapper.querySelector('#url-input');
     const btnAnalyze = wrapper.querySelector('#btn-analyze');
     const btnBack = wrapper.querySelector('#btn-back');
+    const btnZenBack = wrapper.querySelector('#btn-zen-back');
     const btnZenExit = wrapper.querySelector('#btn-zen-exit');
     let zenEnabled = isZenModeEnabled('new');
     let zenTurnedOnFromNew = false;
@@ -154,6 +167,7 @@ export function newFormScreen() {
       }
       goBack();
     };
+    btnZenBack?.addEventListener('click', handleZenExitAsBack, true);
     btnZenExit?.addEventListener('click', handleZenExitAsBack, true);
     window.addEventListener('fm:zen-mode-change', handleZenModeChanged);
 
@@ -187,6 +201,7 @@ export function newFormScreen() {
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
 
     return () => {
+      btnZenBack?.removeEventListener('click', handleZenExitAsBack, true);
       btnZenExit?.removeEventListener('click', handleZenExitAsBack, true);
       window.removeEventListener('fm:zen-mode-change', handleZenModeChanged);
       cleanupZen?.();

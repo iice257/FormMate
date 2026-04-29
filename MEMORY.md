@@ -45,6 +45,7 @@
 - The primary web Google sign-in path should use Google Identity Services credentials (`signInWithIdToken`) for the visible auth flow; Supabase redirect OAuth remains fallback-only.
 - Mobile app shell should expose a hamburger beside `New Form` that opens a full-screen left menu with push-style page motion; account modal should also be full-screen on mobile.
 - Zen mode should reuse the subtle new-form background image treatment across zen screens only (same image and very low-opacity overlay), without changing non-zen screens.
+- Zen mode controls should stay compact: the floating menu must open only on click, not expand on hover; zen navigation should group New Form separately, page links together, and profile/settings/help together.
 - Cloud sync degraded banners/notices should be hidden sitewide (including auth and layout-level warning surfaces).
 - Docs and examples should remain publicly browsable while signed out, but AI usage and example launches must require sign-in with explicit UI messaging.
 - Legal pages should live as lightweight direct-link surfaces (`privacy`, `terms`) accessible from the docs-style navigation.
