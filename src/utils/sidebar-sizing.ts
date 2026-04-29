@@ -24,18 +24,3 @@ export function clampSidebarPair(primaryWidth, secondaryWidth, viewportWidth = w
   const secondary = clampSidebarWidth(secondaryWidth, { viewportWidth, oppositeWidth: primary });
   return { primary, secondary };
 }
-
-export function getSidebarRange({
-  viewportWidth = window.innerWidth || 1200,
-  oppositeWidth = 0,
-  minRatio = SIDEBAR_MIN_RATIO,
-  maxRatio = SIDEBAR_MAX_RATIO,
-  totalMaxRatio = SIDEBARS_TOTAL_MAX_RATIO,
-  fixedMinimum = 0,
-} = {}) {
-  const min = Math.max(fixedMinimum, Math.round(viewportWidth * minRatio));
-  const perSidebarMax = Math.round(viewportWidth * maxRatio);
-  const totalMax = Math.round(viewportWidth * totalMaxRatio);
-  const max = Math.max(min, Math.min(perSidebarMax, totalMax - Math.max(0, oppositeWidth)));
-  return { min, max };
-}

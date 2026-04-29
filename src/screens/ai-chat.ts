@@ -11,7 +11,7 @@ import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
-import { clampSidebarWidth, getSidebarRange } from '../utils/sidebar-sizing';
+import { clampSidebarWidth } from '../utils/sidebar-sizing';
 import {
   buildMessageWithUiContext,
   buildNextFollowUps,
@@ -25,7 +25,6 @@ import {
 const SESSION_STORAGE_KEY = 'fm_chat_sessions';
 const MAX_IMAGE_ATTACHMENTS = 5;
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-const MAX_TEXT_ATTACHMENT_CHARS = 3200;
 
 function loadSessions() {
   try {
@@ -78,15 +77,6 @@ function readFileAsDataUrl(file) {
   });
 }
 
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
-    reader.readAsText(file);
-  });
-}
-
 export function aiChatScreen() {
   const { userProfile, formData } = getState();
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
@@ -104,9 +94,6 @@ export function aiChatScreen() {
             <span style="padding: 0.15rem 0.5rem; background: #d1fae5; color: #059669; border-radius: var(--fm-radius-full); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Copilot Active</span>
           </div>
           <div style="display: flex; gap: 0.35rem;">
-            <button type="button" aria-label="Search chats" title="Search chats" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
-              <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
-            </button>
             <button type="button" aria-label="Share chat" title="Share chat" style="width: 32px; height: 32px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; border-radius: var(--fm-radius-sm);">
               <span class="material-symbols-outlined" style="font-size: 20px;">ios_share</span>
             </button>
@@ -139,7 +126,7 @@ export function aiChatScreen() {
             <button id="btn-chat-attach" type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
-            <input id="chat-attach-input" type="file" accept="image/*,.txt,.md,.csv,text/plain" multiple style="display:none;" />
+            <input id="chat-attach-input" type="file" accept="image/*" multiple style="display:none;" />
             <div style="flex: 1; position: relative;">
               <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
               <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
@@ -151,7 +138,7 @@ export function aiChatScreen() {
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
-          <div id="chat-attachment-state" style="text-align:center; font-size:0.65rem; color:#94a3b8; margin-top:0.35rem;">No attachments</div>
+          <div id="chat-attachment-state" class="chat-attachment-strip" aria-live="polite"></div>
           <div style="text-align: center; font-size: 0.65rem; color: #cbd5e1; margin-top: 0.4rem;">AI can make mistakes. Check important info.</div>
         </div>
       </div>
@@ -161,11 +148,16 @@ export function aiChatScreen() {
       </button>
 
       <div id="chat-right-sidebar" class="hidden lg:flex zen-chat-sidebar no-scrollbar detached-right-sidebar ${rightSidebarOpen ? '' : 'is-hidden'}" data-fm-right-sidebar="true" data-fm-transition-panel="true" data-zen-hide="always" style="width: ${rightSidebarWidth}px; flex-direction: column; padding: 1.25rem; flex-shrink: 0; overflow-y: auto;" ${rightSidebarOpen ? '' : 'hidden'}>
-        <div class="detached-sidebar-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize chat sidebar" aria-valuenow="${rightSidebarWidth}"></div>
+        <div class="detached-sidebar-resizer" aria-hidden="true"></div>
         <div class="detached-sidebar-header">
-          <span class="detached-sidebar-title">Chat Sidebar</span>
+          <div class="detached-sidebar-heading-group">
+            <span class="detached-sidebar-title">Chats</span>
+            <button type="button" class="detached-sidebar-icon-btn" aria-label="Search chats" title="Search chats">
+              <span class="material-symbols-outlined">search</span>
+            </button>
+          </div>
           <button id="btn-hide-chat-sidebar" type="button" class="detached-sidebar-hide-btn" aria-label="Hide sidebar">
-            <span>Hide Sidebar</span>
+            <span>Hide</span>
             <span class="material-symbols-outlined">right_panel_close</span>
           </button>
         </div>
@@ -236,10 +228,6 @@ export function aiChatScreen() {
       if (!rightSidebar) return 0;
       const nextWidth = clampSidebarWidth(width, { oppositeWidth: getMainSidebarWidth() });
       rightSidebar.style.width = `${nextWidth}px`;
-      const range = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-      rightSidebarResizer?.setAttribute('aria-valuemin', String(range.min));
-      rightSidebarResizer?.setAttribute('aria-valuemax', String(range.max));
-      rightSidebarResizer?.setAttribute('aria-valuenow', String(nextWidth));
       setAnonymousPref('aiChat.rightSidebarWidth', nextWidth);
       return nextWidth;
     };
@@ -257,32 +245,12 @@ export function aiChatScreen() {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
       };
-      document.body.style.cursor = 'col-resize';
+      document.body.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     };
-    const handleRightSidebarKeydown = (event) => {
-      const currentWidth = rightSidebar?.getBoundingClientRect?.().width || rightSidebarWidth;
-      const step = event.shiftKey ? 24 : 8;
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        applyRightSidebarWidth(currentWidth + step);
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        applyRightSidebarWidth(currentWidth - step);
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        const { min } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-        applyRightSidebarWidth(min);
-      } else if (event.key === 'End') {
-        event.preventDefault();
-        const { max } = getSidebarRange({ oppositeWidth: getMainSidebarWidth() });
-        applyRightSidebarWidth(max);
-      }
-    };
     rightSidebarResizer?.addEventListener('pointerdown', handleRightSidebarPointerDown);
-    rightSidebarResizer?.addEventListener('keydown', handleRightSidebarKeydown);
     const handleRightSidebarResize = () => {
       if (!rightSidebar || rightSidebar.hidden) return;
       applyRightSidebarWidth(rightSidebar.getBoundingClientRect().width);
@@ -290,7 +258,6 @@ export function aiChatScreen() {
     window.addEventListener('resize', handleRightSidebarResize);
     cleanupSidebarControls.push(() => {
       rightSidebarResizer?.removeEventListener('pointerdown', handleRightSidebarPointerDown);
-      rightSidebarResizer?.removeEventListener('keydown', handleRightSidebarKeydown);
       window.removeEventListener('resize', handleRightSidebarResize);
     });
     applyRightSidebarWidth(rightSidebar?.getBoundingClientRect?.().width || rightSidebarWidth);
@@ -308,7 +275,6 @@ export function aiChatScreen() {
     let chatHistory = [];
     let sessionList = Array.isArray(sessions) ? [...sessions] : [];
     let pendingImages = [];
-    let pendingTextSnippets = [];
     let pendingUiContextEvents = [];
     let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.AI_CHAT, formData?.title || '');
     const cleanupRichActions = bindRichActionClicks(chatMessages, {
@@ -329,7 +295,7 @@ export function aiChatScreen() {
     const syncSendButton = () => {
       if (!btnSend) return;
       const hasText = Boolean(chatInput?.value?.trim());
-      const hasAttachment = pendingImages.length > 0 || pendingTextSnippets.length > 0 || pendingUiContextEvents.length > 0;
+      const hasAttachment = pendingImages.length > 0 || pendingUiContextEvents.length > 0;
       btnSend.disabled = !(hasText || hasAttachment) || isChatPending;
     };
 
@@ -351,20 +317,24 @@ export function aiChatScreen() {
 
     const renderAttachmentState = () => {
       const imageCount = pendingImages.length;
-      const textCount = pendingTextSnippets.length;
       const uiContextCount = pendingUiContextEvents.length;
       if (!attachmentState) return;
-      if (!imageCount && !textCount && !uiContextCount) {
-        attachmentState.textContent = 'No attachments';
-        } else {
-          const parts = [];
-          if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
-          if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
-          if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
-          attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
-        }
-        syncSendButton();
-      };
+      const imageChips = pendingImages.map((image, index) => `
+        <div class="chat-attachment-chip" title="${escapeAttr(image.name || `Image ${index + 1}`)}">
+          <img src="${escapeAttr(image.dataUrl)}" alt="" />
+          <span>Image ${index + 1}</span>
+        </div>
+      `).join('');
+      const queuedChip = uiContextCount ? `
+        <div class="chat-attachment-chip chat-attachment-chip-muted">
+          <span class="material-symbols-outlined">pending_actions</span>
+          <span>${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}</span>
+        </div>
+      ` : '';
+      replaceChildrenWithSafeHtml(attachmentState, `${imageChips}${queuedChip}`);
+      attachmentState.hidden = !imageCount && !uiContextCount;
+      syncSendButton();
+    };
 
     const syncVoiceButton = () => {
       if (!btnVoice) return;
@@ -379,7 +349,6 @@ export function aiChatScreen() {
 
     const clearPendingAttachments = () => {
       pendingImages = [];
-      pendingTextSnippets = [];
       renderAttachmentState();
     };
 
@@ -388,26 +357,19 @@ export function aiChatScreen() {
       renderAttachmentState();
     };
 
-    const addTextSnippet = (label, text) => {
-      const snippet = String(text || '').trim().slice(0, MAX_TEXT_ATTACHMENT_CHARS);
-      if (!snippet) return false;
-      pendingTextSnippets.push({
-        label: label || 'Text snippet',
-        text: snippet,
-      });
-      if (pendingTextSnippets.length > 6) {
-        pendingTextSnippets = pendingTextSnippets.slice(-6);
-      }
-      renderAttachmentState();
-      return true;
-    };
-
     const addImageFiles = async (files) => {
-      const selected = Array.from(files || []).filter((file) => String(file.type || '').startsWith('image/'));
-      if (!selected.length) return;
+      const incoming = Array.from(files || []);
+      const selected = incoming.filter((file) => String(file.type || '').startsWith('image/'));
+      if (!selected.length) {
+        if (incoming.length) toast.warning('Only image attachments are supported.');
+        return;
+      }
+      if (selected.length < incoming.length) {
+        toast.warning('Only image attachments are supported. Non-image files were ignored.');
+      }
       const slots = MAX_IMAGE_ATTACHMENTS - pendingImages.length;
       if (slots <= 0) {
-        toast.warning(`Maximum ${MAX_IMAGE_ATTACHMENTS} screenshots can be attached.`);
+        toast.warning(`Maximum ${MAX_IMAGE_ATTACHMENTS} images can be attached.`);
         return;
       }
 
@@ -416,33 +378,18 @@ export function aiChatScreen() {
         .slice(0, slots);
 
       if (valid.length < selected.length) {
-        toast.warning(`Ignored oversized screenshots. Max ${Math.floor(MAX_IMAGE_BYTES / (1024 * 1024))}MB each.`);
+        toast.warning(`Ignored oversized images. Max ${Math.floor(MAX_IMAGE_BYTES / (1024 * 1024))}MB each.`);
       }
 
       for (const file of valid) {
         try {
           const dataUrl = await readFileAsDataUrl(file);
-          pendingImages.push({ name: file.name || 'Screenshot', dataUrl });
+          pendingImages.push({ name: file.name || 'Image', dataUrl });
         } catch {
           // Ignore a single file failure and continue.
         }
       }
       renderAttachmentState();
-    };
-
-    const addTextFiles = async (files) => {
-      const selected = Array.from(files || []).filter((file) => {
-        const type = String(file.type || '').toLowerCase();
-        return type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name || '');
-      });
-      for (const file of selected.slice(0, 4)) {
-        try {
-          const text = await readFileAsText(file);
-          addTextSnippet(file.name || 'Attachment', text);
-        } catch {
-          // Ignore read errors for individual files.
-        }
-      }
     };
 
     function persistCurrentSession(latestPrompt) {
@@ -496,7 +443,7 @@ export function aiChatScreen() {
     async function sendMessage(text) {
       const trimmed = text.trim();
       const hasUiContext = pendingUiContextEvents.length > 0;
-      if ((!trimmed && !pendingImages.length && !pendingTextSnippets.length && !hasUiContext) || isChatPending) return;
+      if ((!trimmed && !pendingImages.length && !hasUiContext) || isChatPending) return;
       isChatPending = true;
       chatInput.value = '';
       btnSend.disabled = true;
@@ -521,14 +468,6 @@ export function aiChatScreen() {
 
       try {
         const attachmentPayload = [];
-        pendingTextSnippets.forEach((entry) => {
-          attachmentPayload.push({
-            type: 'text_snippet',
-            name: entry.label,
-            text: entry.text,
-          });
-        });
-
         if (pendingImages.length) {
           try {
             const vision = await extractVisionContext({
@@ -618,7 +557,6 @@ export function aiChatScreen() {
     attachInput?.addEventListener('change', async () => {
       const files = Array.from(attachInput.files || []);
       await addImageFiles(files);
-      await addTextFiles(files);
       attachInput.value = '';
     });
 
@@ -635,13 +573,6 @@ export function aiChatScreen() {
         return;
       }
 
-      const pastedText = event?.clipboardData?.getData('text/plain') || '';
-      if (pastedText.length > 180 && /\n/.test(pastedText)) {
-        event.preventDefault();
-        if (addTextSnippet('Pasted snippet', pastedText)) {
-          toast.info('Attached pasted text snippet.');
-        }
-      }
     });
 
     btnVoice?.addEventListener('click', async () => {

@@ -29,7 +29,6 @@ import {
 let sortableModulePromise = null;
 const MAX_CHAT_IMAGE_ATTACHMENTS = 5;
 const MAX_CHAT_IMAGE_BYTES = 3 * 1024 * 1024;
-const MAX_CHAT_TEXT_CHARS = 3200;
 
 async function loadSortable() {
   if (!sortableModulePromise) {
@@ -66,15 +65,6 @@ function readFileAsDataUrl(file) {
     reader.onload = () => resolve(String(reader.result || ''));
     reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
     reader.readAsDataURL(file);
-  });
-}
-
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
-    reader.readAsText(file);
   });
 }
 
@@ -196,7 +186,7 @@ export function workspaceScreen() {
         <div class="detached-sidebar-header">
           <span class="detached-sidebar-title">Assistant Sidebar</span>
           <button id="btn-hide-workspace-sidebar" type="button" class="detached-sidebar-hide-btn" aria-label="Hide sidebar">
-            <span>Hide Sidebar</span>
+            <span>Hide</span>
             <span class="material-symbols-outlined">right_panel_close</span>
           </button>
         </div>
@@ -242,7 +232,7 @@ export function workspaceScreen() {
                 <button id="btn-workspace-chat-voice" type="button" aria-label="Start voice input" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
                 </button>
-                <input id="workspace-chat-attach-input" type="file" accept="image/*,.txt,.md,.csv,text/plain" multiple style="display:none;" />
+                <input id="workspace-chat-attach-input" type="file" accept="image/*" multiple style="display:none;" />
               </div>
               <div style="flex: 1; position: relative;">
                 <input type="text" id="chat-input" placeholder="Ask Copilot anything..." aria-label="Ask Copilot anything" style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
@@ -251,6 +241,7 @@ export function workspaceScreen() {
                 </button>
               </div>
             </div>
+            <div id="workspace-chat-attachment-state" class="chat-attachment-strip chat-attachment-strip-sidebar" aria-live="polite"></div>
             <div style="text-align: center; font-size: 0.6rem; color: #cbd5e1; margin-top: 0.35rem;">AI can make mistakes. Check important info.</div>
           </div>
         </div>
@@ -344,7 +335,6 @@ export function workspaceScreen() {
     let sortableInstance = null;
     let isChatPending = false;
     let pendingImages = [];
-    let pendingTextSnippets = [];
     let pendingUiContextEvents = [];
     let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.WORKSPACE, formData?.title || '');
     const cleanupRichActions = bindRichActionClicks(chatMessages, {
@@ -415,7 +405,7 @@ export function workspaceScreen() {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
       };
-      document.body.style.cursor = 'col-resize';
+      document.body.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
@@ -755,7 +745,7 @@ export function workspaceScreen() {
     const syncSendButton = () => {
       if (!btnSend) return;
       const hasText = Boolean(chatInput?.value?.trim());
-      const hasAttachment = pendingImages.length > 0 || pendingTextSnippets.length > 0 || pendingUiContextEvents.length > 0;
+      const hasAttachment = pendingImages.length > 0 || pendingUiContextEvents.length > 0;
       btnSend.disabled = !(hasText || hasAttachment) || isChatPending;
     };
 
@@ -776,18 +766,22 @@ export function workspaceScreen() {
 
     const renderAttachmentState = () => {
       const imageCount = pendingImages.length;
-      const textCount = pendingTextSnippets.length;
       const uiContextCount = pendingUiContextEvents.length;
       if (attachmentState) {
-        if (!imageCount && !textCount && !uiContextCount) {
-          attachmentState.textContent = 'No attachments';
-        } else {
-          const parts = [];
-          if (imageCount) parts.push(`${imageCount} screenshot${imageCount === 1 ? '' : 's'}`);
-          if (textCount) parts.push(`${textCount} text snippet${textCount === 1 ? '' : 's'}`);
-          if (uiContextCount) parts.push(`${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}`);
-          attachmentState.textContent = `Attached: ${parts.join(' + ')}`;
-        }
+        const imageChips = pendingImages.map((image, index) => `
+          <div class="chat-attachment-chip" title="${escapeAttr(image.name || `Image ${index + 1}`)}">
+            <img src="${escapeAttr(image.dataUrl)}" alt="" />
+            <span>Image ${index + 1}</span>
+          </div>
+        `).join('');
+        const queuedChip = uiContextCount ? `
+          <div class="chat-attachment-chip chat-attachment-chip-muted">
+            <span class="material-symbols-outlined">pending_actions</span>
+            <span>${uiContextCount} queued update${uiContextCount === 1 ? '' : 's'}</span>
+          </div>
+        ` : '';
+        replaceChildrenWithSafeHtml(attachmentState, `${imageChips}${queuedChip}`);
+        attachmentState.hidden = !imageCount && !uiContextCount;
       }
       syncSendButton();
     };
@@ -804,7 +798,6 @@ export function workspaceScreen() {
 
     const clearPendingAttachments = () => {
       pendingImages = [];
-      pendingTextSnippets = [];
       renderAttachmentState();
     };
 
@@ -813,27 +806,20 @@ export function workspaceScreen() {
       renderAttachmentState();
     };
 
-    const addTextSnippet = (label, text) => {
-      const snippet = String(text || '').trim().slice(0, MAX_CHAT_TEXT_CHARS);
-      if (!snippet) return false;
-      pendingTextSnippets.push({
-        label: label || 'Text snippet',
-        text: snippet,
-      });
-      if (pendingTextSnippets.length > 6) {
-        pendingTextSnippets = pendingTextSnippets.slice(-6);
-      }
-      renderAttachmentState();
-      return true;
-    };
-
     const addImageFiles = async (files) => {
-      const selected = Array.from(files || []).filter((file) => String(file.type || '').startsWith('image/'));
-      if (!selected.length) return;
+      const incoming = Array.from(files || []);
+      const selected = incoming.filter((file) => String(file.type || '').startsWith('image/'));
+      if (!selected.length) {
+        if (incoming.length) toast.warning('Only image attachments are supported.');
+        return;
+      }
+      if (selected.length < incoming.length) {
+        toast.warning('Only image attachments are supported. Non-image files were ignored.');
+      }
 
       const slots = MAX_CHAT_IMAGE_ATTACHMENTS - pendingImages.length;
       if (slots <= 0) {
-        toast.warning(`Maximum ${MAX_CHAT_IMAGE_ATTACHMENTS} screenshots can be attached.`);
+        toast.warning(`Maximum ${MAX_CHAT_IMAGE_ATTACHMENTS} images can be attached.`);
         return;
       }
 
@@ -842,35 +828,19 @@ export function workspaceScreen() {
         .slice(0, slots);
 
       if (valid.length < selected.length) {
-        toast.warning(`Ignored oversized screenshots. Max ${Math.floor(MAX_CHAT_IMAGE_BYTES / (1024 * 1024))}MB each.`);
+        toast.warning(`Ignored oversized images. Max ${Math.floor(MAX_CHAT_IMAGE_BYTES / (1024 * 1024))}MB each.`);
       }
 
       for (const file of valid) {
         try {
           const dataUrl = await readFileAsDataUrl(file);
-          pendingImages.push({ name: file.name || 'Screenshot', dataUrl });
+          pendingImages.push({ name: file.name || 'Image', dataUrl });
         } catch {
           // Ignore individual file failures and continue.
         }
       }
 
       renderAttachmentState();
-    };
-
-    const addTextFiles = async (files) => {
-      const selected = Array.from(files || []).filter((file) => {
-        const type = String(file.type || '').toLowerCase();
-        return type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name || '');
-      });
-
-      for (const file of selected.slice(0, 4)) {
-        try {
-          const text = await readFileAsText(file);
-          addTextSnippet(file.name || 'Attachment', text);
-        } catch {
-          // Ignore individual file failures and continue.
-        }
-      }
     };
 
     // Chat
@@ -905,7 +875,7 @@ export function workspaceScreen() {
     async function sendMessage(text) {
       const trimmedText = text.trim();
       const hasUiContext = pendingUiContextEvents.length > 0;
-      if ((!trimmedText && !pendingImages.length && !pendingTextSnippets.length && !hasUiContext) || isChatPending) return;
+      if ((!trimmedText && !pendingImages.length && !hasUiContext) || isChatPending) return;
       isChatPending = true;
       const userVisibleText = trimmedText
         || (hasUiContext ? 'Applied queued interactive edits for this request.' : 'Added attachment context for this request.');
@@ -927,14 +897,6 @@ export function workspaceScreen() {
 
       try {
         const attachmentPayload = [];
-        pendingTextSnippets.forEach((entry) => {
-          attachmentPayload.push({
-            type: 'text_snippet',
-            name: entry.label,
-            text: entry.text,
-          });
-        });
-
         if (pendingImages.length) {
           try {
             const activeField = formData?.questions?.find((entry) => String(entry?.id) === String(getState().activeQuestionId));
@@ -1023,7 +985,6 @@ export function workspaceScreen() {
     attachInput?.addEventListener('change', async () => {
       const files = Array.from(attachInput.files || []);
       await addImageFiles(files);
-      await addTextFiles(files);
       attachInput.value = '';
     });
 
@@ -1040,13 +1001,6 @@ export function workspaceScreen() {
         return;
       }
 
-      const pastedText = event?.clipboardData?.getData('text/plain') || '';
-      if (pastedText.length > 180 && /\n/.test(pastedText)) {
-        event.preventDefault();
-        if (addTextSnippet('Pasted snippet', pastedText)) {
-          toast.info('Attached pasted text snippet.');
-        }
-      }
     });
 
     btnVoice?.addEventListener('click', async () => {
