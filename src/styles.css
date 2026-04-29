@@ -1122,7 +1122,11 @@ input[type="range"]:active::-moz-range-thumb {
   min-width: 44px;
   width: 44px;
   height: 44px;
-  padding: 0;
+  padding: 0 0.75rem;
+  gap: 0.38rem;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: width var(--fm-transition-normal), transform var(--fm-transition-fast), box-shadow var(--fm-transition-fast), background-color var(--fm-transition-fast), border-color var(--fm-transition-fast), color var(--fm-transition-fast), opacity var(--fm-transition-fast);
 }
 
 .zen-mode-menu-wrap {
@@ -1138,14 +1142,35 @@ input[type="range"]:active::-moz-range-thumb {
   background: rgba(255, 255, 255, 0.88);
   color: var(--fm-text);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-  transition: transform var(--fm-transition-fast), box-shadow var(--fm-transition-fast), background-color var(--fm-transition-fast), border-color var(--fm-transition-fast);
 }
 
 .zen-mode-menu-btn:hover {
+  width: 88px;
   transform: translateY(-1px);
   border-color: var(--fm-interactive-strike-strong);
   background: rgba(255, 255, 255, 0.97);
   box-shadow: var(--fm-interactive-glow-soft);
+}
+
+.zen-mode-fab-label {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1;
+  transition: max-width var(--fm-transition-normal), opacity var(--fm-transition-fast);
+}
+
+.zen-mode-exit-btn:hover {
+  width: 122px;
+}
+
+.zen-mode-exit-btn:hover .zen-mode-fab-label,
+.zen-mode-menu-btn:hover .zen-mode-fab-label {
+  max-width: 5.5rem;
+  opacity: 1;
 }
 
 .zen-mode-menu {

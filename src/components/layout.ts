@@ -32,6 +32,7 @@ const ZEN_SCREEN_ICONS = {
   'workspace': 'description',
   'vault': 'shield',
 };
+const ZEN_MENU_ORDER = ['new', 'dashboard', 'workspace', 'history', 'ai-chat', 'vault'];
 
 /**
  * Register the account modal opener. Called once during app boot after modal init.
@@ -130,18 +131,16 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
 
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
-  const rawTargets = [...SUPPORTED_ZEN_SCREENS]
-    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace());
-  const switchTargets = rawTargets
-    .filter((candidate) => candidate !== 'new')
-    .concat(rawTargets.includes('new') ? ['new'] : [])
+  const switchTargets = ZEN_MENU_ORDER
+    .filter((candidate) => SUPPORTED_ZEN_SCREENS.has(candidate))
+    .filter((candidate) => candidate !== 'workspace' || hasActiveWorkspace())
     .map((candidate) => {
       const isCurrent = candidate === screenId;
       const isPrimaryAction = candidate === 'new';
       return `
       <button
         type="button"
-        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''} ${isPrimaryAction ? 'zen-mode-menu-item-primary zen-mode-menu-item-separate' : ''}"
+        class="zen-mode-menu-item ${isCurrent ? 'is-current' : ''} ${isPrimaryAction ? 'zen-mode-menu-item-primary' : ''}"
         data-zen-target="${escapeHtml(candidate)}"
         aria-current="${isCurrent ? 'page' : 'false'}"
         aria-label="${escapeHtml(ZEN_SCREEN_LABELS[candidate] || candidate)}${isCurrent ? ' (Current)' : ''}"
@@ -163,6 +162,7 @@ function getZenModeExitButtonHtml(screenId) {
         aria-label="Exit Zen Mode"
       >
         <span class="material-symbols-outlined">close</span>
+        <span class="zen-mode-fab-label">Close Zen</span>
       </button>
 
       <div class="zen-mode-menu-wrap">
@@ -175,6 +175,7 @@ function getZenModeExitButtonHtml(screenId) {
           aria-expanded="false"
         >
           <span class="material-symbols-outlined">menu</span>
+          <span class="zen-mode-fab-label">Menu</span>
         </button>
 
         <div id="zen-mode-menu" class="zen-mode-menu" hidden>
