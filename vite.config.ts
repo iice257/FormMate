@@ -9,6 +9,7 @@ export default defineConfig({
     preserveSymlinks: true,
   },
   server: {
+    host: process.env.VITE_DEV_HOST || undefined,
     port: 5173,
     strictPort: process.env.VITE_STRICT_PORT === '1',
     open: false,

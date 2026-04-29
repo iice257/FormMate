@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const children = [];
 const API_HOST = '127.0.0.1';
+const API_BIND_HOST = String(process.env.FORMMATE_API_BIND_HOST || API_HOST).trim() || API_HOST;
 const API_VERSION = '2026-04-18.1';
 const DEFAULT_API_PORT = 3000;
 const API_PORT_CANDIDATES = [DEFAULT_API_PORT, 3001, 3002, 3003];
@@ -134,7 +135,7 @@ if (selectedApiPort === null) {
   for (const candidatePort of API_PORT_CANDIDATES) {
     const backendChild = run(['run', 'dev:api-local'], {
       ...backendEnv,
-      FORMMATE_API_HOST: API_HOST,
+      FORMMATE_API_HOST: API_BIND_HOST,
       FORMMATE_API_PORT: String(candidatePort),
     }, { propagateExitCode: false });
 

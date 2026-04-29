@@ -11,6 +11,7 @@
     "dev:stack": "node scripts/dev-stack.mjs",
     "build": "node scripts/check-required-env.mjs && vite build --configLoader native",
     "preview": "vite preview --configLoader native",
+    "start:docker": "tsx scripts/docker-prod-server.ts",
     "env:pull": "vercel env pull .env.local --yes",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:request-security",
