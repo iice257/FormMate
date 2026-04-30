@@ -152,7 +152,7 @@ export function aiChatScreen() {
         <div class="detached-sidebar-header">
           <div class="detached-sidebar-heading-group">
             <span class="detached-sidebar-title">Chats</span>
-            <button type="button" class="detached-sidebar-icon-btn" aria-label="Search chats" title="Search chats">
+            <button id="btn-search-chat-sidebar" type="button" class="detached-sidebar-icon-btn" aria-label="Search chats" title="Search chats">
               <span class="material-symbols-outlined">search</span>
             </button>
           </div>
@@ -160,6 +160,10 @@ export function aiChatScreen() {
             <span>Hide</span>
             <span class="material-symbols-outlined">right_panel_close</span>
           </button>
+        </div>
+        <div id="chat-sidebar-search-row" class="chat-sidebar-search-row" hidden>
+          <span class="material-symbols-outlined">search</span>
+          <input id="chat-sidebar-search" type="search" placeholder="Search chats..." autocomplete="off" aria-label="Search chat titles and messages" />
         </div>
         <div style="display: flex; align-items: center; gap: 0.6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--fm-border-light); margin-bottom: 1rem;">
           <img src="${escapeAttr(avatarSrc)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;" alt="Avatar" />
@@ -205,6 +209,10 @@ export function aiChatScreen() {
     const rightSidebarResizer = wrapper.querySelector('#chat-right-sidebar .detached-sidebar-resizer');
     const showSidebarBtn = wrapper.querySelector('#btn-show-chat-sidebar');
     const hideSidebarBtn = wrapper.querySelector('#btn-hide-chat-sidebar');
+    const searchSidebarBtn = wrapper.querySelector('#btn-search-chat-sidebar');
+    const searchSidebarRow = wrapper.querySelector('#chat-sidebar-search-row');
+    const searchSidebarInput = wrapper.querySelector('#chat-sidebar-search');
+    const sessionsList = wrapper.querySelector('#sessions-list');
     const cleanupSidebarControls = [];
     const setRightSidebarOpen = (open) => {
       if (!rightSidebar) return;
@@ -274,6 +282,7 @@ export function aiChatScreen() {
     let isChatPending = false;
     let chatHistory = [];
     let sessionList = Array.isArray(sessions) ? [...sessions] : [];
+    let currentSessionSearchText = '';
     let pendingImages = [];
     let pendingUiContextEvents = [];
     let followUpSuggestions = getDefaultFollowUps(AI_SURFACES.AI_CHAT, formData?.title || '');
@@ -397,6 +406,7 @@ export function aiChatScreen() {
       const nextSession = {
         id: sessionList[0]?.id || `session-${Date.now()}`,
         title: baseTitle.length > 60 ? `${baseTitle.slice(0, 57)}...` : baseTitle,
+        searchableText: currentSessionSearchText.slice(-4000),
         updatedAt: new Date().toISOString(),
       };
 
@@ -405,6 +415,30 @@ export function aiChatScreen() {
         .slice(0, 8);
 
       saveSessions(sessionList);
+      renderSessionList(searchSidebarInput?.value || '');
+    }
+
+    function renderSessionList(query = '') {
+      const normalizedQuery = String(query || '').trim().toLowerCase();
+      const matches = sessionList
+        .filter((session) => {
+          if (!normalizedQuery) return true;
+          return `${session.title || ''} ${session.searchableText || ''}`.toLowerCase().includes(normalizedQuery);
+        })
+        .slice(0, 8);
+
+      if (!sessionsList) return;
+      if (!matches.length) {
+        sessionsList.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; font-style: italic; padding: 0.5rem;">${normalizedQuery ? 'No matching chats' : 'No recent chats'}</div>`;
+        return;
+      }
+
+      sessionsList.innerHTML = matches.map((session) => `
+        <button class="session-item" data-session-id="${escapeAttr(session.id)}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.65rem; border: none; background: none; border-radius: var(--fm-radius-sm); cursor: pointer; text-align: left; font-family: var(--fm-font-sans); width: 100%; color: var(--fm-text); transition: background 0.15s;">
+          <span class="material-symbols-outlined" style="font-size: 18px; color: #94a3b8;">chat_bubble_outline</span>
+          <span style="font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(session.title || `Chat ${String(session.id || '').substring(0, 4)}`)}</span>
+        </button>
+      `).join('');
     }
 
     function appendBubble(role, text) {
@@ -456,6 +490,7 @@ export function aiChatScreen() {
       const modelMessage = buildMessageWithUiContext(trimmed, pendingUiContextEvents);
       appendBubble('user', userVisibleText);
       addChatMessage('user', userVisibleText);
+      currentSessionSearchText = `${currentSessionSearchText}\nuser: ${userVisibleText}`.trim();
       chatHistory.push({ role: 'user', content: modelMessage || userVisibleText });
       persistCurrentSession(userVisibleText);
 
@@ -520,7 +555,9 @@ export function aiChatScreen() {
         typingEl.remove();
         appendBubble('assistant', displayResponse);
         addChatMessage('assistant', displayResponse);
+        currentSessionSearchText = `${currentSessionSearchText}\nassistant: ${displayResponse}`.trim();
         chatHistory.push({ role: 'assistant', content: displayResponse });
+        persistCurrentSession(userVisibleText);
         clearPendingAttachments();
         clearUiContextQueue();
       } catch (error) {
@@ -622,7 +659,10 @@ export function aiChatScreen() {
     wrapper.querySelector('#btn-new-chat')?.addEventListener('click', () => {
       chatHistory = [];
       sessionList = [];
+      currentSessionSearchText = '';
       saveSessions(sessionList);
+      renderSessionList('');
+      if (searchSidebarInput) searchSidebarInput.value = '';
       followUpSuggestions = getDefaultFollowUps(AI_SURFACES.AI_CHAT, formData?.title || '');
       clearUiContextQueue();
       renderFollowUps();
@@ -630,6 +670,17 @@ export function aiChatScreen() {
       chatMessages.style.justifyContent = 'center';
       chatMessages.style.alignItems = 'center';
       chatMessages.appendChild(emptyState || document.createTextNode(''));
+    });
+
+    searchSidebarBtn?.addEventListener('click', () => {
+      if (!searchSidebarRow || !searchSidebarInput) return;
+      searchSidebarRow.hidden = false;
+      searchSidebarInput.focus();
+      renderSessionList(searchSidebarInput.value || '');
+    });
+
+    searchSidebarInput?.addEventListener('input', () => {
+      renderSessionList(searchSidebarInput.value || '');
     });
 
     return () => {

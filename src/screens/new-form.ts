@@ -2,7 +2,7 @@
 // FormMate - New Form Screen
 
 import { getState, setState } from '../state';
-import { getHomeScreenForUser, navigateTo, goBack } from '../router';
+import { canGoBackWithinApp, getHomeScreenForUser, navigateTo, goBack, goBackWithinApp } from '../router';
 import { normalizeSubmittedFormUrl } from '../parser/url-intake';
 import { toast } from '../components/toast';
 import { initAurora } from './Aurora';
@@ -26,17 +26,17 @@ export function newFormScreen() {
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg btn-press" id="btn-login">Sign In</button>`;
 
   const zenActive = isZenModeEnabled('new');
-  const showZenSubtitle = !zenActive || Boolean(String(formUrl || '').trim());
+  const showZenBack = zenActive && canGoBackWithinApp('new');
 
   const html = `
     <div class="relative flex h-screen w-full flex-col overflow-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
       <button
         type="button"
         id="btn-zen-back"
-        class="zen-mode-back-btn ${zenActive ? 'visible' : ''}"
+        class="zen-mode-back-btn ${showZenBack ? 'visible' : ''}"
         aria-label="Go back"
         title="Back"
-        ${zenActive ? '' : 'hidden'}
+        ${showZenBack ? '' : 'hidden'}
       >
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
@@ -82,7 +82,6 @@ export function newFormScreen() {
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-tight tracking-tight zen-new-form-copy">
               Enter your form <span class="text-link-gradient animate-gradient-x">link</span>
             </h1>
-            ${showZenSubtitle ? `<p class="new-form-hero-subtitle">Paste form link to analyze</p>` : ''}
           </div>
 
           <div class="w-full max-w-2xl mx-auto relative z-20 zen-new-form-form">
@@ -157,7 +156,13 @@ export function newFormScreen() {
       }
       zenEnabled = nextEnabled;
     };
-    const handleZenExitAsBack = (event) => {
+    const handleZenExit = (event) => {
+      if (!isZenModeEnabled('new')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      updateZenMode('new', false);
+    };
+    const handleZenBack = (event) => {
       if (!isZenModeEnabled('new')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -165,10 +170,10 @@ export function newFormScreen() {
         updateZenMode('new', false);
         return;
       }
-      goBack();
+      goBackWithinApp();
     };
-    btnZenBack?.addEventListener('click', handleZenExitAsBack, true);
-    btnZenExit?.addEventListener('click', handleZenExitAsBack, true);
+    btnZenBack?.addEventListener('click', handleZenBack, true);
+    btnZenExit?.addEventListener('click', handleZenExit, true);
     window.addEventListener('fm:zen-mode-change', handleZenModeChanged);
 
     btnBack.addEventListener('click', () => goBack());
@@ -201,8 +206,8 @@ export function newFormScreen() {
     wrapper.querySelector('#btn-profile')?.addEventListener('click', () => openAccountModal('profile'));
 
     return () => {
-      btnZenBack?.removeEventListener('click', handleZenExitAsBack, true);
-      btnZenExit?.removeEventListener('click', handleZenExitAsBack, true);
+      btnZenBack?.removeEventListener('click', handleZenBack, true);
+      btnZenExit?.removeEventListener('click', handleZenExit, true);
       window.removeEventListener('fm:zen-mode-change', handleZenModeChanged);
       cleanupZen?.();
       cleanupAurora?.();

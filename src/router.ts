@@ -601,3 +601,26 @@ export function goBack() {
     });
   }
 }
+
+export function canGoBackWithinApp(currentScreenOverride?: string) {
+  const currentScreen = normalizeScreenName(currentScreenOverride || getState().currentScreen);
+  const previousScreen = normalizeScreenName(window.__fmPreviousScreen);
+  if (!previousScreen || previousScreen === currentScreen) return false;
+  if (currentScreen === 'dashboard') return false;
+  return APP_SHELL_SCREENS.has(previousScreen);
+}
+
+export function goBackWithinApp() {
+  if (canGoBackWithinApp()) {
+    window.history.back();
+    return;
+  }
+
+  navigateTo(getDashboardActionScreenForUser(), {
+    replace: true,
+    direction: 'back',
+    source: 'browser',
+    transition: 'page',
+    scroll: 'restore',
+  });
+}

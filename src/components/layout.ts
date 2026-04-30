@@ -3,7 +3,7 @@
 
 
 import { getState, setState } from '../state';
-import { getHomeScreenForUser, goBack, navigateTo } from '../router';
+import { canGoBackWithinApp, getHomeScreenForUser, goBackWithinApp, navigateTo } from '../router';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { executeAction, searchActions } from '../actions/action-index';
@@ -131,6 +131,7 @@ export function getZenModeToggleHtml(screenId, { label = 'Zen', variant = 'heade
 
 function getZenModeExitButtonHtml(screenId) {
   const isActive = isZenModeEnabled(screenId);
+  const showBack = isActive && canGoBackWithinApp(screenId);
   const buildZenMenuItem = (candidate, extraClass = '') => {
     const isCurrent = candidate === screenId;
     return `
@@ -161,10 +162,10 @@ function getZenModeExitButtonHtml(screenId) {
     <button
       type="button"
       id="btn-zen-back"
-      class="zen-mode-back-btn ${isActive ? 'visible' : ''}"
+      class="zen-mode-back-btn ${showBack ? 'visible' : ''}"
       aria-label="Go back"
       title="Back"
-      ${isActive ? '' : 'hidden'}
+      ${showBack ? '' : 'hidden'}
     >
       <span class="material-symbols-outlined">arrow_back</span>
     </button>
@@ -199,16 +200,7 @@ function getZenModeExitButtonHtml(screenId) {
           <div class="zen-mode-menu-group" aria-label="Main pages">
             ${switchTargets}
           </div>
-          <div class="zen-mode-menu-group zen-mode-menu-group-account" aria-label="Account actions">
-            <button
-              type="button"
-              class="zen-mode-menu-item"
-              data-zen-profile="true"
-              aria-label="Open profile"
-            >
-              <span class="material-symbols-outlined zen-mode-menu-item-icon">account_circle</span>
-              <span class="zen-mode-menu-item-label">Profile</span>
-            </button>
+          <div class="zen-mode-menu-group zen-mode-menu-group-account" aria-label="Settings">
             <button
               type="button"
               class="zen-mode-menu-item"
@@ -217,15 +209,6 @@ function getZenModeExitButtonHtml(screenId) {
             >
               <span class="material-symbols-outlined zen-mode-menu-item-icon">settings</span>
               <span class="zen-mode-menu-item-label">Settings</span>
-            </button>
-            <button
-              type="button"
-              class="zen-mode-menu-item"
-              data-zen-help="true"
-              aria-label="Open help"
-            >
-              <span class="material-symbols-outlined zen-mode-menu-item-icon">help</span>
-              <span class="zen-mode-menu-item-label">Help</span>
             </button>
           </div>
         </div>
@@ -270,9 +253,7 @@ export function bindZenModeControls(wrapper, zenMode) {
   const zenMenuBtn = wrapper.querySelector('#btn-zen-menu');
   const zenMenu = wrapper.querySelector('#zen-mode-menu');
   const zenMenuItems = wrapper.querySelectorAll('[data-zen-target]');
-  const zenProfileBtn = wrapper.querySelector('[data-zen-profile="true"]');
   const zenSettingsBtn = wrapper.querySelector('[data-zen-settings="true"]');
-  const zenHelpBtn = wrapper.querySelector('[data-zen-help="true"]');
 
   const syncZenUi = (enabled) => {
     zenShell?.classList.toggle('is-zen-mode', enabled);
@@ -293,8 +274,9 @@ export function bindZenModeControls(wrapper, zenMode) {
     }
 
     if (zenBackBtn) {
-      zenBackBtn.hidden = !enabled;
-      zenBackBtn.classList.toggle('visible', enabled);
+      const showBack = enabled && canGoBackWithinApp(zenScreenId);
+      zenBackBtn.hidden = !showBack;
+      zenBackBtn.classList.toggle('visible', showBack);
     }
 
     if (zenFabStack) {
@@ -322,7 +304,7 @@ export function bindZenModeControls(wrapper, zenMode) {
   const handleZenExit = () => setZenMode(false);
   const handleZenBack = () => {
     closeZenMenu();
-    goBack();
+    goBackWithinApp();
   };
   const handleZenMenuToggle = () => {
     if (!zenMenu || !zenMenuBtn) return;
@@ -364,14 +346,6 @@ export function bindZenModeControls(wrapper, zenMode) {
     closeZenMenu();
     openAccountModal('settings');
   };
-  const handleZenProfileClick = () => {
-    closeZenMenu();
-    openAccountModal('profile');
-  };
-  const handleZenHelpClick = () => {
-    closeZenMenu();
-    openAccountModal('help');
-  };
   const handleZenMenuClickAway = (event) => {
     if (!zenMenu || !zenMenuBtn) return;
     const target = event.target;
@@ -402,9 +376,7 @@ export function bindZenModeControls(wrapper, zenMode) {
       });
     });
   });
-  zenProfileBtn?.addEventListener('click', handleZenProfileClick);
   zenSettingsBtn?.addEventListener('click', handleZenSettingsClick);
-  zenHelpBtn?.addEventListener('click', handleZenHelpClick);
   document.addEventListener('keydown', handleEscape);
   document.addEventListener('click', handleZenMenuClickAway);
   window.addEventListener(ZEN_MODE_EVENT, handleZenChange);
@@ -417,9 +389,7 @@ export function bindZenModeControls(wrapper, zenMode) {
     zenBackBtn?.removeEventListener('click', handleZenBack);
     zenExitBtn?.removeEventListener('click', handleZenExit);
     zenMenuBtn?.removeEventListener('click', handleZenMenuToggle);
-    zenProfileBtn?.removeEventListener('click', handleZenProfileClick);
     zenSettingsBtn?.removeEventListener('click', handleZenSettingsClick);
-    zenHelpBtn?.removeEventListener('click', handleZenHelpClick);
     document.removeEventListener('keydown', handleEscape);
     document.removeEventListener('click', handleZenMenuClickAway);
     window.removeEventListener(ZEN_MODE_EVENT, handleZenChange);
@@ -632,6 +602,9 @@ export function initLayout(wrapper, options = {}) {
 
   links.forEach(link => {
     wrapper.querySelector(`#${link.id}`)?.addEventListener('click', () => {
+      if (options.zenMode?.screenId && isZenModeEnabled(options.zenMode.screenId)) {
+        updateZenMode(options.zenMode.screenId, false);
+      }
       navigateTo(link.route, {
         source: 'sidebar',
         transition: 'shell',
@@ -640,6 +613,9 @@ export function initLayout(wrapper, options = {}) {
     });
     wrapper.querySelector(`#nav-mobile-${link.route}`)?.addEventListener('click', () => {
       closeMobileMenu();
+      if (options.zenMode?.screenId && isZenModeEnabled(options.zenMode.screenId)) {
+        updateZenMode(options.zenMode.screenId, false);
+      }
       navigateTo(link.route, {
         source: 'sidebar',
         transition: 'shell',
@@ -667,6 +643,9 @@ export function initLayout(wrapper, options = {}) {
   });
 
   wrapper.querySelector('#btn-header-new-form')?.addEventListener('click', () => {
+    if (options.zenMode?.screenId && isZenModeEnabled(options.zenMode.screenId)) {
+      updateZenMode(options.zenMode.screenId, false);
+    }
     navigateTo('new');
   });
 

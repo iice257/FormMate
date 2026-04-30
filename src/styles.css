@@ -41,6 +41,7 @@ body {
 /* Material Symbols icon styling */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
 }
 
 /* Smooth transitions for all interactive elements */
@@ -62,6 +63,13 @@ a,
 [data-route],
 summary {
   cursor: pointer;
+}
+
+[data-legal-nav],
+[data-docs-nav],
+.docs-home-button,
+#btn-login {
+  white-space: nowrap;
 }
 
 button:disabled,
@@ -1139,7 +1147,21 @@ input[type="range"]:active::-moz-range-thumb {
   gap: 0.38rem;
   overflow: hidden;
   white-space: nowrap;
+  align-items: center;
+  justify-content: center;
   transition: transform var(--fm-transition-fast), box-shadow var(--fm-transition-fast), background-color var(--fm-transition-fast), border-color var(--fm-transition-fast), color var(--fm-transition-fast), opacity var(--fm-transition-fast);
+}
+
+.zen-mode-back-btn .material-symbols-outlined,
+.zen-mode-exit-btn .material-symbols-outlined,
+.zen-mode-menu-btn .material-symbols-outlined {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .zen-mode-back-btn {
@@ -1162,10 +1184,18 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 .zen-mode-menu-btn:hover {
+  width: 92px;
+  padding-inline: 0.72rem;
   transform: translateY(-1px);
   border-color: var(--fm-interactive-strike-strong);
   background: rgba(255, 255, 255, 0.97);
   box-shadow: var(--fm-interactive-glow-soft);
+}
+
+.zen-mode-menu-btn[aria-expanded="true"],
+.zen-mode-menu-btn[aria-expanded="true"]:hover {
+  width: 42px;
+  padding-inline: 0;
 }
 
 .zen-mode-fab-label {
@@ -1189,11 +1219,22 @@ input[type="range"]:active::-moz-range-thumb {
   opacity: 1;
 }
 
+.zen-mode-menu-btn:hover .zen-mode-fab-label {
+  max-width: 2.8rem;
+  opacity: 1;
+}
+
+.zen-mode-menu-btn[aria-expanded="true"] .zen-mode-fab-label,
+.zen-mode-menu-btn[aria-expanded="true"]:hover .zen-mode-fab-label {
+  max-width: 0;
+  opacity: 0;
+}
+
 .zen-mode-menu {
   position: absolute;
   top: calc(100% + 0.55rem);
   right: 0;
-  min-width: 176px;
+  min-width: 154px;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1233,13 +1274,13 @@ input[type="range"]:active::-moz-range-thumb {
 
 .zen-mode-menu-item {
   display: grid;
-  grid-template-columns: 1.15rem minmax(0, 1fr);
+  grid-template-columns: 1rem minmax(0, 1fr);
   align-items: center;
   justify-items: center;
   gap: 0.5rem;
   width: 100%;
   min-height: 2.35rem;
-  padding: 0.48rem 0.62rem;
+  padding: 0.46rem 0.55rem;
   border: 1px solid transparent;
   border-radius: 0.82rem;
   background: transparent;
@@ -3123,6 +3164,7 @@ input[type="range"]:active::-moz-range-thumb {
 .detached-sidebar-heading-group {
   display: inline-flex;
   align-items: center;
+  justify-self: start;
   min-width: 0;
   width: fit-content;
   max-width: 100%;
@@ -3149,8 +3191,8 @@ input[type="range"]:active::-moz-range-thumb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -3184,6 +3226,7 @@ input[type="range"]:active::-moz-range-thumb {
   font-size: 0.72rem;
   font-weight: 800;
   height: 32px;
+  min-width: 32px;
   padding: 0 0.7rem;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
@@ -3203,6 +3246,35 @@ input[type="range"]:active::-moz-range-thumb {
 
 .detached-sidebar-show-btn.is-visible {
   display: inline-flex;
+}
+
+.chat-sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  margin: 0.75rem 0 0.85rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--fm-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #94a3b8;
+}
+
+.chat-sidebar-search-row .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.chat-sidebar-search-row input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--fm-text);
+  font-size: 0.78rem;
+  font-weight: 650;
+  outline: 0;
+  box-shadow: none;
 }
 
 
