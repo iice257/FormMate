@@ -146,7 +146,7 @@ function writeStoredSession(session, options = {}) {
 }
 
 export function isDevAuthEnabled() {
-  return Boolean(import.meta.env.DEV);
+  return Boolean(import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production');
 }
 
 function getLocalStorage() {
@@ -209,7 +209,7 @@ export function getRequestAuthHeaders() {
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  if (session?.devOnly && isDevAuthEnabled()) {
+  if ((session?.devOnly || !session) && isDevAuthEnabled()) {
     headers['X-FormMate-Dev-Auth'] = '1';
   }
 

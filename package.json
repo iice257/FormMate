@@ -14,9 +14,10 @@
     "start:docker": "tsx scripts/docker-prod-server.ts",
     "env:pull": "vercel env pull .env.local --yes",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:request-security",
+    "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:parser-buckets && npm run test:request-security",
     "test:chat-contract": "tsx tests/chat-contract.ts",
     "test:parser-fixtures": "tsx tests/parser-fixtures.ts",
+    "test:parser-buckets": "tsx tests/parser-buckets.ts",
     "test:request-security": "tsx tests/request-security.ts",
     "test:e2e": "playwright test",
     "test:storage": "npx tsx test-local-store.ts"

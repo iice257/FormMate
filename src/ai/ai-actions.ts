@@ -11,6 +11,7 @@ import { AI_SURFACES, generateText, generateJson, getAiErrorMessage, isRetryable
 import { getState } from '../state';
 import { categorizeField } from './field-classifier';
 import { buildSystemPrompt } from './system-prompts';
+import { FILL_BUCKET } from '../parser/fill-plan';
 
 // ─── HTML Form Parsing (Scraping Transition) ─
 
@@ -94,6 +95,83 @@ Extraction Rules:
 }
 
 // ─── Form Analysis (Field Categorization) ────
+
+/**
+ * Optional ambiguity judge for already-extracted fields.
+ * It never extracts structure; it can only re-bucket weak/uncertain fields.
+ */
+export async function classifyAmbiguousFieldBuckets(questions, context = {}) {
+  const { settings } = getState();
+  if (settings?.parser?.useAiAmbiguityJudge !== true) return questions;
+
+  const items = (Array.isArray(questions) ? questions : [])
+    .map((question, index) => ({ question, index }))
+    .filter(({ question }) => {
+      const hints = question?.parserHints || {};
+      return hints.fillBucket === FILL_BUCKET.UNCERTAIN || Number(hints.bucketConfidence || 0) < 0.6;
+    })
+    .slice(0, 12);
+
+  if (!items.length) return questions;
+
+  const messages = [
+    {
+      role: 'system',
+      content: `You classify already-extracted form fields into fill-plan buckets.
+Return valid JSON only: {"fields":[{"index":0,"fillBucket":"profile_fillable|ai_draftable|manual|uncertain","bucketReason":"short reason","bucketConfidence":0.0}]}
+Do not invent fields. Do not answer fields. Use manual for legal, salary, file, choice, consent, date, eligibility, or sensitive fields. Use uncertain when the label is weak.`
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        formTitle: context.title || '',
+        sourceUrl: context.url || '',
+        fields: items.map(({ question, index }) => ({
+          index,
+          label: question?.text || '',
+          type: question?.type || '',
+          options: Array.isArray(question?.options) ? question.options.slice(0, 12) : [],
+          currentReason: question?.parserHints?.bucketReason || '',
+        })),
+      })
+    }
+  ];
+
+  const parsed = await generateJson({
+    task: 'field_bucket_classification',
+    surface: AI_SURFACES.ANALYZING,
+    messages,
+    temperature: 0.1,
+    maxTokens: 1200,
+  });
+
+  const validBuckets = new Set(Object.values(FILL_BUCKET));
+  const byIndex = new Map();
+  (Array.isArray(parsed?.fields) ? parsed.fields : []).forEach((entry) => {
+    const index = Number(entry?.index);
+    const fillBucket = String(entry?.fillBucket || '');
+    if (Number.isInteger(index) && validBuckets.has(fillBucket)) {
+      byIndex.set(index, {
+        fillBucket,
+        bucketReason: String(entry?.bucketReason || 'AI ambiguity judge classified this field.').slice(0, 180),
+        bucketConfidence: Math.max(0, Math.min(1, Number(entry?.bucketConfidence || 0.62))),
+        bucketJudgedBy: 'ai',
+      });
+    }
+  });
+
+  return questions.map((question, index) => {
+    const judged = byIndex.get(index);
+    if (!judged) return question;
+    return {
+      ...question,
+      parserHints: {
+        ...(question?.parserHints || {}),
+        ...judged,
+      },
+    };
+  });
+}
 
 /**
  * Pre-analyze the form to categorize fields: autofillable, generatable, manual-only.
@@ -324,9 +402,25 @@ export async function processChatMessage(userMessage, formContext, history = [],
     content: msg.content
   }));
 
-  const schemaContext = formQuestions.length ? formQuestions.map(q =>
-    `- [ID: ${q.id}] ${q.text} (Type: ${q.type}, Current Answer: ${answers?.[q.id]?.text || 'None'})`
-  ).join('\n') : '';
+  const schemaContext = formQuestions.length ? formQuestions.map((q) => {
+    const hints = q?.parserHints || {};
+    const bucket = hints.fillBucket || 'unknown';
+    const bucketReason = hints.bucketReason ? `, Bucket Reason: ${hints.bucketReason}` : '';
+    const bucketConfidence = Number.isFinite(Number(hints.bucketConfidence))
+      ? `, Bucket Confidence: ${Math.round(Number(hints.bucketConfidence) * 100)}%`
+      : '';
+    return `- [ID: ${q.id}] ${q.text} (Type: ${q.type}, Fill Bucket: ${bucket}${bucketConfidence}${bucketReason}, Current Answer: ${answers?.[q.id]?.text || 'None'})`;
+  }).join('\n') : '';
+
+  const fillPlanSummary = safeFormContext.fillPlanSummary || safeFormContext.diagnostics?.fillPlanSummary || null;
+  const fillPlanContext = fillPlanSummary ? [
+    `Fill Plan Summary:`,
+    `- Total fields: ${fillPlanSummary.total ?? formQuestions.length}`,
+    `- Profile-fillable: ${fillPlanSummary.profileFillable ?? 0}`,
+    `- AI-draftable: ${fillPlanSummary.aiDraftable ?? 0}`,
+    `- Manual: ${fillPlanSummary.manual ?? 0}`,
+    `- Uncertain: ${fillPlanSummary.uncertain ?? 0}`,
+  ].join('\n') : '';
 
   const writingStyle = userProfile?.preferredTone || personality || 'professional';
 
@@ -345,6 +439,7 @@ If they ask about "this field", they are referring to this one.` : '';
 
   const contextHints = [
     schemaContext ? `Form Schema:\n${schemaContext}` : '',
+    fillPlanContext,
     profileContext,
     activeFieldContext,
     `Writing Style: ${writingStyle}`,
@@ -370,7 +465,14 @@ If they ask about "this field", they are referring to this one.` : '';
         formTitle: formContext?.title || '',
         activeFieldId: activeFieldId || '',
         activeFieldText: formQuestions.find((entry) => String(entry?.id) === String(activeFieldId))?.text || '',
-        formQuestions: formQuestions.map((entry) => ({ id: entry.id, text: entry.text, type: entry.type })),
+        fillPlanSummary: fillPlanSummary || undefined,
+        formQuestions: formQuestions.map((entry) => ({
+          id: entry.id,
+          text: entry.text,
+          type: entry.type,
+          fillBucket: entry?.parserHints?.fillBucket || '',
+          bucketReason: entry?.parserHints?.bucketReason || '',
+        })),
         conversationHints: contextHints,
       },
       attachments,

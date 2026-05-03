@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { MOCK_FORMS } from './mock-forms';
-import { parseFormHtml } from '../ai/ai-actions';
+import { classifyAmbiguousFieldBuckets } from '../ai/ai-actions';
 import { getRequestAuthHeaders } from '../auth/auth-service';
 import { legacyFormDataToCanonical, toLegacyFormData } from './compat';
+import { enrichLegacyFormDataWithFillPlan } from './fill-plan';
 import { createBaseParseEnvelope, createParserMessage } from './status';
 import {
   BLOCKED_REASON,
@@ -25,6 +26,8 @@ const HARD_CAPTURE_PROVIDERS = new Set([
   PROVIDER_TYPE.WORKDAY,
 ]);
 
+const DOCUMENT_URL_PATTERN = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(?:[?#].*)?$/i;
+
 function createParseError(code, message, details = {}) {
   const err = new Error(message);
   err.code = code;
@@ -38,6 +41,15 @@ function isDemoUrl(url) {
 
 function getDemoId(url) {
   return String(url || '').slice('demo://'.length).trim();
+}
+
+function isDocumentUrl(url) {
+  try {
+    const parsed = new URL(String(url || ''));
+    return DOCUMENT_URL_PATTERN.test(parsed.pathname);
+  } catch {
+    return DOCUMENT_URL_PATTERN.test(String(url || ''));
+  }
 }
 
 export function extractGoogleFormId(url) {
@@ -109,7 +121,7 @@ function parseFbPublicLoadData(dataString) {
 
 function attachLegacyMetadata(legacyFormData, { sourceUrl, provider, parseStrategy, outcome, diagnostics }) {
   if (!legacyFormData) return null;
-  return {
+  return enrichLegacyFormDataWithFillPlan({
     ...legacyFormData,
     url: legacyFormData.url || sourceUrl,
     source: legacyFormData.source || getProviderLabel(provider),
@@ -133,7 +145,7 @@ function attachLegacyMetadata(legacyFormData, { sourceUrl, provider, parseStrate
       ...(diagnostics || {}),
       parseStatus: outcome?.status,
     },
-  };
+  });
 }
 
 function buildEnvelopeFromAdapter({
@@ -195,6 +207,7 @@ function buildEnvelopeFromAdapter({
       httpStatus,
       parseStrategy: parseStrategy || adapterResult?.parseStrategy || '',
       domSignatureProvider: domSignatureProvider || undefined,
+      fillPlanSummary: fallbackLegacy?.fillPlanSummary || adapterResult?.legacyFormData?.fillPlanSummary,
     },
     form: canonicalForm,
     compatibility: attachLegacyMetadata(fallbackLegacy, {
@@ -304,6 +317,58 @@ function buildFallbackErrorEnvelope(url, provider, err, parseStrategy = 'error')
       parseStrategy,
     },
   });
+}
+
+function buildDocumentUnsupportedEnvelope(url, provider = PROVIDER_TYPE.PLAIN_HTML) {
+  return createBaseParseEnvelope({
+    sourceType: SOURCE_TYPE.HTML,
+    sourceUrl: url,
+    normalizedUrl: url,
+    finalUrl: url,
+    provider,
+    adapterKey: 'document-url',
+    fetchStrategy: 'document_url_gate',
+    parseStatus: PARSE_STATUS.UNSUPPORTED,
+    completeness: COMPLETENESS_STATUS.EMPTY,
+    unsupportedReasons: [UNSUPPORTED_REASON.PROVIDER_NOT_SUPPORTED],
+    warnings: [
+      createParserMessage(
+        'DOCUMENT_URL_UNSUPPORTED',
+        'warning',
+        'Document links are not parsed from URL in this version. Use screenshots or manual review for visible fields.'
+      ),
+    ],
+    nextAction: NEXT_ACTION.UPLOAD_SCREENSHOTS,
+    nextStepRequired: false,
+    nextStepHint: 'Upload screenshots of the visible document form fields, or review this document manually.',
+    confidence: {
+      overall: 0.9,
+      fieldDetection: 0,
+      uiClassification: 0,
+      semanticClassification: 0,
+      fillPolicy: 0,
+      completeness: 0.9,
+    },
+    diagnostics: {
+      authSignal: false,
+      renderSignal: false,
+      aiFallbackUsed: false,
+      extractionWarnings: ['Document URL detected before HTML acquisition.'],
+      parseStrategy: 'document_url_gate',
+    },
+  });
+}
+
+async function readProxyErrorMessage(response, fallbackMessage) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) return fallbackMessage;
+
+  try {
+    const payload = await response.json();
+    return payload?.message || payload?.error || fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
 }
 
 async function parseGoogleForm(url) {
@@ -445,7 +510,7 @@ async function parseGoogleForm(url) {
       url,
       provider: selectedProviderLabel,
       parseStrategy: result.strategy === 'formResponse' ? 'google_form_response_dom' : 'google_viewform_dom',
-      parseWithAiHtml: parseFormHtml,
+      classifyAmbiguousFields: classifyAmbiguousFieldBuckets,
     });
 
     return buildEnvelopeFromAdapter({
@@ -475,7 +540,11 @@ async function parseGenericForm(url) {
       headers: authHeaders,
     });
     if (!response.ok) {
-      throw createParseError('NETWORK', `Proxy fetch failed: ${response.statusText}`, { platform: initialProvider, url });
+      const message = await readProxyErrorMessage(
+        response,
+        'The public page could not be fetched for URL parsing.'
+      );
+      throw createParseError('NETWORK', message, { platform: initialProvider, url, httpStatus: response.status });
     }
 
     const contentType = response.headers.get('content-type') || '';
@@ -534,7 +603,7 @@ export async function parseHtmlSnapshot({
     url: sourceUrl,
     provider: selectedProviderLabel,
     parseStrategy: 'dom_parse',
-    parseWithAiHtml: parseFormHtml,
+    classifyAmbiguousFields: classifyAmbiguousFieldBuckets,
   });
   adapterResult = applyProviderAdapterOverrides({
     provider: selectedProvider,
@@ -618,7 +687,7 @@ function buildDemoEnvelope(url) {
     });
   }
 
-  const legacyFormData = {
+  const legacyFormData = enrichLegacyFormDataWithFillPlan({
     ...demo,
     url,
     source: 'Demo',
@@ -637,7 +706,7 @@ function buildDemoEnvelope(url) {
       questionCount: Array.isArray(demo.questions) ? demo.questions.length : 0,
       httpStatus: 200,
     },
-  };
+  });
 
   const canonicalForm = legacyFormDataToCanonical(legacyFormData, { provider: PROVIDER_TYPE.DEMO });
   return createBaseParseEnvelope({
@@ -678,6 +747,10 @@ export async function parseFormUrl(url) {
   }
 
   const urlProvider = detectProviderFromUrl(url);
+  if (isDocumentUrl(url)) {
+    return buildDocumentUnsupportedEnvelope(url, urlProvider || PROVIDER_TYPE.PLAIN_HTML);
+  }
+
   if (HARD_CAPTURE_PROVIDERS.has(urlProvider)) {
     return buildProviderCaptureGateEnvelope(url, urlProvider);
   }

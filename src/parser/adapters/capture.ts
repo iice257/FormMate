@@ -2,6 +2,7 @@
 
 import { capturedPayloadToFormData } from '../capture-parser';
 import { legacyFormDataToCanonical } from '../compat';
+import { enrichLegacyFormDataWithFillPlan } from '../fill-plan';
 import {
   COMPLETENESS_STATUS,
   NEXT_ACTION,
@@ -12,7 +13,7 @@ import {
 import { createParserMessage } from '../status';
 
 export function runCaptureAdapter(payload) {
-  const legacyFormData = capturedPayloadToFormData(payload);
+  const legacyFormData = enrichLegacyFormDataWithFillPlan(capturedPayloadToFormData(payload));
   const questionCount = Array.isArray(legacyFormData?.questions) ? legacyFormData.questions.length : 0;
 
   if (!questionCount) {
@@ -64,12 +65,13 @@ export function runCaptureAdapter(payload) {
     warnings: [],
     legacyFormData,
     canonicalForm,
-    diagnostics: {
-      authSignal: false,
-      renderSignal: false,
-      aiFallbackUsed: false,
-      extractionWarnings: [],
-    },
+      diagnostics: {
+        authSignal: false,
+        renderSignal: false,
+        aiFallbackUsed: false,
+        extractionWarnings: [],
+        fillPlanSummary: legacyFormData.fillPlanSummary,
+      },
     confidence: {
       fieldDetection: 0.9,
       uiClassification: 0.85,

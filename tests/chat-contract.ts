@@ -134,4 +134,51 @@ function runChatContractTests() {
   console.log('Chat contract tests passed.');
 }
 
+async function runChatContextTests() {
+  const { processChatMessage } = await import('../src/ai/ai-actions.ts');
+  const { setState } = await import('../src/state.ts');
+
+  let capturedContext: any = null;
+  setState({
+    answers: { q1: { text: 'Drafted answer', source: 'ai', confidence: 0.9 } },
+    userProfile: { name: 'Ada Lovelace', occupation: 'Engineer', experience: 'Forms', bio: 'Builder' },
+    personality: 'professional',
+    settings: { ai: { provider: 'mock' } },
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url: any, init: any) => {
+    const body = JSON.parse(init?.body || '{}');
+    capturedContext = body.formContext;
+    return new Response(JSON.stringify({ text: 'ok' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    await processChatMessage('What should I do next?', {
+      title: 'Application',
+      fillPlanSummary: { total: 1, profileFillable: 0, aiDraftable: 1, manual: 0, uncertain: 0 },
+      questions: [{
+        id: 'q1',
+        text: 'Why do you want this role?',
+        type: 'long_text',
+        parserHints: {
+          fillBucket: 'ai_draftable',
+          bucketReason: 'Open-ended answer is useful for AI drafting.',
+          bucketConfidence: 0.86,
+        },
+      }],
+    }, [], 'q1', { surface: AI_SURFACES.WORKSPACE });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(capturedContext?.fillPlanSummary?.aiDraftable, 1, 'chat context should include fill-plan summary');
+  assert.equal(capturedContext?.formQuestions?.[0]?.fillBucket, 'ai_draftable', 'chat context should include parser bucket');
+  assert.equal(capturedContext?.formQuestions?.[0]?.bucketReason, 'Open-ended answer is useful for AI drafting.', 'chat context should include bucket reason');
+}
+
 runChatContractTests();
+await runChatContextTests();
