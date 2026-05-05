@@ -215,10 +215,10 @@ export async function hydrateFromRemote(user, options = {}) {
     }
 
     return {
-      userProfile: remote.profile || loadProfile(),
-      settings: remote.settings || loadSettings(),
-      vault: remote.vault || loadVault(),
-      formHistory: remote.formHistory || loadFormHistory(),
+      userProfile: remote.profile || {},
+      settings: remote.settings || {},
+      vault: remote.vault || {},
+      formHistory: Array.isArray(remote.formHistory) ? remote.formHistory : [],
     };
   } catch (e) {
     console.warn('[StorageProvider] Remote hydration failed:', e);

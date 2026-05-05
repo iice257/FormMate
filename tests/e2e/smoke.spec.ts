@@ -233,7 +233,7 @@ test('signed-in protected bookmarks open or safely fall back', async ({ page }) 
   await expect(page.locator('#nav-dashboard')).toBeVisible();
 });
 
-test('remember this browser controls persistent auth storage', async ({ page }) => {
+test('remember this browser does not persist bearer tokens', async ({ page }) => {
   await seedOnboardingComplete(page);
   await page.goto('/auth');
   await page.click('[data-dev-test-user]');
@@ -252,6 +252,7 @@ test('remember this browser controls persistent auth storage', async ({ page }) 
   await page.check('#login-remember');
   await page.click('[data-dev-test-user]');
   await page.waitForURL('**/dashboard');
-  await expect(page.evaluate(() => localStorage.getItem('formmate_auth_session'))).resolves.toBeTruthy();
-  await expect(page.evaluate(() => sessionStorage.getItem('formmate_auth_session'))).resolves.toBeNull();
+  await expect(page.evaluate(() => localStorage.getItem('formmate_auth_session'))).resolves.toBeNull();
+  await expect(page.evaluate(() => localStorage.getItem('formmate_auth_persistence'))).resolves.toBe('persistent');
+  await expect(page.evaluate(() => sessionStorage.getItem('formmate_auth_session'))).resolves.toBeTruthy();
 });

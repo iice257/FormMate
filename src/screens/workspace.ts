@@ -14,6 +14,7 @@ import { toast } from '../components/toast';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { escapeAttr, escapeHtml } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import { RASTER_IMAGE_MIME_TYPES, isAllowedRasterImageFile } from '../utils/file-validation';
 import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
 import { clampSidebarWidth } from '../utils/sidebar-sizing';
 import {
@@ -29,6 +30,17 @@ import {
 let sortableModulePromise = null;
 const MAX_CHAT_IMAGE_ATTACHMENTS = 5;
 const MAX_CHAT_IMAGE_BYTES = 3 * 1024 * 1024;
+
+function escapeSelectorValue(value) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(String(value || ''));
+  }
+  return String(value || '').replace(/["\\\]\[]/g, '\\$&');
+}
+
+function questionSelector(selector, questionId) {
+  return `${selector}[data-question-id="${escapeSelectorValue(questionId)}"]`;
+}
 
 async function loadSortable() {
   if (!sortableModulePromise) {
@@ -223,7 +235,7 @@ export function workspaceScreen() {
 
           <!-- Chat Input -->
           <div style="padding: 0.75rem; border-top: 1px solid var(--fm-border-light);">
-          <div id="workspace-chat-followups" class="chat-followups chat-followups-sidebar"></div>
+            <div id="workspace-chat-followups" class="chat-followups chat-followups-sidebar"></div>
             <div style="display: flex; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.25rem;">
                 <button id="btn-workspace-chat-attach" type="button" aria-label="Attach a file" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
@@ -232,7 +244,7 @@ export function workspaceScreen() {
                 <button id="btn-workspace-chat-voice" type="button" aria-label="Start voice input" style="width: 28px; height: 28px; border: none; background: none; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
                 </button>
-                <input id="workspace-chat-attach-input" type="file" accept="image/*" multiple style="display:none;" />
+                <input id="workspace-chat-attach-input" type="file" accept="image/png,image/jpeg,image/webp" multiple style="display:none;" />
               </div>
               <div style="flex: 1; position: relative;">
                 <input type="text" id="chat-input" placeholder="Ask Copilot anything..." aria-label="Ask Copilot anything" style="width: 100%; height: 36px; padding: 0 2.5rem 0 0.75rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.8rem; background: var(--fm-bg-sunken); color: var(--fm-text);" />
@@ -512,8 +524,8 @@ export function workspaceScreen() {
     // Question card interactions
     const syncUndoRedoButtons = () => {
       formData.questions.forEach(q => {
-        const uBtn = questionsContainer.querySelector(`.btn-undo[data-question-id="${q.id}"]`);
-        const rBtn = questionsContainer.querySelector(`.btn-redo[data-question-id="${q.id}"]`);
+        const uBtn = questionsContainer.querySelector(questionSelector('.btn-undo', q.id));
+        const rBtn = questionsContainer.querySelector(questionSelector('.btn-redo', q.id));
         if (uBtn) uBtn.disabled = !canUndo(q.id);
         if (rBtn) rBtn.disabled = !canRedo(q.id);
       });
@@ -541,7 +553,7 @@ export function workspaceScreen() {
         try {
           const res = await quickEditAnswer(question, current, instruction);
           updateAnswer(qId, res.text, 'edited');
-          const textarea = wrapper.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+          const textarea = wrapper.querySelector(questionSelector('.answer-textarea', qId));
           if (textarea) textarea.value = res.text;
           updateAnsweredCount();
           syncUndoRedoButtons();
@@ -571,7 +583,7 @@ export function workspaceScreen() {
         try {
           const res = await regenerateAnswer(question, current);
           updateAnswer(qId, res.text, 'ai');
-          const textarea = wrapper.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+          const textarea = wrapper.querySelector(questionSelector('.answer-textarea', qId));
           if (textarea) textarea.value = res.text;
           updateAnsweredCount();
           syncUndoRedoButtons();
@@ -600,7 +612,7 @@ export function workspaceScreen() {
       }
 
       if (newAns && qId) {
-        const textarea = wrapper.querySelector(`.answer-textarea[data-question-id="${qId}"]`);
+        const textarea = wrapper.querySelector(questionSelector('.answer-textarea', qId));
         if (textarea) textarea.value = newAns.text;
         updateAnsweredCount();
       }
@@ -616,7 +628,7 @@ export function workspaceScreen() {
 
     // Radio / checkbox / scale interactions
     const applyRadioSelection = (questionId, selectedValue) => {
-      wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="radio"]`).forEach((el) => {
+      wrapper.querySelectorAll(`${questionSelector('.option-select', questionId)}[data-type="radio"]`).forEach((el) => {
         const isSelected = el.dataset.value === selectedValue;
         el.classList.toggle('is-selected', isSelected);
         el.classList.toggle('border-primary', isSelected);
@@ -633,7 +645,7 @@ export function workspaceScreen() {
 
     const applyCheckboxSelection = (questionId, selectedValues) => {
       const set = new Set(selectedValues);
-      wrapper.querySelectorAll(`.option-select[data-question-id="${questionId}"][data-type="checkbox"]`).forEach((el) => {
+      wrapper.querySelectorAll(`${questionSelector('.option-select', questionId)}[data-type="checkbox"]`).forEach((el) => {
         const isChecked = set.has(el.dataset.value);
         el.classList.toggle('is-selected', isChecked);
         el.classList.toggle('border-primary', isChecked);
@@ -670,7 +682,7 @@ export function workspaceScreen() {
         const qId = scaleBtn.dataset.questionId;
         const val = scaleBtn.dataset.value || '';
         updateAnswer(qId, String(val), 'user');
-        wrapper.querySelectorAll(`.scale-btn[data-question-id="${qId}"]`).forEach((b) => {
+        wrapper.querySelectorAll(questionSelector('.scale-btn', qId)).forEach((b) => {
           const isActive = b.dataset.value === String(val);
           b.classList.toggle('is-selected', isActive); b.classList.toggle('bg-primary', isActive); b.classList.toggle('text-white', isActive); b.classList.toggle('border-slate-200', !isActive);
           b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -682,7 +694,7 @@ export function workspaceScreen() {
       const uploadBtn = e.target.closest('.question-card-upload-button');
       if (uploadBtn) {
         const qId = uploadBtn.dataset.questionId;
-        const fileInput = wrapper.querySelector(`.question-card-upload-input[data-question-id="${qId}"]`);
+        const fileInput = wrapper.querySelector(questionSelector('.question-card-upload-input', qId));
         if (fileInput) {
           fileInput.value = '';
           fileInput.click();
@@ -703,7 +715,8 @@ export function workspaceScreen() {
 
       const questionId = input.dataset.questionId;
       const file = input.files?.[0];
-      const card = wrapper.querySelector(`.question-card[data-card-id="${questionId}"]`);
+      const card = Array.from(wrapper.querySelectorAll('.question-card'))
+        .find((item) => String(item.dataset.cardId || '') === String(questionId || ''));
       const label = card?.querySelector('[data-upload-file-label]');
 
       if (!file) {
@@ -808,13 +821,14 @@ export function workspaceScreen() {
 
     const addImageFiles = async (files) => {
       const incoming = Array.from(files || []);
-      const selected = incoming.filter((file) => String(file.type || '').startsWith('image/'));
+      const checks = await Promise.all(incoming.map(async (file) => ({ file, ok: await isAllowedRasterImageFile(file) })));
+      const selected = checks.filter((entry) => entry.ok).map((entry) => entry.file);
       if (!selected.length) {
-        if (incoming.length) toast.warning('Only image attachments are supported.');
+        if (incoming.length) toast.warning('Only PNG, JPEG, and WebP images are supported.');
         return;
       }
       if (selected.length < incoming.length) {
-        toast.warning('Only image attachments are supported. Non-image files were ignored.');
+        toast.warning('Only PNG, JPEG, and WebP images are supported. Other files were ignored.');
       }
 
       const slots = MAX_CHAT_IMAGE_ATTACHMENTS - pendingImages.length;
@@ -991,7 +1005,7 @@ export function workspaceScreen() {
     chatInput?.addEventListener('paste', async (event) => {
       const items = Array.from(event?.clipboardData?.items || []);
       const imageFiles = items
-        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .filter((item) => item.kind === 'file' && RASTER_IMAGE_MIME_TYPES.has(String(item.type || '').toLowerCase()))
         .map((item) => item.getAsFile())
         .filter(Boolean);
 

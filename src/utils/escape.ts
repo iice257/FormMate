@@ -21,7 +21,7 @@ export function safeHttpUrl(url) {
   const value = String(url ?? '').trim();
   if (!value) return '';
 
-  if (value.startsWith('/')) return value;
+  if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value;
 
   try {
     const parsed = new URL(value);

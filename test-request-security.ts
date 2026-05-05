@@ -86,7 +86,8 @@ async function run() {
   assert.equal(validateGoogleFormUrl('https://docs.google.com/forms/d/e/example/viewform').ok, true);
   assert.equal(validateGoogleFormUrl('https://forms.gle/abc123').ok, true);
   assert.equal(validateGoogleFormUrl('https://example.com/forms/d/e/example/viewform').ok, false);
-  assert.equal(resolveGoogleFormRedirect('https://docs.google.com/forms/d/e/example/viewform', 'http://localhost/private').ok, false);
+  const blockedGoogleRedirect = await resolveGoogleFormRedirect('https://docs.google.com/forms/d/e/example/viewform', 'http://localhost/private');
+  assert.equal(blockedGoogleRedirect.ok, false);
 
   console.log('request-security checks passed');
 }

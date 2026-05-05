@@ -4,6 +4,7 @@ import { navigateTo } from '../router';
 import { toast } from '../components/toast';
 import { capturedPayloadToFormData } from '../parser/capture-parser';
 import { escapeHtml } from '../utils/escape';
+import { isAllowedRasterImageFile } from '../utils/file-validation';
 
 const MAX_SCREENSHOTS = 5;
 const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024;
@@ -222,7 +223,7 @@ export function captureScreen() {
           <p class="text-sm text-slate-500 leading-relaxed mb-4">
             Upload screenshots when the form can only be read visually. We&apos;ll extract visible fields and continue analysis.
           </p>
-          <input id="screenshot-input" type="file" accept="image/*" multiple class="block w-full rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800" />
+          <input id="screenshot-input" type="file" accept="image/png,image/jpeg,image/webp" multiple class="block w-full rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800" />
           <div id="screenshot-status" class="mt-3 text-xs text-slate-500">No screenshots selected yet.</div>
           <div class="flex items-center justify-end gap-3 mt-4">
             <button id="btn-import-screenshots" class="px-5 py-2.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-sm btn-press">Analyze screenshots</button>
@@ -334,12 +335,13 @@ export function captureScreen() {
         toast.error(`Some screenshots are too large. Max size is ${Math.floor(MAX_SCREENSHOT_BYTES / (1024 * 1024))}MB per image.`);
       }
 
-      const valid = selected.filter((file) =>
-        String(file.type || '').startsWith('image/') && file.size <= MAX_SCREENSHOT_BYTES
-      );
+      const checks = await Promise.all(selected.map(async (file) => ({ file, ok: await isAllowedRasterImageFile(file) })));
+      const valid = checks
+        .filter((entry) => entry.ok && entry.file.size <= MAX_SCREENSHOT_BYTES)
+        .map((entry) => entry.file);
       if (!valid.length) {
         screenshotArtifacts = [];
-        if (screenshotStatus) screenshotStatus.textContent = 'No valid screenshots selected. Use image files only.';
+        if (screenshotStatus) screenshotStatus.textContent = 'No valid screenshots selected. Use PNG, JPEG, or WebP files only.';
         return;
       }
 

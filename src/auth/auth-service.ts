@@ -76,9 +76,7 @@ function readStoredSession() {
     try {
       const raw = localStorageRef.getItem(AUTH_STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        inMemorySession = parsed?.value ?? parsed ?? null;
-        return inMemorySession;
+        localStorageRef.removeItem(AUTH_STORAGE_KEY);
       }
     } catch (error) {
       console.warn('[Auth] Failed to parse persistent auth cache:', error);
@@ -127,7 +125,7 @@ function writeStoredSession(session, options = {}) {
     return;
   }
 
-  const targetStorage = persistence === 'persistent' ? localStorageRef : sessionStorageRef;
+  const targetStorage = sessionStorageRef;
   if (targetStorage) {
     try {
       targetStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
@@ -135,6 +133,8 @@ function writeStoredSession(session, options = {}) {
         timestamp: Date.now(),
         ttl: null,
       }));
+      // Keep only the remember preference in localStorage; bearer/refresh tokens
+      // stay in sessionStorage so browser restarts do not preserve JS-readable tokens.
       setAuthPersistencePreference(persistence === 'persistent');
       return;
     } catch (error) {

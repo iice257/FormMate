@@ -9,6 +9,7 @@ import { cancelRecording, getRecordingState, isVoiceSupported, startRecording, s
 import { toast } from '../components/toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
+import { RASTER_IMAGE_MIME_TYPES, isAllowedRasterImageFile } from '../utils/file-validation';
 import { bindRichActionClicks, renderAssistantRichText } from '../actions/action-rich-text';
 import { getAnonymousPref, setAnonymousPref } from '../storage/anonymous-prefs';
 import { clampSidebarWidth } from '../utils/sidebar-sizing';
@@ -126,7 +127,7 @@ export function aiChatScreen() {
             <button id="btn-chat-attach" type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
-            <input id="chat-attach-input" type="file" accept="image/*" multiple style="display:none;" />
+            <input id="chat-attach-input" type="file" accept="image/png,image/jpeg,image/webp" multiple style="display:none;" />
             <div style="flex: 1; position: relative;">
               <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
               <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
@@ -368,13 +369,14 @@ export function aiChatScreen() {
 
     const addImageFiles = async (files) => {
       const incoming = Array.from(files || []);
-      const selected = incoming.filter((file) => String(file.type || '').startsWith('image/'));
+      const checks = await Promise.all(incoming.map(async (file) => ({ file, ok: await isAllowedRasterImageFile(file) })));
+      const selected = checks.filter((entry) => entry.ok).map((entry) => entry.file);
       if (!selected.length) {
-        if (incoming.length) toast.warning('Only image attachments are supported.');
+        if (incoming.length) toast.warning('Only PNG, JPEG, and WebP images are supported.');
         return;
       }
       if (selected.length < incoming.length) {
-        toast.warning('Only image attachments are supported. Non-image files were ignored.');
+        toast.warning('Only PNG, JPEG, and WebP images are supported. Other files were ignored.');
       }
       const slots = MAX_IMAGE_ATTACHMENTS - pendingImages.length;
       if (slots <= 0) {
@@ -600,7 +602,7 @@ export function aiChatScreen() {
     chatInput?.addEventListener('paste', async (event) => {
       const items = Array.from(event?.clipboardData?.items || []);
       const imageFiles = items
-        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .filter((item) => item.kind === 'file' && RASTER_IMAGE_MIME_TYPES.has(String(item.type || '').toLowerCase()))
         .map((item) => item.getAsFile())
         .filter(Boolean);
 

@@ -5,6 +5,7 @@ import { categorizeField } from '../ai/field-classifier';
 
 export function renderQuestionCard(question, answer, index) {
   const { id, text, type, options = [], required } = question;
+  const safeId = escapeAttr(id);
   const answerText = answer?.text || '';
   const source = answer?.source || 'empty';
   const confidence = answer?.confidence || 0;
@@ -54,7 +55,7 @@ export function renderQuestionCard(question, answer, index) {
   const inputHtml = renderInput(question, answerText);
 
   return `
-    <article class="question-card ${isActive ? 'question-card-active' : ''}" data-card-id="${id}" data-category="${category}">
+    <article class="question-card ${isActive ? 'question-card-active' : ''}" data-card-id="${safeId}" data-category="${escapeAttr(category)}">
       <div class="drag-handle question-card-drag-handle" aria-hidden="true">
         <span class="material-symbols-outlined">drag_indicator</span>
       </div>
@@ -80,16 +81,16 @@ export function renderQuestionCard(question, answer, index) {
       </div>
 
       <div class="question-card-actions">
-        <button type="button" class="btn-undo question-card-icon-btn" data-question-id="${id}" aria-label="Undo answer changes" title="Undo answer changes">
+        <button type="button" class="btn-undo question-card-icon-btn" data-question-id="${safeId}" aria-label="Undo answer changes" title="Undo answer changes">
           <span class="material-symbols-outlined">undo</span>
         </button>
-        <button type="button" class="btn-redo question-card-icon-btn" data-question-id="${id}" aria-label="Redo answer changes" title="Redo answer changes">
+        <button type="button" class="btn-redo question-card-icon-btn" data-question-id="${safeId}" aria-label="Redo answer changes" title="Redo answer changes">
           <span class="material-symbols-outlined">redo</span>
         </button>
         <div class="question-card-actions-spacer"></div>
         ${category !== 'manual_only'
           ? `
-            <button type="button" class="btn-regenerate question-card-regenerate" data-question-id="${id}" aria-label="Regenerate answer">
+            <button type="button" class="btn-regenerate question-card-regenerate" data-question-id="${safeId}" aria-label="Regenerate answer">
               <span class="material-symbols-outlined">refresh</span>
               <span>Regenerate</span>
             </button>
@@ -103,6 +104,7 @@ export function renderQuestionCard(question, answer, index) {
 
 function renderInput(question, answerText) {
   const { id, text, type, options = [] } = question;
+  const safeId = escapeAttr(id);
 
   switch (type) {
     case 'short_text':
@@ -111,7 +113,7 @@ function renderInput(question, answerText) {
           aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="text"
           class="answer-textarea question-card-text-input"
-          data-question-id="${id}"
+          data-question-id="${safeId}"
           value="${escapeAttr(answerText)}"
           placeholder="Type your answer..."
         />
@@ -121,7 +123,7 @@ function renderInput(question, answerText) {
       return `
         <textarea
           class="answer-textarea question-card-textarea"
-          data-question-id="${id}"
+          data-question-id="${safeId}"
           placeholder="Type your answer..."
           aria-label="${escapeAttr(`Answer: ${text}`)}"
         >${escapeHtml(answerText)}</textarea>
@@ -139,7 +141,7 @@ function renderInput(question, answerText) {
                 role="radio"
                 aria-checked="${selected ? 'true' : 'false'}"
                 aria-label="${escapeAttr(`Select option: ${option}`)}"
-                data-question-id="${id}"
+                data-question-id="${safeId}"
                 data-value="${escapeAttr(option)}"
                 data-type="radio"
               >
@@ -166,7 +168,7 @@ function renderInput(question, answerText) {
                 role="checkbox"
                 aria-checked="${checked ? 'true' : 'false'}"
                 aria-label="${escapeAttr(`Toggle option: ${option}`)}"
-                data-question-id="${id}"
+                data-question-id="${safeId}"
                 data-value="${escapeAttr(option)}"
                 data-type="checkbox"
               >
@@ -185,7 +187,7 @@ function renderInput(question, answerText) {
       return `
         <select
           class="answer-textarea question-card-text-input"
-          data-question-id="${id}"
+          data-question-id="${safeId}"
           aria-label="${escapeAttr(`Answer: ${text}`)}"
         >
           <option value="">Select an option...</option>
@@ -199,7 +201,7 @@ function renderInput(question, answerText) {
           aria-label="${escapeAttr(`Answer: ${text}`)}"
           type="date"
           class="answer-textarea question-card-text-input"
-          data-question-id="${id}"
+          data-question-id="${safeId}"
           value="${escapeAttr(answerText)}"
         />
       `;
@@ -212,7 +214,7 @@ function renderInput(question, answerText) {
             <button
               type="button"
               class="scale-btn question-card-scale-btn ${value === selectedValue ? 'is-selected' : ''}"
-              data-question-id="${id}"
+              data-question-id="${safeId}"
               data-value="${value}"
               aria-pressed="${value === selectedValue ? 'true' : 'false'}"
               aria-label="${escapeAttr(`Answer: ${text} - ${value}`)}"
@@ -228,7 +230,7 @@ function renderInput(question, answerText) {
           <button
             type="button"
             class="question-card-upload-button"
-            data-question-id="${id}"
+            data-question-id="${safeId}"
             aria-label="${escapeAttr(`Choose file for: ${text}`)}"
           >
             <span class="material-symbols-outlined">cloud_upload</span>
@@ -240,7 +242,7 @@ function renderInput(question, answerText) {
           <input
             type="file"
             class="question-card-upload-input"
-            data-question-id="${id}"
+            data-question-id="${safeId}"
             hidden
             aria-hidden="true"
             tabindex="-1"
@@ -254,7 +256,7 @@ function renderInput(question, answerText) {
           type="text"
           aria-label="${escapeAttr(`Answer: ${text}`)}"
           class="answer-textarea question-card-text-input"
-          data-question-id="${id}"
+          data-question-id="${safeId}"
           value="${escapeAttr(answerText)}"
           placeholder="Type your answer..."
         />

@@ -300,11 +300,16 @@ export function authScreen() {
         isAuthenticated: true,
         authUser: user,
         userProfile: {
-          ...getState().userProfile,
           name: user.name || '',
           email: user.email || '',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2298da&color=fff&bold=true`
-        }
+        },
+        answers: {},
+        answerHistory: {},
+        answerHistoryIndex: {},
+        currentForm: null,
+        formData: null,
+        imageArtifacts: [],
       });
     };
 

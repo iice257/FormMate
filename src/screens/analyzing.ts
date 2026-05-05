@@ -10,6 +10,7 @@ import { generateAnswers } from '../ai/ai-actions';
 import { getAiErrorMessage } from '../ai/ai-service';
 import { MOCK_AI_ANSWERS } from '../parser/mock-forms';
 import { incrementUsage, saveFormHistory, loadFormHistory } from '../storage/local-store';
+import { RASTER_IMAGE_MIME_TYPES, isAllowedRasterImageFile } from '../utils/file-validation';
 
 const MAX_GOOGLE_SCREENSHOTS = 5;
 const MAX_GOOGLE_SCREENSHOT_BYTES = 3 * 1024 * 1024;
@@ -200,7 +201,7 @@ export function analyzingScreen() {
 
           <div id="google-dropzone" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 md:p-5">
             <div class="flex flex-col gap-3">
-              <input id="google-screenshot-input" type="file" accept="image/*" multiple class="block w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-800" />
+              <input id="google-screenshot-input" type="file" accept="image/png,image/jpeg,image/webp" multiple class="block w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-800" />
               <p class="text-xs text-slate-500">
                 Attach screenshots here, drag-drop, or paste directly with Ctrl/Cmd+V.
               </p>
@@ -308,12 +309,14 @@ export function analyzingScreen() {
         return;
       }
 
-      const accepted = files
-        .filter((file) => String(file.type || '').startsWith('image/'))
+      const checks = await Promise.all(files.map(async (file) => ({ file, ok: await isAllowedRasterImageFile(file) })));
+      const accepted = checks
+        .filter((entry) => entry.ok)
+        .map((entry) => entry.file)
         .slice(0, availableSlots);
 
       if (!accepted.length) {
-        setGoogleCountText('Only image files are supported for screenshot parsing.');
+        setGoogleCountText('Only PNG, JPEG, and WebP screenshots are supported.');
         return;
       }
 
@@ -344,7 +347,7 @@ export function analyzingScreen() {
       if (!googleGateOpen) return;
       const items = Array.from(event?.clipboardData?.items || []);
       const imageFiles = items
-        .filter((item) => item.kind === 'file' && String(item.type || '').startsWith('image/'))
+        .filter((item) => item.kind === 'file' && RASTER_IMAGE_MIME_TYPES.has(String(item.type || '').toLowerCase()))
         .map((item) => item.getAsFile())
         .filter(Boolean);
 

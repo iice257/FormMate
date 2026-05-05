@@ -6,6 +6,13 @@
 import { getState, updateAnswer } from '../state';
 import { navigateTo, goBack } from '../router';
 
+function escapeSelectorValue(value) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(String(value || ''));
+  }
+  return String(value || '').replace(/["\\\]\[]/g, '\\$&');
+}
+
 export function reviewScreen() {
   const { formData, answers } = getState();
 
@@ -44,7 +51,7 @@ export function reviewScreen() {
       }
 
       return `
-        <div class="flex items-start gap-4 card-premium p-4 rounded-xl shadow-sm" data-review-id="${q.id}">
+        <div class="flex items-start gap-4 card-premium p-4 rounded-xl shadow-sm" data-review-id="${escapeAttr(q.id)}">
           <div class="flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 size-12">
             <span class="material-symbols-outlined">${icon}</span>
           </div>
@@ -54,14 +61,14 @@ export function reviewScreen() {
               ${badgeHtml}
             </div>
             <div class="mt-1">
-              <p class="review-answer text-slate-900 text-base font-medium ${!answerText ? 'text-slate-300 italic' : ''}" data-question-id="${q.id}">
+              <p class="review-answer text-slate-900 text-base font-medium ${!answerText ? 'text-slate-300 italic' : ''}" data-question-id="${escapeAttr(q.id)}">
                 ${answerText ? escapeHtml(answerText) : 'No answer provided'}
               </p>
               <input type="text" aria-label="${escapeAttr(`Edit answer: ${q.text}`)}" class="review-edit hidden w-full mt-1 rounded-lg border-slate-200 focus:ring-primary focus:border-primary text-sm py-2 px-3"
-                data-question-id="${q.id}" value="${escapeAttr(answerText)}" />
+                data-question-id="${escapeAttr(q.id)}" value="${escapeAttr(answerText)}" />
             </div>
           </div>
-          <button class="btn-edit-review p-2 text-slate-400 hover:text-primary transition-colors shrink-0" data-question-id="${q.id}">
+          <button class="btn-edit-review p-2 text-slate-400 hover:text-primary transition-colors shrink-0" data-question-id="${escapeAttr(q.id)}">
             <span class="material-symbols-outlined">edit</span>
           </button>
         </div>
@@ -166,8 +173,9 @@ export function reviewScreen() {
     wrapper.querySelectorAll('.btn-edit-review').forEach(btn => {
       btn.addEventListener('click', () => {
         const qId = btn.dataset.questionId;
-        const answerEl = wrapper.querySelector(`.review-answer[data-question-id="${qId}"]`);
-        const editEl = wrapper.querySelector(`.review-edit[data-question-id="${qId}"]`);
+        const safeQId = escapeSelectorValue(qId);
+        const answerEl = wrapper.querySelector(`.review-answer[data-question-id="${safeQId}"]`);
+        const editEl = wrapper.querySelector(`.review-edit[data-question-id="${safeQId}"]`);
 
         if (editEl.classList.contains('hidden')) {
           answerEl.classList.add('hidden');

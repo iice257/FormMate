@@ -1,15 +1,28 @@
 const DISALLOWED_SELECTOR = 'script, iframe, object, embed, link[rel="import"], meta[http-equiv="refresh"]';
 const URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'poster']);
-const BLOCKED_PROTOCOL_PREFIXES = ['javascript:', 'vbscript:', 'data:text/html'];
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+const DATA_IMAGE_ATTRS = new Set(['src', 'poster']);
 
 type SafeHtmlOptions = {
   allowedTags?: Set<string>;
   allowedAttributes?: Record<string, Set<string>>;
 };
 
-function isBlockedUrl(value: string) {
-  const normalized = String(value || '').trim().toLowerCase();
-  return BLOCKED_PROTOCOL_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+function isSafeUrlAttribute(name: string, value: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return true;
+  if (raw.startsWith('//')) return false;
+  if (raw.startsWith('/') && !raw.startsWith('//') && !raw.includes('\\')) return true;
+
+  try {
+    const parsed = new URL(raw, 'https://formmate.local');
+    if (DATA_IMAGE_ATTRS.has(name) && parsed.protocol === 'data:') {
+      return /^data:image\/(?:png|gif|jpe?g|webp|avif);base64,/i.test(raw);
+    }
+    return SAFE_URL_PROTOCOLS.has(parsed.protocol);
+  } catch {
+    return false;
+  }
 }
 
 function scrubTree(root: ParentNode, options: SafeHtmlOptions = {}) {
@@ -37,7 +50,7 @@ function scrubTree(root: ParentNode, options: SafeHtmlOptions = {}) {
         return;
       }
 
-      if (URL_ATTRS.has(name) && isBlockedUrl(attribute.value)) {
+      if (URL_ATTRS.has(name) && !isSafeUrlAttribute(name, attribute.value)) {
         element.removeAttribute(attribute.name);
         return;
       }

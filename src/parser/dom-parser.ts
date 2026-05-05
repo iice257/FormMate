@@ -1,4 +1,11 @@
 // @ts-nocheck
+function escapeSelectorValue(value) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(String(value || ''));
+  }
+  return String(value || '').replace(/["\\\]\[]/g, '\\$&');
+}
+
 export function parseDOM(htmlString) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(String(htmlString || ''), 'text/html');
@@ -398,9 +405,10 @@ function resolveControlLabelInfo(doc, item, control) {
   if (ariaLabel) return { text: cleanText(ariaLabel), source: 'aria_label' };
 
   if (control.id) {
-    const scoped = item.querySelector?.(`label[for="${control.id}"]`);
+    const escapedId = escapeSelectorValue(control.id);
+    const scoped = item.querySelector?.(`label[for="${escapedId}"]`);
     if (scoped) return { text: cleanText(scoped.textContent), source: 'label_for' };
-    const globalLabel = doc.querySelector(`label[for="${control.id}"]`);
+    const globalLabel = doc.querySelector(`label[for="${escapedId}"]`);
     if (globalLabel) return { text: cleanText(globalLabel.textContent), source: 'label_for' };
   }
 
