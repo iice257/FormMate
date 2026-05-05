@@ -105,10 +105,6 @@ export function landingScreen() {
         <main class="landing-main flex-1 flex flex-col items-center px-6 pt-20 pb-16 md:pt-32 z-10">
           <!-- Hero Section -->
           <div class="landing-hero-copy max-w-[800px] w-full text-center space-y-6">
-            <div class="landing-hero-badge mx-auto inline-flex items-center gap-2 rounded-full px-5 py-2 text-[12px] font-black uppercase text-primary">
-              <span class="material-symbols-outlined text-[17px]" aria-hidden="true">auto_awesome</span>
-              Form Copilot
-            </div>
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
               Fill Any Form<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">in Seconds.</span>
             </h1>

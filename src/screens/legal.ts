@@ -29,7 +29,7 @@ function renderLegalTabs(active) {
 function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
   const authed = getState().isAuthenticated;
   const authButtonHtml = !authed
-    ? `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`
+    ? `<button class="legal-signin-btn bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`
     : `<button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>`;
 
   return `

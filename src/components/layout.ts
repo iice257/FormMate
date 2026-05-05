@@ -217,7 +217,7 @@ function getZenModeExitButtonHtml(screenId) {
   `;
 }
 
-function getSidebarCollapseButtonHtml() {
+function getSidebarCollapseButtonHtml({ id = 'btn-sidebar-toggle', extraClass = '' } = {}) {
   const expanded = isSidebarExpanded();
   const label = expanded ? 'Collapse Sidebar' : 'Expand Sidebar';
   const icon = expanded ? 'left_panel_close' : 'left_panel_open';
@@ -225,8 +225,9 @@ function getSidebarCollapseButtonHtml() {
   return `
     <button
       type="button"
-      id="btn-sidebar-toggle"
-      class="layout-sidebar-utility-btn"
+      id="${escapeHtml(id)}"
+      class="layout-sidebar-utility-btn ${escapeHtml(extraClass)}"
+      data-sidebar-toggle="true"
       aria-label="${escapeHtml(label)}"
       title="${escapeHtml(label)}"
       aria-pressed="${expanded ? 'false' : 'true'}"
@@ -542,33 +543,34 @@ export function withLayout(pageId, contentHtml, options = {}) {
           
           <!-- Bottom Section: Account -->
           <div class="layout-sidebar-bottom">
-            <div class="layout-sidebar-collapse-row">
-              ${getSidebarCollapseButtonHtml()}
+            <div class="layout-sidebar-collapsed-toggle-row">
+              ${getSidebarCollapseButtonHtml({ id: 'btn-sidebar-toggle-compact', extraClass: 'layout-sidebar-collapsed-toggle' })}
             </div>
-            ${supportsZenOnPage ? `
-              <div class="layout-sidebar-zen-row">
-                ${getZenModeToggleHtml(zenScreenId, { label: 'Zen Mode', variant: 'minimal' })}
-              </div>
-            ` : ''}
             <div class="layout-sidebar-account-block">
               <div class="layout-sidebar-account-shell">
                 <div class="layout-sidebar-account-row">
-                  <button id="nav-profile-sidebar" class="layout-sidebar-user" type="button" aria-label="Open account">
+                  <button id="btn-sidebar-account-menu" class="layout-sidebar-user" type="button" aria-label="Open account menu" aria-haspopup="menu" aria-expanded="false" aria-controls="sidebar-account-menu">
                     <div class="layout-sidebar-avatar-wrap">
                       <img src="${escapeAttr(avatarSrc)}" alt="Avatar" />
                     </div>
                     <div class="layout-sidebar-user-info">
                       <span class="layout-sidebar-user-name">${displayName}</span>
                     </div>
+                    <span class="material-symbols-outlined layout-sidebar-account-chevron" aria-hidden="true">expand_more</span>
                   </button>
-                  <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" aria-label="Open preferences">
-                    <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
-                    <span class="layout-sidebar-label">Settings</span>
-                  </button>
-                  <button id="nav-support" class="layout-sidebar-settings-inline" type="button" aria-label="Open Help Center">
-                    <span class="material-symbols-outlined layout-sidebar-icon">help</span>
-                    <span class="layout-sidebar-label">Help</span>
-                  </button>
+                  <div id="sidebar-account-menu" class="layout-sidebar-account-menu" role="menu" aria-label="Account actions" hidden>
+                    ${getSidebarCollapseButtonHtml({ extraClass: 'layout-sidebar-menu-toggle' })}
+                    ${supportsZenOnPage ? getZenModeToggleHtml(zenScreenId, { label: 'Zen Mode', variant: 'minimal' }) : ''}
+                    <div class="layout-sidebar-menu-divider"></div>
+                    <button id="btn-sidebar-settings" class="layout-sidebar-settings-inline" type="button" role="menuitem" aria-label="Open preferences">
+                      <span class="material-symbols-outlined layout-sidebar-icon">settings</span>
+                      <span class="layout-sidebar-label">Settings</span>
+                    </button>
+                    <button id="nav-support" class="layout-sidebar-settings-inline" type="button" role="menuitem" aria-label="Open Help Center">
+                      <span class="material-symbols-outlined layout-sidebar-icon">help</span>
+                      <span class="layout-sidebar-label">Help</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -626,6 +628,7 @@ export function initLayout(wrapper, options = {}) {
 
   // Help Center -> account modal (help tab)
   wrapper.querySelector('#nav-support')?.addEventListener('click', () => {
+    closeAccountMenu();
     openAccountModal('help');
   });
   wrapper.querySelector('#nav-mobile-support')?.addEventListener('click', () => {
@@ -674,31 +677,33 @@ export function initLayout(wrapper, options = {}) {
     }
   };
 
-  const sidebarToggleBtn = wrapper.querySelector('#btn-sidebar-toggle');
+  const sidebarToggleBtns = Array.from(wrapper.querySelectorAll('[data-sidebar-toggle="true"]'));
   const syncSidebarUi = (expanded) => {
     layoutShell?.classList.toggle(SIDEBAR_COLLAPSED_CLASS, !expanded);
 
-    if (!sidebarToggleBtn) return;
-
     const label = expanded ? 'Collapse Sidebar' : 'Expand Sidebar';
     const icon = expanded ? 'left_panel_close' : 'left_panel_open';
-    sidebarToggleBtn.setAttribute('aria-label', label);
-    sidebarToggleBtn.setAttribute('title', label);
-    sidebarToggleBtn.setAttribute('aria-pressed', expanded ? 'false' : 'true');
 
-    const iconEl = sidebarToggleBtn.querySelector('.material-symbols-outlined');
-    if (iconEl) iconEl.textContent = icon;
+    sidebarToggleBtns.forEach((sidebarToggleBtn) => {
+      sidebarToggleBtn.setAttribute('aria-label', label);
+      sidebarToggleBtn.setAttribute('title', label);
+      sidebarToggleBtn.setAttribute('aria-pressed', expanded ? 'false' : 'true');
 
-    const labelEl = sidebarToggleBtn.querySelector('.layout-sidebar-utility-label');
-    if (labelEl) labelEl.textContent = label;
+      const iconEl = sidebarToggleBtn.querySelector('.material-symbols-outlined');
+      if (iconEl) iconEl.textContent = icon;
+
+      const labelEl = sidebarToggleBtn.querySelector('.layout-sidebar-utility-label');
+      if (labelEl) labelEl.textContent = label;
+    });
   };
   const handleSidebarToggle = () => {
     const nextExpanded = !isSidebarExpanded();
     setState({ sidebarOpen: nextExpanded });
     syncSidebarUi(nextExpanded);
+    closeAccountMenu();
   };
 
-  sidebarToggleBtn?.addEventListener('click', handleSidebarToggle);
+  sidebarToggleBtns.forEach((sidebarToggleBtn) => sidebarToggleBtn.addEventListener('click', handleSidebarToggle));
   syncSidebarUi(isSidebarExpanded());
   mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
   mobileMenuCloseBtn?.addEventListener('click', closeMobileMenu);
@@ -860,16 +865,41 @@ export function initLayout(wrapper, options = {}) {
   document.addEventListener('click', handleDocumentClick);
   document.addEventListener('keydown', handleSearchShortcut);
 
-  // Sidebar user card -> account modal (profile tab)
-  wrapper.querySelector('#nav-profile-sidebar')?.addEventListener('click', () => {
-    openAccountModal('profile');
-  });
+  // Sidebar account menu
+  const accountMenuBtn = wrapper.querySelector('#btn-sidebar-account-menu');
+  const accountMenu = wrapper.querySelector('#sidebar-account-menu');
+  const setAccountMenuOpen = (open) => {
+    if (!accountMenu || !accountMenuBtn) return;
+    accountMenu.hidden = !open;
+    accountMenu.classList.toggle('is-open', open);
+    accountMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  const closeAccountMenu = () => setAccountMenuOpen(false);
+  const toggleAccountMenu = () => setAccountMenuOpen(accountMenu?.hidden !== false);
+  const handleAccountMenuClickAway = (event) => {
+    if (!accountMenu || !accountMenuBtn || accountMenu.hidden) return;
+    const target = event.target;
+    if (accountMenu.contains(target) || accountMenuBtn.contains(target)) return;
+    closeAccountMenu();
+  };
+  const handleAccountMenuEscape = (event) => {
+    if (event.key === 'Escape' && accountMenu && !accountMenu.hidden) {
+      closeAccountMenu();
+      accountMenuBtn?.focus();
+    }
+  };
+
+  accountMenuBtn?.addEventListener('click', toggleAccountMenu);
+  document.addEventListener('click', handleAccountMenuClickAway);
+  document.addEventListener('keydown', handleAccountMenuEscape);
+
   wrapper.querySelector('#nav-mobile-profile')?.addEventListener('click', () => {
     closeMobileMenu();
     openAccountModal('profile');
   });
 
   wrapper.querySelector('#btn-sidebar-settings')?.addEventListener('click', () => {
+    closeAccountMenu();
     openAccountModal('settings');
   });
   wrapper.querySelector('#btn-mobile-settings')?.addEventListener('click', () => {
@@ -885,24 +915,30 @@ export function initLayout(wrapper, options = {}) {
   const zenMode = options.zenMode;
   if (!zenMode) {
     return () => {
-      sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+      sidebarToggleBtns.forEach((sidebarToggleBtn) => sidebarToggleBtn.removeEventListener('click', handleSidebarToggle));
       mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
       mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
+      accountMenuBtn?.removeEventListener('click', toggleAccountMenu);
       document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('click', handleAccountMenuClickAway);
       document.removeEventListener('keydown', handleSearchShortcut);
       document.removeEventListener('keydown', handleMobileMenuEscape);
+      document.removeEventListener('keydown', handleAccountMenuEscape);
       document.body.classList.remove('fm-mobile-menu-open');
       document.body.classList.remove('fm-zen-mode');
     };
   }
   const cleanupZen = bindZenModeControls(wrapper, zenMode);
   return () => {
-    sidebarToggleBtn?.removeEventListener('click', handleSidebarToggle);
+    sidebarToggleBtns.forEach((sidebarToggleBtn) => sidebarToggleBtn.removeEventListener('click', handleSidebarToggle));
     mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
     mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
+    accountMenuBtn?.removeEventListener('click', toggleAccountMenu);
     document.removeEventListener('click', handleDocumentClick);
+    document.removeEventListener('click', handleAccountMenuClickAway);
     document.removeEventListener('keydown', handleSearchShortcut);
     document.removeEventListener('keydown', handleMobileMenuEscape);
+    document.removeEventListener('keydown', handleAccountMenuEscape);
     document.body.classList.remove('fm-mobile-menu-open');
     cleanupZen?.();
   };
