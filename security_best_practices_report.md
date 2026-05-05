@@ -1,103 +1,125 @@
-# Signed-Out Surface Security Fix Report
+# FormMate Code Review And Security Audit
 
 ## Executive Summary
 
-The signed-out surface audit findings were fixed and the follow-up route/session policy was implemented:
+This audit found and fixed security issues across the API trust boundary, Docker production runtime, client rendering, auth/session handling, file intake, and repository hygiene. The most important fixes were strict TLS in Docker production, server-side monthly AI usage enforcement, safer auth/rate-limit handling, session token storage hardening, account-scoped data isolation, raster-only image imports, safer dynamic selectors, and broader security regression tests.
 
-1. API routes no longer accept same-origin browser headers as proof of authentication.
-2. The assisted capture page no longer renders a URL-derived bookmarklet into an HTML `href`, and capture tokens are normalized before display/use.
-3. Public/legal/docs routes remain directly usable, protected deep links resume after auth, and unknown routes render a branded 404.
-4. Trusted-browser persistence is explicit through a "Remember this browser" checkbox.
+Ignored local `.env` files contain real development secrets/tokens and remain untracked. Rotate any value that has been shared outside this machine. No secret values are quoted in this report.
 
 ## Fixed Findings
 
-### 0. Route Discovery and Deep-Link Policy
-
-- Severity: Defense-in-depth
-- Status: Fixed
-- Location: `src/router.ts`, `src/screens/auth.ts`, `src/screens/not-found.ts`
-- Impact: Fresh direct hits to known or guessed SPA routes needed a clear policy that does not treat route names as secrets and does not break useful bookmarks.
-- Fix: Route entry is now auth-aware. Public routes (`/`, `/auth`, `/docs`, `/help`, `/privacy`, `/terms`, `/examples`) open directly. Protected signed-out direct links store a pending route and send the user to `/auth`; after successful auth, the app resumes the pending route if it is still valid. Signed-in protected bookmarks open directly, while workflow routes without required local state fall back to dashboard. Unknown routes render the branded 404.
-- Indexing mitigation: `public/robots.txt` disallows all crawling, and Vercel now sends `X-Robots-Tag: noindex, nofollow`.
-
-### 1. Signed-Out Same-Origin API Access
+### 1. Production Docker Disabled TLS Verification
 
 - Severity: High
-- Status: Fixed
-- Location: `api/_shared/request-security.ts:122`, `api/_shared/request-security.ts:160`
-- Impact: Signed-out users could reach AI/parser/proxy request handling from the app origin without a validated Supabase bearer token.
-- Fix: `assertTrustedAppSignal()` now allows only loopback dev auth or a Supabase-validated bearer token. Same-origin browser headers alone now receive `401 AUTH_REQUIRED`.
-- Regression coverage: `tests/request-security.ts:44` asserts that same-origin browser headers do not grant access, while `tests/request-security.ts:62` keeps loopback dev auth working.
+- Location: `scripts/docker-prod-server.ts`
+- Impact: The production Docker server disabled Node TLS certificate validation unless explicitly overridden, allowing upstream Groq/Supabase/API traffic to be intercepted or tampered with by a network attacker.
+- Fix: Docker production now verifies TLS by default. Insecure TLS bypass is limited to an explicit non-production-only `FORMMATE_ALLOW_INSECURE_TLS=1` escape hatch.
 
-### 2. Capture Bookmarklet Attribute Injection
+### 2. Docker Runtime Missing Vercel Security Headers
 
 - Severity: Medium
-- Status: Fixed
-- Location: `src/screens/capture.ts:15`, `src/screens/capture.ts:150`, `src/screens/capture.ts:193`
-- Impact: A crafted `/capture?t=...` URL could create stray attributes on the bookmarklet anchor after HTML parsing, including CSS that visually overlaid the page. The rendered `javascript:` link was also unusable after sanitization.
-- Fix: URL-provided tokens must match the expected `cap_*_*` shape or are replaced with a fresh random token. The bookmarklet is no longer rendered as an anchor `href`; the page exposes only the copy-button flow and escapes the displayed token.
-- Runtime verification: A malicious `t` value no longer creates a `FormMate Capture` anchor, no red overlay is applied, and the displayed token is regenerated into the valid `cap_*_*` format.
+- Location: `scripts/docker-prod-server.ts`, `vercel.json`
+- Impact: Self-hosted Docker deployments lacked the CSP, `Permissions-Policy`, and `X-Robots-Tag` defense-in-depth already configured for Vercel.
+- Fix: Docker production now mirrors the Vercel CSP and related security headers.
 
-### 3. Health Endpoint Reconnaissance
-
-- Severity: Low
-- Status: Fixed
-- Location: `api/health.ts:17`, `api/health.ts:40`
-- Impact: The public health endpoint exposed feature/config booleans useful for reconnaissance.
-- Fix: Detailed config health is now exposed only outside production or when `FORMMATE_EXPOSE_HEALTH_CONFIG=1` is explicitly set. Production health remains a minimal liveness response.
-
-### 4. Google Identity CSP Mismatch
-
-- Severity: Low
-- Status: Fixed
-- Location: `vercel.json:9`
-- Impact: Google Identity script/frame loading could be blocked by the production CSP when Google sign-in is configured.
-- Fix: The CSP now allows `https://accounts.google.com` for the required Google Identity script/connect/frame sources while keeping the rest of the script policy self-restricted.
-
-### 5. Dev Test Access Exposure
-
-- Severity: Low
-- Status: Fixed
-- Location: `src/auth/auth-service.ts:112`
-- Impact: Dev test access depended partly on localhost hostname, which could expose the dev panel in a production build served from a loopback host.
-- Fix: Browser dev auth now depends on Vite dev mode only.
-
-### 6. Trusted Browser Persistence
-
-- Severity: Defense-in-depth
-- Status: Fixed
-- Location: `src/auth/auth-service.ts`, `src/screens/auth.ts`
-- Impact: Users needed a clear distinction between a session-only browser and a trusted browser that remains signed in across browser restarts.
-- Fix: Login, OTP signup completion, Google sign-in, and dev test sign-in now honor an explicit "Remember this browser" checkbox. Unchecked sessions are stored in `sessionStorage`; checked sessions use the same normalized session shape in `localStorage`. Sign-out and account deletion clear both stores and sensitive caches.
-
-### 7. Dependency Audit
-
-- Severity: Medium/High transitive advisories
-- Status: Partially fixed
-- Location: `package-lock.json`
-- Impact: `npm audit` reported advisories mostly under the development-only Vercel CLI dependency tree.
-- Fix: `npm audit fix` was run twice and updated available non-breaking lockfile entries. `npm audit --audit-level=moderate` still reports 30 advisories through Vercel CLI transitive packages (`@tootallnate/once`, `ajv`, `minimatch`, `path-to-regexp`, `smol-toml`, `srvx`, `tar`, `undici`). I did not run force upgrades because npm's non-force fix path was exhausted and a forced Vercel toolchain jump should be reviewed separately.
-
-### 8. SSRF DNS Resolution Gap
+### 3. Production Image Included Dev Tooling And Ran As Root
 
 - Severity: Medium
-- Status: Fixed
-- Location: `api/_shared/request-security.ts`, `api/proxy/scrape.ts`, `api/proxy/google-form.ts`
-- Impact: URL proxy endpoints blocked obvious private hostnames/IP literals and re-checked redirects, but did not resolve public-looking hostnames before fetching. A hostname controlled by an attacker could resolve to a loopback/private/link-local address and attempt server-side access to internal resources.
-- Fix: Server-side URL validation now performs DNS resolution before fetches and redirect follow-ups, rejects any resolved private, loopback, link-local, carrier-grade NAT, benchmark, multicast, or otherwise non-public IP address, and keeps protocol/hostname checks in place. Regression coverage uses an injected resolver to simulate a public-looking hostname resolving to `127.0.0.1`.
+- Location: `Dockerfile`, `package.json`, `package-lock.json`
+- Impact: The production image installed dev dependencies, including the Vercel CLI tree with known transitive audit findings, and ran the Node process as root.
+- Fix: `tsx` was moved to production dependencies, the production image now runs `npm ci --omit=dev`, and the container runs as the built-in unprivileged `node` user.
+
+### 4. API Rate Limits Trusted Spoofable Forwarded Headers
+
+- Severity: Medium
+- Location: `api/_shared/request-security.ts`, API route files under `api/`
+- Impact: Docker/direct deployments could have rate limits bypassed with spoofed `X-Forwarded-For` values.
+- Fix: API routes now use a shared trusted IP helper. Forwarded IP headers are trusted only on Vercel or when `FORMMATE_TRUST_PROXY=1` is explicitly configured.
+
+### 5. Bearer Token Validation Was Not Pre-Throttled
+
+- Severity: Medium
+- Location: `api/_shared/request-security.ts`
+- Impact: Random bearer-token requests could force outbound Supabase validation calls before route-level rate limiting.
+- Fix: `assertTrustedAppSignal()` now applies a pre-auth limiter before Supabase token validation.
+
+### 6. AI Usage Quotas Were Client-Enforced Only
+
+- Severity: High
+- Location: `api/_shared/server-usage.ts`, `api/ai/*`, `api/parser/image-extract.ts`, `src/storage/usage-gate.ts`
+- Impact: Authenticated users could call AI endpoints directly and bypass local client usage counters, creating cost-abuse risk.
+- Fix: AI endpoints now enforce a server-side monthly usage counter keyed by authenticated user/session. This is an in-process guard; a persistent shared quota store is still recommended for multi-instance production.
+
+### 7. Transcription Accepted Arbitrary Content Types
+
+- Severity: Low/Medium
+- Location: `api/ai/transcribe.ts`
+- Impact: Authenticated callers could relay arbitrary 10 MB request bodies/content types to the upstream transcription provider.
+- Fix: The endpoint now accepts only `multipart/form-data` uploads from the expected browser flow.
+
+### 8. Persistent Browser Tokens Were JS-Readable
+
+- Severity: High
+- Location: `src/auth/auth-service.ts`, `tests/e2e/smoke.spec.ts`
+- Impact: "Remember this browser" stored full Supabase sessions, including refresh tokens, in `localStorage`, increasing token theft persistence after XSS or extension compromise.
+- Fix: Full sessions are now stored only in `sessionStorage`; `localStorage` keeps only the remember preference. Existing persistent token cache entries are removed on read.
+
+### 9. Account Data Could Bleed Across Users
+
+- Severity: High
+- Location: `src/screens/auth.ts`, `src/storage/storage-provider.ts`
+- Impact: New login state merged with the previous profile and remote hydration could fall back to generic local/session account caches, risking cross-user profile/vault/history bleed in the same browser tab.
+- Fix: Login state resets account-scoped working data, and remote hydration now returns empty defaults for missing remote fields instead of falling back to generic local caches.
+
+### 10. Dynamic Selectors Used Unescaped IDs
+
+- Severity: Medium
+- Location: `src/parser/dom-parser.ts`, `src/screens/workspace.ts`, `src/screens/review.ts`, `src/components/question-card.ts`
+- Impact: Parsed form IDs/question IDs containing selector metacharacters could throw `SyntaxError` and break import/workspace/review flows. Unescaped IDs in generated attributes also increased markup injection risk.
+- Fix: Selector fragments now use `CSS.escape()` with a fallback, and generated `data-*` attributes escape untrusted IDs.
+
+### 11. Image Import Allowed Any `image/*`
+
+- Severity: Medium
+- Location: `src/utils/file-validation.ts`, `src/screens/analyzing.ts`, `src/screens/capture.ts`, `src/screens/ai-chat.ts`, `src/screens/workspace.ts`
+- Impact: SVG and unusual active image formats could enter screenshot/attachment flows.
+- Fix: Image intake now accepts only PNG, JPEG, and WebP and checks file signatures before reading data URLs.
+
+### 12. URL Sanitization Allowed Edge-Case Schemes
+
+- Severity: Medium
+- Location: `src/utils/escape.ts`, `src/utils/safe-html.ts`, `test-safe-html.ts`
+- Impact: Protocol-relative URLs and non-web/data URL edge cases could survive some sanitizer paths.
+- Fix: URL attributes now use an allowlist for safe protocols, protocol-relative URLs are rejected, and tests cover those cases.
+
+### 13. Security Regression Tests Were Not Fully Wired
+
+- Severity: Medium
+- Location: `package.json`, `test-request-security.ts`, `test-safe-html.ts`
+- Impact: Root-level security helper tests were not part of `npm test`; one async redirect assertion was not awaited.
+- Fix: Added `test:security-helpers` to `npm test` and fixed the async redirect assertion.
+
+### 14. Generated Logs And Vite Cache Were Tracked
+
+- Severity: Low
+- Location: `.gitignore`, `.vite/deps/*`, `*.log`, `*.err`
+- Impact: Tracked generated artifacts polluted searches and could mask current diagnostics.
+- Fix: `.vite/` is ignored and tracked Vite cache/log artifacts were removed from the git index.
+
+## Residual Risks
+
+- `npm audit --audit-level=moderate` still reports dev-toolchain advisories through the Vercel CLI tree. `npm audit --omit=dev` is expected to be the production-focused gate after the Docker omit-dev fix.
+- The URL proxy still has residual DNS rebinding/TOCTOU risk because `fetch()` resolves hostnames after validation. Stronger mitigation needs a host allowlist, connection-time private-range enforcement, or infrastructure egress controls.
+- Server-side monthly usage enforcement is in-process. For horizontally scaled production, move usage counters to a server-owned durable store.
+- Browser Supabase sessions remain JS-readable for the active tab/session. The stronger long-term design is a backend-for-frontend with HttpOnly cookies.
 
 ## Verification
 
-- `npm run typecheck`
-- `npm test`
-- `npm run test:e2e`
-- `npm run build`
-- `npm audit fix` (twice; residual Vercel CLI advisories remain)
-- `npm audit --audit-level=moderate` (fails on residual Vercel CLI transitive advisories)
-- Manual repo/build scan: `.env.local` contains only Supabase URL, publishable/anon key, and `VITE_STORAGE_PROVIDER`; production text bundle scan found no `GROQ_API_KEY`, service-role key, Stripe/Resend secret, database URL, private key, or webhook signing secret. Public Supabase client routes/anon headers are present by design and rely on RLS.
-- Supabase schema review: `public.formmate_user_data` has RLS enabled with owner-only select/insert/update/delete policies.
-- Same-origin signed-out browser/API replay: `POST /api/ai/chat` now returns `401 AUTH_REQUIRED`.
-- Loopback dev auth replay: `X-FormMate-Dev-Auth: 1` still reaches route validation in local development.
-- Capture DOM replay: malicious `t` parameter no longer injects overlay CSS or stray anchor attributes.
-- Route replay: public direct hits to `/docs`, `/privacy`, `/terms`, and `/examples` render directly; signed-out protected `/history` routes to `/auth` and resumes after login; signed-in direct `/history` and `/ai-chat` render; signed-in direct `/workspace` without form state safely falls back to `/dashboard`; `/totally-fake` renders the branded 404.
-- 404 visual check: Playwright captured `.playwright-tmp/not-found-desktop.png` and verified title `404 | FormMate`, heading `404`, badge `Lost in the form flow`, and public nav labels.
+- `npm install tsx@^4.21.0 --save-prod`
+- `git rm --cached` for tracked generated Vite/log artifacts
+- `npm run typecheck` passed.
+- `npm test` passed, including the newly wired security helper tests.
+- `npm audit --omit=dev --audit-level=moderate` passed with 0 production vulnerabilities.
+- `npm run build` passed. Vite still reports existing chunk-size/dynamic-import warnings.
+- `npm run test:e2e` passed 14/14. The local Vite test server logged expected API proxy `ECONNREFUSED` messages because the serverless API was not running locally during the browser smoke tests.
+- `npm audit --audit-level=moderate` still fails on dev-only Vercel CLI transitive advisories; `npm audit fix` reported the lockfile was already up to date.
