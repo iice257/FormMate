@@ -482,6 +482,303 @@ input[type="range"]:active::-moz-range-thumb {
   background-size: cover;
 }
 
+/* Landing hero art direction */
+.landing-page-shell {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(34, 152, 218, 0.12), rgba(34, 152, 218, 0.03) 32%, transparent 58%),
+    linear-gradient(180deg, #fbfdff 0%, #f7fbff 46%, #ffffff 100%);
+  isolation: isolate;
+}
+
+.landing-page-shell .layout-container {
+  position: relative;
+  z-index: 2;
+}
+
+.landing-hero-underlay {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(980px, 100svh);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-hero-underlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.18) 24%, rgba(255, 255, 255, 0.08) 76%, rgba(255, 255, 255, 0.92) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.76) 84%, #ffffff 100%);
+  z-index: 5;
+}
+
+.landing-hero-glow {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: min(760px, 82vw);
+  height: min(430px, 48vw);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.98) 0%, rgba(229, 246, 255, 0.9) 34%, rgba(34, 152, 218, 0.16) 58%, transparent 74%);
+  filter: blur(16px);
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+  animation: landingGlowBreath 7s ease-in-out infinite;
+}
+
+.landing-hero-monogram {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  width: min(620px, 64vw);
+  height: auto;
+  opacity: 0.045;
+  transform: translate(-50%, -50%) rotate(-0.5deg);
+  filter: saturate(0.8);
+  z-index: 1;
+}
+
+.landing-routing-map {
+  position: absolute;
+  inset: -34px -18px auto;
+  width: calc(100% + 36px);
+  height: 760px;
+  z-index: 2;
+  opacity: 0.78;
+}
+
+.landing-routing-map path {
+  stroke: rgba(34, 152, 218, 0.13);
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.landing-routing-map circle {
+  fill: rgba(34, 152, 218, 0.16);
+  stroke: rgba(255, 255, 255, 0.74);
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+
+.landing-ghost-form {
+  position: absolute;
+  top: 285px;
+  width: 280px;
+  display: grid;
+  gap: 24px;
+  opacity: 0.52;
+  z-index: 3;
+}
+
+.landing-ghost-form-left {
+  left: clamp(-180px, -8vw, -94px);
+}
+
+.landing-ghost-form-right {
+  right: clamp(-186px, -9vw, -104px);
+  top: 248px;
+}
+
+.ghost-card {
+  border: 1px solid rgba(34, 152, 218, 0.12);
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 22px 60px rgba(34, 152, 218, 0.04);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.ghost-card-large {
+  min-height: 178px;
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.ghost-card-small {
+  min-height: 150px;
+  border-radius: 20px;
+  padding: 17px;
+}
+
+.ghost-offset {
+  margin-left: 58px;
+  opacity: 0.72;
+}
+
+.ghost-row,
+.ghost-field,
+.ghost-select,
+.ghost-upload i {
+  border-radius: 999px;
+  background: rgba(34, 152, 218, 0.08);
+  border: 1px solid rgba(34, 152, 218, 0.08);
+}
+
+.ghost-row {
+  width: 48%;
+  height: 12px;
+  margin-bottom: 18px;
+}
+
+.ghost-row-short {
+  width: 34%;
+}
+
+.ghost-field,
+.ghost-select {
+  width: 100%;
+  height: 34px;
+  margin-bottom: 12px;
+}
+
+.ghost-field-small {
+  width: 70%;
+}
+
+.ghost-select {
+  position: relative;
+}
+
+.ghost-select::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid rgba(34, 152, 218, 0.22);
+  border-bottom: 1px solid rgba(34, 152, 218, 0.22);
+  transform: translateY(-65%) rotate(45deg);
+}
+
+.ghost-checkline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.ghost-checkline span {
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
+  border: 1px solid rgba(34, 152, 218, 0.16);
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.ghost-checkline i {
+  width: 58%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(34, 152, 218, 0.065);
+}
+
+.ghost-upload {
+  width: 184px;
+  min-height: 120px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  margin-left: 88px;
+  border-style: dashed;
+}
+
+.ghost-upload .material-symbols-outlined {
+  color: rgba(34, 152, 218, 0.22);
+  font-size: 30px;
+}
+
+.ghost-upload i {
+  width: 68%;
+  height: 8px;
+}
+
+.landing-hero-copy {
+  position: relative;
+  z-index: 4;
+}
+
+.landing-hero-badge {
+  background: linear-gradient(180deg, rgba(238, 249, 255, 0.98), rgba(217, 241, 253, 0.82));
+  border: 1px solid rgba(34, 152, 218, 0.2);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 10px 28px rgba(34, 152, 218, 0.12);
+}
+
+.landing-url-panel::before {
+  content: '';
+  position: absolute;
+  inset: -76px -54px -62px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(34, 152, 218, 0.2), rgba(34, 152, 218, 0.075) 36%, transparent 70%);
+  filter: blur(18px);
+  opacity: 0.82;
+  z-index: -1;
+}
+
+.landing-url-shell {
+  box-shadow:
+    0 22px 46px rgba(15, 23, 42, 0.08),
+    0 18px 42px rgba(34, 152, 218, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+}
+
+.landing-product-preview {
+  position: relative;
+  z-index: 3;
+}
+
+@keyframes landingGlowBreath {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+
+  50% {
+    opacity: 0.96;
+    transform: translate(-50%, -50%) scale(1.035);
+  }
+}
+
+@media (max-width: 900px) {
+  .landing-routing-map {
+    inset-inline: -220px;
+    width: calc(100% + 440px);
+    opacity: 0.48;
+  }
+
+  .landing-ghost-form {
+    display: none;
+  }
+
+  .landing-hero-monogram {
+    width: 88vw;
+    opacity: 0.038;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-hero-underlay {
+    height: 760px;
+  }
+
+  .landing-routing-map {
+    height: 610px;
+    opacity: 0.34;
+  }
+
+  .landing-url-panel::before {
+    inset: -42px -22px -38px;
+  }
+}
+
 /* Spin animation */
 @keyframes spin {
   from {

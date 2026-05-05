@@ -28,7 +28,56 @@ export function landingScreen() {
     : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
 
   const html = `
-    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
+    <div class="landing-page-shell relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
+      <div class="landing-hero-underlay" aria-hidden="true" inert>
+        <div class="landing-hero-glow"></div>
+        <img src="/logo.svg" alt="" aria-hidden="true" class="landing-hero-monogram" />
+        <svg class="landing-routing-map" viewBox="0 0 1600 900" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M-10 252H220Q260 252 260 292V376Q260 416 300 416H420" />
+          <path d="M0 710H132Q174 710 174 668V596Q174 554 216 554H404Q440 554 440 518V478Q440 442 476 442H540" />
+          <path d="M112 0V74Q112 112 150 112H294Q334 112 334 152V280Q334 324 378 324H444" />
+          <path d="M1610 102H1450Q1406 102 1406 146V278Q1406 322 1362 322H1254" />
+          <path d="M1600 640H1512Q1472 640 1472 600V498Q1472 456 1430 456H1318Q1276 456 1276 414V372Q1276 330 1234 330H1110" />
+          <path d="M1482 0V74Q1482 118 1438 118H1290Q1248 118 1248 160V258Q1248 300 1206 300H1044" />
+          <path d="M462 604V542Q462 506 498 506H632Q672 506 672 466V412Q672 374 710 374H780" />
+          <path d="M1112 604V520Q1112 482 1074 482H986Q948 482 948 444V410Q948 374 912 374H842" />
+          <circle cx="72" cy="252" r="4" />
+          <circle cx="416" cy="416" r="4" />
+          <circle cx="430" cy="554" r="4" />
+          <circle cx="1450" cy="102" r="4" />
+          <circle cx="1290" cy="118" r="4" />
+          <circle cx="1276" cy="414" r="4" />
+          <circle cx="462" cy="604" r="3.5" />
+          <circle cx="1112" cy="604" r="3.5" />
+          <circle cx="780" cy="374" r="3.5" />
+          <circle cx="842" cy="374" r="3.5" />
+        </svg>
+        <div class="landing-ghost-form landing-ghost-form-left">
+          <div class="ghost-card ghost-card-large">
+            <div class="ghost-row ghost-row-short"></div>
+            <div class="ghost-field"></div>
+            <div class="ghost-field ghost-field-small"></div>
+            <div class="ghost-checkline"><span></span><i></i></div>
+          </div>
+          <div class="ghost-card ghost-upload">
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+            <i></i>
+          </div>
+        </div>
+        <div class="landing-ghost-form landing-ghost-form-right">
+          <div class="ghost-card ghost-card-small">
+            <div class="ghost-row"></div>
+            <div class="ghost-select"></div>
+            <div class="ghost-checkline"><span></span><i></i></div>
+            <div class="ghost-checkline"><span></span><i></i></div>
+          </div>
+          <div class="ghost-card ghost-card-large ghost-offset">
+            <div class="ghost-row ghost-row-short"></div>
+            <div class="ghost-field"></div>
+            <div class="ghost-field"></div>
+          </div>
+        </div>
+      </div>
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
@@ -53,9 +102,13 @@ export function landingScreen() {
           </div>
         </header>
 
-        <main class="flex-1 flex flex-col items-center px-6 pt-24 pb-16 md:pt-40 z-10">
+        <main class="landing-main flex-1 flex flex-col items-center px-6 pt-20 pb-16 md:pt-32 z-10">
           <!-- Hero Section -->
-          <div class="max-w-[800px] w-full text-center space-y-6">
+          <div class="landing-hero-copy max-w-[800px] w-full text-center space-y-6">
+            <div class="landing-hero-badge mx-auto inline-flex items-center gap-2 rounded-full px-5 py-2 text-[12px] font-black uppercase text-primary">
+              <span class="material-symbols-outlined text-[17px]" aria-hidden="true">auto_awesome</span>
+              Form Copilot
+            </div>
             <h1 class="text-slate-900 text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
               Fill Any Form<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent">in Seconds.</span>
             </h1>
@@ -65,9 +118,9 @@ export function landingScreen() {
             </p>
 
             <!-- URL Input -->
-            <div class="mt-12 w-full max-w-2xl mx-auto relative relative z-20">
+            <div class="landing-url-panel mt-12 w-full max-w-2xl mx-auto relative z-20">
 
-              <div class="bg-white/80 backdrop-blur-md p-2 rounded-[2.5rem] shadow-xl shadow-primary/10 border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+              <div class="landing-url-shell bg-white/85 backdrop-blur-md p-2 rounded-[2.5rem] border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
                 <div class="flex-1 relative">
                   <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
                   <input aria-label="Form URL"
@@ -100,8 +153,8 @@ export function landingScreen() {
           </div>
 
           <!-- Workspace Preview (inline mockup) -->
-          <div class="max-w-[1020px] w-full mt-32 stagger-children">
-            <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(91,19,236,0.15)] transition-all duration-500">
+          <div class="landing-product-preview max-w-[1020px] w-full mt-28 stagger-children">
+            <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(34,152,218,0.18)] transition-all duration-500">
               <!-- Preview Chrome Bar -->
               <div class="flex items-center gap-2 px-4 py-3 bg-slate-100/50 border-b border-slate-200/60">
                 <div class="flex gap-1.5">
