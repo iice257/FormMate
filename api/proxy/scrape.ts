@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin, resolveResolvedSafeRedirect, validateResolvedSafeHttpUrl } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getClientIp, getRequestOrigin, isAllowedOrigin, resolveResolvedSafeRedirect, validateResolvedSafeHttpUrl } from '../_shared/request-security.js';
 
 export const config = {
   maxDuration: 10,
@@ -7,12 +7,6 @@ export const config = {
 
 const RATE_LIMIT = { max: 60, windowMs: 60_000 };
 const buckets = new Map();
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
-}
 
 function rateLimit(req) {
   const ip = getClientIp(req);

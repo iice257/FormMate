@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getClientIp, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { enforceMonthlyUsage } from '../_shared/server-usage.js';
 
 export const config = {
   maxDuration: 10,
@@ -47,12 +48,6 @@ const SYSTEM_PROMPT = [
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
-}
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
 }
 
 function rateLimit(req) {
@@ -423,6 +418,16 @@ export default async function handler(req, res) {
         code: 'ORIGIN_NOT_ALLOWED',
         message: 'Origin not allowed.',
         retryable: false,
+      });
+    }
+
+    const usage = enforceMonthlyUsage(req, 'aiCalls');
+    if (!usage.allowed) {
+      return sendError(res, 429, {
+        code: 'MONTHLY_USAGE_LIMIT',
+        message: 'Monthly AI usage limit reached.',
+        retryable: false,
+        details: { current: usage.current, limit: usage.limit },
       });
     }
 

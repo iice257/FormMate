@@ -1,6 +1,7 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getClientIp, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
 import { AI_MODELS } from '../_shared/ai-policy.js';
+import { enforceMonthlyUsage } from '../_shared/server-usage.js';
 
 export const config = {
   maxDuration: 10,
@@ -18,12 +19,6 @@ const MAX_IMAGE_CHARS = 4_100_000;
 const RATE_LIMIT = { max: 10, windowMs: 60_000 };
 const buckets = new Map();
 const ALLOWED_SURFACES = new Set(['workspace', 'ai-chat']);
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
-}
 
 function rateLimit(req, surface) {
   const ip = getClientIp(req);
@@ -185,6 +180,11 @@ export default async function handler(req, res) {
     if (!rl.allowed) {
       res.setHeader('Retry-After', String(rl.retryAfterSec || 2));
       return sendError(res, 429, 'RATE_LIMITED', 'Too many vision context requests.');
+    }
+
+    const usage = enforceMonthlyUsage(req, 'aiCalls');
+    if (!usage.allowed) {
+      return sendError(res, 429, 'MONTHLY_USAGE_LIMIT', 'Monthly AI usage limit reached.', { current: usage.current, limit: usage.limit });
     }
 
     const rawImages = Array.isArray(req.body?.images) ? req.body.images : [];

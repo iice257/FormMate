@@ -23,7 +23,9 @@ const PRIVATE_HOST_PATTERNS = [
 const LOCAL_ORIGIN_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const SESSION_CACHE_TTL_MS = 60_000;
 const MAX_SESSION_CACHE_ENTRIES = 256;
+const AUTH_RATE_LIMIT = { max: 120, windowMs: 60_000 };
 const sessionCache = new Map();
+const authBuckets = new Map();
 
 function readHeader(req, name) {
   return req?.headers?.[name] || req?.headers?.[name.toLowerCase()] || '';
@@ -125,18 +127,18 @@ export function hasTrustedAppSignal(req) {
 }
 
 async function validateSupabaseAccessToken(token) {
-  if (!token) return false;
+  if (!token) return null;
 
   pruneSessionCache();
   const cached = sessionCache.get(token);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.valid;
+    return cached.session || null;
   }
 
   const supabaseUrl = getEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
   const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
   if (!supabaseUrl || !supabaseAnonKey) {
-    return false;
+    return null;
   }
 
   try {
@@ -149,12 +151,20 @@ async function validateSupabaseAccessToken(token) {
       signal: AbortSignal.timeout(6000),
     });
 
-    const valid = response.ok;
-    sessionCache.set(token, { valid, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+    let session = null;
+    if (response.ok) {
+      const payload = await response.json().catch(() => null);
+      const userId = String(payload?.id || payload?.user?.id || '').trim();
+      session = {
+        userId,
+        authKey: userId ? `user:${userId}` : `token:${token.slice(0, 24)}`,
+      };
+    }
+    sessionCache.set(token, { session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
     pruneSessionCache();
-    return valid;
+    return session;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -162,12 +172,33 @@ export async function assertTrustedAppSignal(req, res, message = 'Access denied.
   const origin = getRequestOrigin(req);
   const devAuthHeader = String(readHeader(req, 'x-formmate-dev-auth') || '').trim().toLowerCase();
   if (['1', 'true'].includes(devAuthHeader)) {
-    if (isLocalDevRequest(req, origin)) return true;
-    if (isDevAuthEnabled() && isLocalOrigin(origin)) return true;
+    if (isLocalDevRequest(req, origin)) {
+      req.formmateAuth = {
+        userId: '',
+        authKey: `dev:${getClientIp(req)}`,
+        mode: 'dev',
+      };
+      return true;
+    }
+  }
+
+  const authLimit = rateLimitAuth(req);
+  if (!authLimit.allowed) {
+    res.setHeader?.('Retry-After', String(authLimit.retryAfterSec || 2));
+    res.status(429).json({
+      error: 'RATE_LIMITED',
+      message: 'Too many authentication attempts. Please wait and retry.',
+    });
+    return false;
   }
 
   const bearerToken = getBearerToken(req);
-  if (bearerToken && await validateSupabaseAccessToken(bearerToken)) {
+  const session = bearerToken ? await validateSupabaseAccessToken(bearerToken) : null;
+  if (session) {
+    req.formmateAuth = {
+      ...session,
+      mode: 'supabase',
+    };
     return true;
   }
 
@@ -193,12 +224,38 @@ function pruneSessionCache(now = Date.now()) {
   }
 }
 
-function getClientIp(req) {
+function shouldTrustForwardedFor() {
+  if (getEnv('VERCEL') || getEnv('VERCEL_URL')) return true;
+  const explicit = normalizeBool(getEnv('FORMMATE_TRUST_PROXY'));
+  return explicit === true;
+}
+
+function rateLimitAuth(req) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const entry = authBuckets.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    authBuckets.set(ip, { count: 1, resetAt: now + AUTH_RATE_LIMIT.windowMs });
+    return { allowed: true };
+  }
+  if (entry.count >= AUTH_RATE_LIMIT.max) {
+    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  entry.count += 1;
+  return { allowed: true };
+}
+
+export function getClientIp(req) {
+  const socketIp = String(req?.socket?.remoteAddress || '').trim();
+  if (!shouldTrustForwardedFor()) {
+    return socketIp || 'unknown';
+  }
+
   const xff = String(readHeader(req, 'x-forwarded-for') || '').trim();
   if (xff) {
     return xff.split(',')[0].trim();
   }
-  return String(req?.socket?.remoteAddress || '').trim();
+  return socketIp || 'unknown';
 }
 
 function isLoopbackAddress(rawIp) {

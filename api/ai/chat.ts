@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getClientIp, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
 import {
   buildServerSystemPrompt,
   getSurfaceRateLimit,
@@ -8,6 +8,7 @@ import {
   isTaskAllowedForSurface,
   sanitizeMessages,
 } from '../_shared/ai-policy.js';
+import { enforceMonthlyUsage } from '../_shared/server-usage.js';
 
 export const config = {
   maxDuration: 10,
@@ -18,12 +19,6 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const REQUEST_TIMEOUT_MS = 9000;
 const MAX_ATTACHMENTS = 8;
 const MAX_ATTACHMENT_CHARS = 10_000;
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
-}
 
 function rateLimit(req, surface) {
   const limit = getSurfaceRateLimit(surface);
@@ -245,6 +240,16 @@ export default async function handler(req, res) {
         code: 'ORIGIN_NOT_ALLOWED',
         message: 'Origin not allowed.',
         retryable: false,
+      });
+    }
+
+    const usage = enforceMonthlyUsage(req, 'aiCalls');
+    if (!usage.allowed) {
+      return sendError(res, 429, {
+        code: 'MONTHLY_USAGE_LIMIT',
+        message: 'Monthly AI usage limit reached.',
+        retryable: false,
+        details: { current: usage.current, limit: usage.limit },
       });
     }
 

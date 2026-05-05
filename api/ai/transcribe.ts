@@ -1,6 +1,7 @@
 // @ts-nocheck
-import { assertTrustedAppSignal, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
+import { assertTrustedAppSignal, getClientIp, getRequestOrigin, isAllowedOrigin } from '../_shared/request-security.js';
 import { AI_MODELS } from '../_shared/ai-policy.js';
+import { enforceMonthlyUsage } from '../_shared/server-usage.js';
 
 export const config = {
   maxDuration: 10,
@@ -15,12 +16,7 @@ const buckets = new Map();
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const REQUEST_TIMEOUT_MS = 9000;
 const ALLOWED_SURFACES = new Set(['workspace', 'ai-chat']);
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
-}
+const ALLOWED_MULTIPART_PATTERN = /^multipart\/form-data(?:\s*;|$)/i;
 
 function rateLimit(req) {
   const ip = getClientIp(req);
@@ -83,6 +79,10 @@ function getAbortSignal(timeoutMs) {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeoutMs);
   return controller.signal;
+}
+
+function isAllowedTranscriptionContentType(value) {
+  return ALLOWED_MULTIPART_PATTERN.test(String(value || '').trim());
 }
 
 function mapUpstreamError(status) {
@@ -188,6 +188,16 @@ export default async function handler(req, res) {
       });
     }
 
+    const usage = enforceMonthlyUsage(req, 'aiCalls');
+    if (!usage.allowed) {
+      return sendError(res, 429, {
+        code: 'MONTHLY_USAGE_LIMIT',
+        message: 'Monthly AI usage limit reached.',
+        retryable: false,
+        details: { current: usage.current, limit: usage.limit },
+      });
+    }
+
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
       return sendError(res, 500, {
@@ -197,10 +207,18 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!req.headers['content-type']) {
+    const contentType = String(req.headers['content-type'] || '').trim();
+    if (!contentType) {
       return sendError(res, 400, {
         code: 'BAD_REQUEST',
         message: 'Missing content-type.',
+        retryable: false,
+      });
+    }
+    if (!isAllowedTranscriptionContentType(contentType)) {
+      return sendError(res, 415, {
+        code: 'UNSUPPORTED_MEDIA_TYPE',
+        message: 'Transcription requests must use multipart/form-data audio uploads.',
         retryable: false,
       });
     }
@@ -227,7 +245,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': req.headers['content-type'],
+        'Content-Type': contentType,
       },
       body: buffer,
       signal: getAbortSignal(REQUEST_TIMEOUT_MS),
