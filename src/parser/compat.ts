@@ -9,6 +9,7 @@ import {
   UI_TYPE,
 } from './schema';
 import { createEvidence } from './evidence';
+import { enrichLegacyFormDataWithFillPlan } from './fill-plan';
 import { buildStableFieldKey, normalizeLabel, normalizeOption, normalizeWhitespace, safeId } from './normalize';
 import { deriveLegacySupportState } from './status';
 
@@ -299,7 +300,8 @@ function convertLegacyQuestionToCanonicalField(question, context = {}) {
 }
 
 export function legacyFormDataToCanonical(legacyFormData, context = {}) {
-  const questions = Array.isArray(legacyFormData?.questions) ? legacyFormData.questions : [];
+  const enrichedLegacy = enrichLegacyFormDataWithFillPlan(legacyFormData);
+  const questions = Array.isArray(enrichedLegacy?.questions) ? enrichedLegacy.questions : [];
   const sectionTitle = context.sectionTitle || 'Main';
   const fields = questions.map((question, order) =>
     convertLegacyQuestionToCanonicalField(question, {
@@ -311,8 +313,8 @@ export function legacyFormDataToCanonical(legacyFormData, context = {}) {
 
   return {
     id: context.formId || `form_${Date.now().toString(36)}`,
-    title: normalizeWhitespace(legacyFormData?.title || 'Untitled Form') || 'Untitled Form',
-    description: normalizeWhitespace(legacyFormData?.description || ''),
+    title: normalizeWhitespace(enrichedLegacy?.title || 'Untitled Form') || 'Untitled Form',
+    description: normalizeWhitespace(enrichedLegacy?.description || ''),
     sections: [{
       id: 'section_1',
       title: sectionTitle,
@@ -373,7 +375,7 @@ function legacyQuestionFromCanonicalField(field, fallbackIndex) {
 export function toLegacyFormData(parseEnvelope) {
   if (!parseEnvelope || typeof parseEnvelope !== 'object') return null;
   if (parseEnvelope.compatibility && Array.isArray(parseEnvelope.compatibility.questions)) {
-    return parseEnvelope.compatibility;
+    return enrichLegacyFormDataWithFillPlan(parseEnvelope.compatibility, parseEnvelope?.outcome?.warnings || []);
   }
 
   const form = parseEnvelope.form;
@@ -382,7 +384,7 @@ export function toLegacyFormData(parseEnvelope) {
   const diagnostics = parseEnvelope?.diagnostics || {};
   const acquisition = parseEnvelope?.acquisition || {};
 
-  return {
+  return enrichLegacyFormDataWithFillPlan({
     title: normalizeWhitespace(form?.title || 'Untitled Form'),
     description: normalizeWhitespace(form?.description || ''),
     url: acquisition.sourceUrl || acquisition.normalizedUrl || '',
@@ -395,5 +397,5 @@ export function toLegacyFormData(parseEnvelope) {
       parseStatus,
     },
     questions: fields.map((field, index) => legacyQuestionFromCanonicalField(field, index)),
-  };
+  }, parseEnvelope?.outcome?.warnings || []);
 }

@@ -110,6 +110,7 @@ export function createBaseParseEnvelope({
       timingsMs: diagnostics.timingsMs || undefined,
       parseStrategy: diagnostics.parseStrategy || undefined,
       domSignatureProvider: diagnostics.domSignatureProvider || undefined,
+      fillPlanSummary: diagnostics.fillPlanSummary || undefined,
     },
   };
 }

@@ -1,6 +1,13 @@
 // @ts-nocheck
 import { getState } from '../state';
 
+const PARSER_BUCKET_TO_CATEGORY = Object.freeze({
+  profile_fillable: 'autofillable',
+  ai_draftable: 'generatable',
+  manual: 'manual_only',
+  uncertain: 'manual_only',
+});
+
 const SEMANTIC_KEYWORDS = Object.freeze([
   { category: 'full_name', score: 0.95, pattern: /(^| )full name( |$)|applicant name/i },
   { category: 'full_name', score: 0.82, pattern: /(^| )name( |$)/i },
@@ -160,15 +167,18 @@ export function deriveFillPolicy(question, semanticResult, stateContext = null) 
 export function categorizeField(question) {
   const state = getState();
   const { userProfile, vault } = state;
+  const parserHints = question?.parserHints || {};
   const semanticResult = inferSemanticCategory(question);
   const fillPolicy = deriveFillPolicy(question, semanticResult, state);
   const lowerText = normalizeText(question?.text);
 
-  let category = 'generatable';
-  if (fillPolicy.mode === 'manual' || fillPolicy.source === 'user' || fillPolicy.source === 'file') {
-    category = 'manual_only';
-  } else if (fillPolicy.mode === 'auto' && fillPolicy.source === 'profile') {
-    category = 'autofillable';
+  let category = PARSER_BUCKET_TO_CATEGORY[parserHints.fillBucket] || 'generatable';
+  if (!parserHints.fillBucket) {
+    if (fillPolicy.mode === 'manual' || fillPolicy.source === 'user' || fillPolicy.source === 'file') {
+      category = 'manual_only';
+    } else if (fillPolicy.mode === 'auto' && fillPolicy.source === 'profile') {
+      category = 'autofillable';
+    }
   }
 
   let match = null;
@@ -199,7 +209,9 @@ export function categorizeField(question) {
       }
     }
 
-    if (!match) {
+    if (!match && parserHints.fillBucket === 'profile_fillable') {
+      category = 'manual_only';
+    } else if (!match) {
       category = 'generatable';
     }
   }
@@ -211,5 +223,8 @@ export function categorizeField(question) {
     semanticCategory: semanticResult.semanticCategory,
     semanticConfidence: semanticResult.confidence,
     fillPolicy,
+    fillBucket: parserHints.fillBucket || null,
+    bucketReason: parserHints.bucketReason || '',
+    bucketConfidence: Number(parserHints.bucketConfidence || 0),
   };
 }

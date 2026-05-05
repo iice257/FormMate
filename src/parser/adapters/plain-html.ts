@@ -2,6 +2,7 @@
 
 import { parseDOM } from '../dom-parser';
 import { legacyFormDataToCanonical } from '../compat';
+import { enrichLegacyFormDataWithFillPlan } from '../fill-plan';
 import {
   BLOCKED_REASON,
   COMPLETENESS_STATUS,
@@ -190,7 +191,7 @@ export async function runPlainHtmlAdapter({
   url,
   provider,
   parseStrategy = 'dom_parse',
-  parseWithAiHtml,
+  classifyAmbiguousFields,
 }) {
   const doc = parseHtmlDocument(html);
   const guardSignals = detectGuardSignals(html, doc);
@@ -317,22 +318,6 @@ export async function runPlainHtmlAdapter({
   }
 
   let aiFallbackUsed = false;
-  if (typeof parseWithAiHtml === 'function' && shouldUseAiFallback(parsed)) {
-    try {
-      const aiParsed = await parseWithAiHtml(html, url);
-      const choice = choosePreferredParse(parsed, aiParsed);
-      parsed = choice.parsed;
-      aiFallbackUsed = choice.usedFallback;
-      if (choice.usedFallback) {
-        warnings.push(createParserMessage('AI_HTML_FALLBACK', 'info', 'AI-based HTML parsing fallback was used.'));
-        workingStrategy = 'ai_html_parse';
-      } else {
-        warnings.push(createParserMessage('AI_HTML_FALLBACK_SKIPPED', 'info', 'AI fallback ran but deterministic parsing remained the stronger result.'));
-      }
-    } catch (error) {
-      warnings.push(createParserMessage('AI_HTML_FALLBACK_FAILED', 'warning', `AI fallback failed: ${error?.message || 'unknown error'}`));
-    }
-  }
 
   const questionCount = Array.isArray(parsed?.questions) ? parsed.questions.length : 0;
   const stepSignals = detectStepSignals(doc, parsed);
@@ -368,11 +353,28 @@ export async function runPlainHtmlAdapter({
     };
   }
 
-  const legacyFormData = toLegacyFormData(parsed, {
+  let legacyFormData = toLegacyFormData(parsed, {
     url,
     provider,
     parseStrategy: workingStrategy,
   });
+  legacyFormData = enrichLegacyFormDataWithFillPlan(legacyFormData, warnings);
+
+  if (typeof classifyAmbiguousFields === 'function') {
+    try {
+      const judged = await classifyAmbiguousFields(legacyFormData.questions, { title: legacyFormData.title, url });
+      if (Array.isArray(judged) && judged.length === legacyFormData.questions.length) {
+        legacyFormData = enrichLegacyFormDataWithFillPlan({
+          ...legacyFormData,
+          questions: judged,
+        }, warnings);
+        aiFallbackUsed = judged.some((question) => question?.parserHints?.bucketJudgedBy === 'ai') || aiFallbackUsed;
+      }
+    } catch (error) {
+      warnings.push(createParserMessage('AI_BUCKET_JUDGE_FAILED', 'warning', `AI ambiguity judge failed: ${error?.message || 'unknown error'}`));
+    }
+  }
+
   const canonicalForm = legacyFormDataToCanonical(legacyFormData, {
     provider,
   });
@@ -417,6 +419,7 @@ export async function runPlainHtmlAdapter({
         `quality=${structuralQuality.overall.toFixed(2)}`,
         `coverage=${structuralQuality.coverage.toFixed(2)}`,
       ),
+      fillPlanSummary: legacyFormData.fillPlanSummary,
     },
     confidence: {
       fieldDetection: Math.min(1, ((fieldConfidence * 0.7) + (structuralQuality.coverage * 0.3))),

@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { legacyFormDataToCanonical } from '../compat';
+import { enrichLegacyFormDataWithFillPlan } from '../fill-plan';
 import { getRequestAuthHeaders } from '../../auth/auth-service';
 import {
   COMPLETENESS_STATUS,
@@ -135,7 +136,9 @@ export async function requestImageParse({ imageArtifacts, imageServiceUrl = '/ap
       });
     }
 
-    const legacyFormData = payload?.legacyFormData || null;
+    const legacyFormData = payload?.legacyFormData
+      ? enrichLegacyFormDataWithFillPlan(payload.legacyFormData, payload?.warnings || [])
+      : null;
     let canonicalForm = payload?.canonicalForm || null;
     if (!canonicalForm && legacyFormData?.questions?.length) {
       try {
@@ -159,6 +162,7 @@ export async function requestImageParse({ imageArtifacts, imageServiceUrl = '/ap
       renderSignal: true,
       aiFallbackUsed: true,
       extractionWarnings: Array.isArray(payload?.diagnostics?.extractionWarnings) ? payload.diagnostics.extractionWarnings : [],
+      fillPlanSummary: legacyFormData?.fillPlanSummary,
       ...(payload?.diagnostics || {}),
     };
 
