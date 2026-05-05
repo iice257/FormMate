@@ -20,9 +20,27 @@ const distDir = path.join(rootDir, 'dist');
 const host = String(process.env.FORMMATE_DOCKER_HOST || '0.0.0.0').trim() || '0.0.0.0';
 const parsedPort = Number.parseInt(String(process.env.FORMMATE_DOCKER_PORT || ''), 10);
 const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 8080;
-const strictTls = String(process.env.FORMMATE_STRICT_TLS || '').trim() === '1';
+const allowInsecureTls = String(process.env.FORMMATE_ALLOW_INSECURE_TLS || '').trim() === '1'
+  && process.env.NODE_ENV !== 'production';
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://accounts.google.com",
+  "img-src 'self' https: data: blob:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' https://accounts.google.com",
+  "frame-src https://accounts.google.com",
+  "media-src 'self' blob: data:",
+  "worker-src 'self' blob:",
+].join('; ');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = strictTls ? '1' : '0';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = allowInsecureTls ? '0' : '1';
+if (allowInsecureTls) {
+  console.warn('[docker-prod] TLS certificate verification disabled for non-production local testing.');
+}
 
 const app = express();
 const json2mb = express.json({ limit: '2mb' });
@@ -33,6 +51,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=(), payment=()');
+  res.setHeader('Content-Security-Policy', contentSecurityPolicy);
   next();
 });
 

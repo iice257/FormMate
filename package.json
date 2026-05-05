@@ -14,11 +14,12 @@
     "start:docker": "tsx scripts/docker-prod-server.ts",
     "env:pull": "vercel env pull .env.local --yes",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:parser-buckets && npm run test:request-security",
+    "test": "npm run test:chat-contract && npm run test:parser-fixtures && npm run test:parser-buckets && npm run test:request-security && npm run test:security-helpers",
     "test:chat-contract": "tsx tests/chat-contract.ts",
     "test:parser-fixtures": "tsx tests/parser-fixtures.ts",
     "test:parser-buckets": "tsx tests/parser-buckets.ts",
     "test:request-security": "tsx tests/request-security.ts",
+    "test:security-helpers": "tsx test-safe-html.ts && tsx test-request-security.ts",
     "test:e2e": "playwright test",
     "test:storage": "npx tsx test-local-store.ts"
   },
@@ -36,7 +37,6 @@
     "jsdom": "^28.1.0",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vercel": "^50.31.1",
     "vite": "^6.2.0"
@@ -51,6 +51,7 @@
     "ogl": "^1.0.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "tsx": "^4.21.0"
   }
 }

@@ -21,9 +21,10 @@ ENV NODE_ENV=production
 ENV FORMMATE_DOCKER_HOST=0.0.0.0
 ENV FORMMATE_DOCKER_PORT=8080
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY api ./api
 COPY scripts ./scripts
+USER node
 EXPOSE 8080
 CMD ["npm", "run", "start:docker"]
