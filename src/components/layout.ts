@@ -7,6 +7,7 @@ import { canGoBackWithinApp, getHomeScreenForUser, goBackWithinApp, navigateTo }
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { replaceChildrenWithSafeHtml } from '../utils/safe-html';
 import { executeAction, searchActions } from '../actions/action-index';
+import { runtimeReadinessItems } from '../app/runtime-health';
 
 // Global account modal state
 let _accountModalOpenFn = null;
@@ -235,6 +236,26 @@ function getSidebarCollapseButtonHtml({ id = 'btn-sidebar-toggle', extraClass = 
       <span class="material-symbols-outlined">${icon}</span>
       <span class="layout-sidebar-utility-label">${escapeHtml(label)}</span>
     </button>
+  `;
+}
+
+function getRuntimeReadinessBannerHtml() {
+  const items = runtimeReadinessItems(getState().appHealth);
+  if (!items.length) {
+    return '';
+  }
+  const primary = items[0];
+  const extra = items.length > 1 ? ` +${items.length - 1} more` : '';
+  return `
+    <div class="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm" role="status" aria-live="polite">
+      <div class="flex items-start gap-3">
+        <span class="material-symbols-outlined mt-0.5 text-[18px] text-amber-600" aria-hidden="true">info</span>
+        <div class="min-w-0">
+          <p class="font-bold">${escapeHtml(primary.label)}${escapeHtml(extra)}</p>
+          <p class="mt-0.5 text-xs leading-5 text-amber-800">${escapeHtml(primary.detail)}</p>
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -579,6 +600,7 @@ export function withLayout(pageId, contentHtml, options = {}) {
 
         <!-- Main Content Area -->
         <div class="layout-content ${pageId !== 'ai-chat' ? 'layout-content-scrollable' : ''} ${options.contentClassName || ''}" id="internal-page-container">
+           ${getRuntimeReadinessBannerHtml()}
            ${contentHtml}
         </div>
       </main>

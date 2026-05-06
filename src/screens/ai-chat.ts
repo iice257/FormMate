@@ -5,6 +5,7 @@ import { getState, addChatMessage } from '../state';
 import { withLayout, initLayout, openAccountModal } from '../components/layout';
 import { processChatMessage } from '../ai/ai-actions';
 import { AI_SURFACES, extractVisionContext, getAiErrorMessage } from '../ai/ai-service';
+import { isAiConfigured, isImageParserConfigured } from '../app/runtime-health';
 import { cancelRecording, getRecordingState, isVoiceSupported, startRecording, stopAndTranscribe } from '../ai/voice';
 import { toast } from '../components/toast';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
@@ -79,7 +80,9 @@ function readFileAsDataUrl(file) {
 }
 
 export function aiChatScreen() {
-  const { userProfile, formData } = getState();
+  const { userProfile, formData, appHealth } = getState();
+  const aiConfigured = isAiConfigured(appHealth);
+  const imageParserConfigured = isImageParserConfigured(appHealth);
   const displayName = escapeHtml(userProfile?.name?.split(' ')[0] || 'User');
   const sessions = loadSessions();
   const avatarSrc = safeHttpUrl(userProfile?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'User')}&background=2298da&color=fff&bold=true`;
@@ -107,7 +110,7 @@ export function aiChatScreen() {
               <span class="material-symbols-outlined" style="font-size: 32px;">auto_awesome</span>
             </div>
             <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--fm-text); margin-bottom: 0.5rem;">How can I help you today?</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">I can assist with form analysis, answer generation, and intelligent suggestions - just ask.</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.5;">${aiConfigured ? 'I can assist with form analysis, answer generation, and intelligent suggestions - just ask.' : 'AI is offline until GROQ_API_KEY is configured. You can still review forms, edit answers, and use non-AI workflows.'}</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <button class="chat-suggestion btn-press" data-msg="Analyze my latest form and suggest improvements" style="padding: 1rem; border: 1px solid var(--fm-border-light); border-radius: var(--fm-radius-xl); background: #fff; cursor: pointer; text-align: left;">
                 <span class="material-symbols-outlined" style="font-size: 20px; color: var(--fm-primary); margin-bottom: 0.4rem; display: block;">analytics</span>
@@ -124,18 +127,18 @@ export function aiChatScreen() {
         <div class="zen-chat-composer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--fm-border-light); flex-shrink: 0;">
           <div id="chat-followups" class="chat-followups chat-followups-main"></div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button id="btn-chat-attach" type="button" aria-label="Attach file" title="Attach file" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button id="btn-chat-attach" type="button" aria-label="${imageParserConfigured ? 'Attach file' : 'Image parsing unavailable until AI is configured'}" title="${imageParserConfigured ? 'Attach file' : 'Image parsing unavailable until AI is configured'}" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: ${imageParserConfigured ? 'pointer' : 'not-allowed'}; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" ${imageParserConfigured ? '' : 'disabled'}>
               <span class="material-symbols-outlined" style="font-size: 18px;">attachment</span>
             </button>
             <input id="chat-attach-input" type="file" accept="image/png,image/jpeg,image/webp" multiple style="display:none;" />
             <div style="flex: 1; position: relative;">
               <label for="chat-input" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;">Message FormMate AI</label>
-              <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="Message FormMate AI..." style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" />
+              <input type="text" id="chat-input" data-zen-focus-target aria-label="Message FormMate AI" placeholder="${aiConfigured ? 'Message FormMate AI...' : 'AI unavailable until GROQ_API_KEY is configured'}" style="width: 100%; height: 44px; padding: 0 3rem 0 1rem; border: 1px solid var(--fm-border); border-radius: var(--fm-radius-full); font-size: 0.85rem; background: #fff; color: var(--fm-text);" ${aiConfigured ? '' : 'disabled'} />
               <button id="btn-send" type="button" aria-label="Send message" title="Send message" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; background: var(--fm-primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" disabled>
                 <span class="material-symbols-outlined" style="font-size: 18px;">arrow_upward</span>
               </button>
             </div>
-            <button id="btn-chat-voice" type="button" aria-label="Start voice input" title="Start voice input" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: pointer; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <button id="btn-chat-voice" type="button" aria-label="${aiConfigured ? 'Start voice input' : 'Voice transcription unavailable until AI is configured'}" title="${aiConfigured ? 'Start voice input' : 'Voice transcription unavailable until AI is configured'}" style="width: 36px; height: 36px; border: 1px solid var(--fm-border); border-radius: 50%; background: #fff; cursor: ${aiConfigured ? 'pointer' : 'not-allowed'}; color: #94a3b8; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" ${aiConfigured ? '' : 'disabled'}>
               <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
             </button>
           </div>
@@ -304,6 +307,10 @@ export function aiChatScreen() {
 
     const syncSendButton = () => {
       if (!btnSend) return;
+      if (!aiConfigured) {
+        btnSend.disabled = true;
+        return;
+      }
       const hasText = Boolean(chatInput?.value?.trim());
       const hasAttachment = pendingImages.length > 0 || pendingUiContextEvents.length > 0;
       btnSend.disabled = !(hasText || hasAttachment) || isChatPending;
@@ -477,6 +484,10 @@ export function aiChatScreen() {
     }
 
     async function sendMessage(text) {
+      if (!aiConfigured) {
+        toast.warning('AI features need GROQ_API_KEY. Manual form review and editing still work.');
+        return;
+      }
       const trimmed = text.trim();
       const hasUiContext = pendingUiContextEvents.length > 0;
       if ((!trimmed && !pendingImages.length && !hasUiContext) || isChatPending) return;
@@ -505,7 +516,7 @@ export function aiChatScreen() {
 
       try {
         const attachmentPayload = [];
-        if (pendingImages.length) {
+        if (pendingImages.length && imageParserConfigured) {
           try {
             const vision = await extractVisionContext({
               surface: AI_SURFACES.AI_CHAT,
@@ -594,6 +605,11 @@ export function aiChatScreen() {
 
     btnAttach?.addEventListener('click', () => attachInput?.click());
     attachInput?.addEventListener('change', async () => {
+      if (!imageParserConfigured) {
+        toast.warning('Image parsing needs AI configuration first.');
+        attachInput.value = '';
+        return;
+      }
       const files = Array.from(attachInput.files || []);
       await addImageFiles(files);
       attachInput.value = '';
@@ -617,6 +633,10 @@ export function aiChatScreen() {
     btnVoice?.addEventListener('click', async () => {
       if (!isVoiceSupported()) {
         toast.error('Voice input is not supported in this browser.');
+        return;
+      }
+      if (!aiConfigured) {
+        toast.warning('Voice transcription needs GROQ_API_KEY.');
         return;
       }
 

@@ -202,7 +202,7 @@ function renderStructuredInteractivePart(part) {
           <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
           <span class="ai-interactive-item-badge">Editable</span>
         </div>
-        <input type="text" class="ai-interactive-input ai-interactive-input-single" value="${escapeAttr(String(part.value || ''))}" />
+        <input type="text" class="ai-interactive-input ai-interactive-input-single" aria-label="${escapeAttr(`Edit ${label}`)}" value="${escapeAttr(String(part.value || ''))}" />
         <button type="button" class="ai-interactive-commit" aria-label="Queue this edit for your next message">
           <span class="material-symbols-outlined">add_task</span>
           <span>Use in next message</span>
@@ -218,7 +218,7 @@ function renderStructuredInteractivePart(part) {
           <div class="ai-interactive-item-title">${displayId ? `<span class="ai-interactive-item-id">${escapeHtml(displayId)}</span>` : ''}${escapeHtml(label)}</div>
           <span class="ai-interactive-item-badge">Editable</span>
         </div>
-        <textarea class="ai-interactive-input" rows="3">${escapeHtml(String(part.value || ''))}</textarea>
+        <textarea class="ai-interactive-input" aria-label="${escapeAttr(`Edit ${label}`)}" rows="3">${escapeHtml(String(part.value || ''))}</textarea>
         <button type="button" class="ai-interactive-commit" aria-label="Queue this edit for your next message">
           <span class="material-symbols-outlined">add_task</span>
           <span>Use in next message</span>

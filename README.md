@@ -1,102 +1,81 @@
 # FormMate
 
-FormMate is a lightweight AI-assisted form companion that scaffolds answers and helps users complete tedious web forms faster. Users paste a form URL, converse via voice or text, and the AI suggests or fills responses that the user can review, regenerate, or edit. It’s designed for productivity and controlled automation, not bulk submission or spam.
+FormMate is an AI-assisted form workspace for importing public forms, extracting questions, drafting answers, and letting the user review or edit everything before use. The current app is a React/Vite frontend with local API handlers for AI chat, voice transcription, image parsing, Google Form scraping, auth health, and security checks.
 
-The focus is on:
+## Current Status
 
-* reducing repetitive typing
-* maintaining user oversight
-* working with dynamic web forms
-* clean, minimal web UI
-* AI-driven suggestion and scaffolding
+- Frontend: React 19, Vite, Tailwind, legacy DOM-rendered screens mounted inside React.
+- API: local Node/Vercel-compatible handlers under `api/`.
+- Storage/auth: Supabase-backed sync when configured, with local browser fallback paths.
+- AI: Groq-backed chat, transcription, and vision/image parsing when `GROQ_API_KEY` is set.
+- Deployment: Vercel and Docker paths exist.
+- Tests: parser fixtures, parser buckets, chat contract, request security, safe HTML, and Playwright e2e.
 
-## Design Ideas
+The app is intentionally useful without AI keys: users can still navigate, authenticate when Supabase is configured, import/review stored form data, edit answers, and use non-AI screens. AI-only controls now explain when `GROQ_API_KEY` is missing instead of failing silently.
 
-### Visual Style
+## Local Development
 
-* Apple-inspired minimalism
-* lots of whitespace
-* subtle shadows and card layouts
-* dark/light mode toggle (but default light for simplicity)
-* rounded corners and gentle micro-interactions
+```bash
+npm install
+npm run dev
+```
 
-### UX Flow
+The dev stack starts:
 
-1. paste form URL
-2. form questions load (parsed dynamically)
-3. AI scaffolds answers
-4. user reviews or edits
-5. fill fields
-6. submit (user initiated)
+- Frontend: `http://localhost:5173/`
+- Local API: `http://127.0.0.1:3000/api/health`
 
-### Interaction Patterns
+Useful checks:
 
-* voice input (optional)
-* chat-style conversation
-* regenerate single fields or entire response sets
-* one-click field suggestions
-* preview before fill
+```bash
+npm run typecheck
+npm test
+npm run audit:a11y
+```
 
-### Accessibility
+`npm run audit:a11y` writes `docs/current-accessibility-audit.md` from the current TypeScript source. It is a heuristic audit, not a full accessibility certification.
 
-* keyboard friendly
-* screen reader considerations
-* high contrast options
-* simple typography
+## Environment
 
-## Tech Stack
+Copy `.env.example` to `.env.local` for local work.
 
-### Frontend
+Required for AI features:
 
-* React (or lightweight alternative)
-* Tailwind (or simple CSS)
-* Playwright (for form DOM interaction)
-* Web Speech API (voice, optional)
+- `GROQ_API_KEY`: enables chat, answer generation, voice transcription, image parsing, and vision context.
 
-### AI Layer
+Optional AI model overrides:
 
-* Gemini 3 Flash API (primary)
-* fallback to Gemini 2.5 or open-weight model if rate limited
-* prompt scaffolding with structured outputs
+- `FORMMATE_IMAGE_MODEL`
+- `FORMMATE_IMAGE_MODELS`
+- `FORMMATE_CHAT_VISION_MODEL`
+- `FORMMATE_CHAT_VISION_MODELS`
 
-### Architecture
+Required for Supabase auth/sync:
 
-* browser automation for field discovery
-* DOM parsing for question extraction
-* user approval layer
-* no server-heavy persistence (privacy focused)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_STORAGE_PROVIDER=supabase`
 
-### Data
+Local API proxy:
 
-* session-based only
-* no long-term storage by default
-* user controls submission
+- `VITE_API_PROXY_TARGET=http://127.0.0.1:3000`
+- `FORMMATE_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173`
 
-## Features (MVP)
+## What Works Without API Keys
 
-* form URL input
-* dynamic question detection
-* AI answer suggestions
-* regenerate per field
-* voice or text input
-* review step before fill
-* clean responsive UI
+- Landing, docs, examples, dashboard, and navigation.
+- Manual form URL intake and non-AI review flows.
+- Local storage fallback when Supabase is not selected.
+- Current-source accessibility audit.
+- Typecheck and unit/security test suite.
 
-## Design Notes
+## What Needs Provider Keys
 
-* keep it small
-* avoid feature bloat
-* prioritize reliability
-* user always in control
-* no bulk automation
+- AI chat and generated answers need `GROQ_API_KEY`.
+- Voice transcription needs `GROQ_API_KEY`.
+- Screenshot/image form extraction needs `GROQ_API_KEY` and a vision-capable model.
+- Supabase auth/sync needs Supabase URL and anon key.
 
-## Future Ideas
+## Product Guardrails
 
-* templates for common forms
-* answer history (opt-in)
-* collaborative form filling
-* exportable data sets
-* plugin system
-
----
-
+FormMate is built for user-supervised productivity, not bulk submission or spam. Keep the review step explicit, avoid automatic submission until the real automation path is safe, and keep server-side limits in place for AI and proxy routes.

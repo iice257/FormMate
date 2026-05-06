@@ -459,11 +459,11 @@ export function docsScreen() {
                  <div class="mb-6">
                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 block">Your Rating</label>
                    <div id="star-rating" class="flex items-center gap-1">
-                     <span data-val="1" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="2" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="3" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="4" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="5" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                     <button type="button" data-val="1" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none" aria-label="Rate 1 star">star</button>
+                     <button type="button" data-val="2" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none" aria-label="Rate 2 stars">star</button>
+                     <button type="button" data-val="3" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none" aria-label="Rate 3 stars">star</button>
+                     <button type="button" data-val="4" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none" aria-label="Rate 4 stars">star</button>
+                     <button type="button" data-val="5" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none" aria-label="Rate 5 stars">star</button>
                    </div>
                  </div>
 

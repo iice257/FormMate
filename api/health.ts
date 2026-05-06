@@ -24,7 +24,7 @@ function buildConfigHealth() {
   const imageParserConfigured = groqConfigured;
   const authAvailable = supabaseConfigured;
   const syncAvailable = storageMode === 'supabase' && supabaseConfigured;
-  const degradedMode = storageMode === 'supabase' && !syncAvailable;
+  const degradedMode = !groqConfigured || (storageMode === 'supabase' && !syncAvailable);
   return {
     apiReachable: true,
     groqConfigured,
