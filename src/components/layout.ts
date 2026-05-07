@@ -868,14 +868,40 @@ export function initLayout(wrapper, options = {}) {
   // Sidebar account menu
   const accountMenuBtn = wrapper.querySelector('#btn-sidebar-account-menu');
   const accountMenu = wrapper.querySelector('#sidebar-account-menu');
+  let accountMenuCloseTimer = null;
+  let accountMenuOpenFrame = null;
   const setAccountMenuOpen = (open) => {
     if (!accountMenu || !accountMenuBtn) return;
-    accountMenu.hidden = !open;
-    accountMenu.classList.toggle('is-open', open);
+
+    if (accountMenuOpenFrame) {
+      window.cancelAnimationFrame(accountMenuOpenFrame);
+      accountMenuOpenFrame = null;
+    }
+
+    if (accountMenuCloseTimer) {
+      window.clearTimeout(accountMenuCloseTimer);
+      accountMenuCloseTimer = null;
+    }
+
+    if (open) {
+      accountMenu.hidden = false;
+      accountMenuOpenFrame = window.requestAnimationFrame(() => {
+        accountMenu.classList.add('is-open');
+        accountMenuOpenFrame = null;
+      });
+    } else {
+      accountMenu.classList.remove('is-open');
+      accountMenuCloseTimer = window.setTimeout(() => {
+        if (!accountMenu.classList.contains('is-open')) {
+          accountMenu.hidden = true;
+        }
+      }, 140);
+    }
+
     accountMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
   const closeAccountMenu = () => setAccountMenuOpen(false);
-  const toggleAccountMenu = () => setAccountMenuOpen(accountMenu?.hidden !== false);
+  const toggleAccountMenu = () => setAccountMenuOpen(!accountMenu?.classList.contains('is-open'));
   const handleAccountMenuClickAway = (event) => {
     if (!accountMenu || !accountMenuBtn || accountMenu.hidden) return;
     const target = event.target;
@@ -919,6 +945,8 @@ export function initLayout(wrapper, options = {}) {
       mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
       mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
       accountMenuBtn?.removeEventListener('click', toggleAccountMenu);
+      if (accountMenuOpenFrame) window.cancelAnimationFrame(accountMenuOpenFrame);
+      if (accountMenuCloseTimer) window.clearTimeout(accountMenuCloseTimer);
       document.removeEventListener('click', handleDocumentClick);
       document.removeEventListener('click', handleAccountMenuClickAway);
       document.removeEventListener('keydown', handleSearchShortcut);
@@ -934,6 +962,8 @@ export function initLayout(wrapper, options = {}) {
     mobileMenuBtn?.removeEventListener('click', toggleMobileMenu);
     mobileMenuCloseBtn?.removeEventListener('click', closeMobileMenu);
     accountMenuBtn?.removeEventListener('click', toggleAccountMenu);
+    if (accountMenuOpenFrame) window.cancelAnimationFrame(accountMenuOpenFrame);
+    if (accountMenuCloseTimer) window.clearTimeout(accountMenuCloseTimer);
     document.removeEventListener('click', handleDocumentClick);
     document.removeEventListener('click', handleAccountMenuClickAway);
     document.removeEventListener('keydown', handleSearchShortcut);

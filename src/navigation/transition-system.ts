@@ -26,9 +26,9 @@ type ApplyNavigationTransitionOptions = {
 const scrollMemory = new Map<number, ScrollSnapshot>();
 let activeTransitionToken = 0;
 
-const PAGE_TRANSITION_MS = 340;
-const SHELL_TRANSITION_MS = 280;
-const PANEL_TRANSITION_MS = 240;
+const PAGE_TRANSITION_MS = 260;
+const SHELL_TRANSITION_MS = 220;
+const PANEL_TRANSITION_MS = 180;
 const PREMIUM_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 function prefersReducedMotion() {

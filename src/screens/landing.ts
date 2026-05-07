@@ -21,11 +21,11 @@ export function landingScreen() {
   const avatarSrc = avatarFromProfile || fallbackAvatar;
 
   const authButtonHtml = isAuthenticated
-    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
+    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-colors shadow-sm btn-press border border-slate-200">
          <img src="${escapeAttr(avatarSrc)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
          <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
-    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
+    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-colors shadow-[0_4px_12px_rgba(15,23,42,0.15)] btn-press" id="btn-login">Sign In</button>`;
 
   const html = `
     <div class="landing-page-shell relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
@@ -81,7 +81,7 @@ export function landingScreen() {
       <div class="layout-container flex h-full grow flex-col">
 
         <!-- Navigation -->
-        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-[transform,opacity,background-color,box-shadow] duration-150 ease-out">
           <div class="flex-1 flex items-center justify-start">
             <button type="button" class="flex min-w-0 items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0 overflow-visible leading-none" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
@@ -92,9 +92,9 @@ export function landingScreen() {
           </div>
           
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-examples">Examples</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
+            ${isAuthenticated ? `<button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer" id="nav-forms">Dashboard</button>` : ''}
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer" id="nav-examples">Examples</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer" id="nav-docs">Docs</button>
           </nav>
  
           <div class="flex-1 flex items-center justify-end gap-3">
@@ -116,7 +116,7 @@ export function landingScreen() {
             <!-- URL Input -->
             <div class="landing-url-panel mt-12 w-full max-w-2xl mx-auto relative z-20">
 
-              <div class="landing-url-shell bg-white/85 backdrop-blur-md p-2 rounded-[2.5rem] border border-slate-200 flex flex-col md:flex-row gap-2 transition-all hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
+              <div class="landing-url-shell bg-white/85 backdrop-blur-md p-2 rounded-[2.5rem] border border-slate-200 flex flex-col md:flex-row gap-2 transition-[box-shadow,border-color] duration-150 ease-out hover:shadow-2xl hover:shadow-primary/20 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary">
                 <div class="flex-1 relative">
                   <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg">link</span>
                   <input aria-label="Form URL"
@@ -126,7 +126,7 @@ export function landingScreen() {
                     type="text"
                   />
                 </div>
-                <button id="btn-analyze" class="bg-primary text-white px-5 sm:px-6 h-14 rounded-full font-bold text-sm sm:text-base hover:bg-primary-dark transition-all flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group whitespace-nowrap">
+                <button id="btn-analyze" class="bg-primary text-white px-5 sm:px-6 h-14 rounded-full font-bold text-sm sm:text-base hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 btn-press shadow-lg shadow-primary/25 group whitespace-nowrap">
                   Analyze
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                 </button>
@@ -134,13 +134,13 @@ export function landingScreen() {
               <div class="mt-8 flex flex-col items-center gap-4">
                 <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
                 <div class="flex flex-wrap justify-center gap-3">
-                    <button id="btn-hero-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <button id="btn-hero-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-[background-color,border-color,box-shadow] btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">explore</span> Examples
                     </button>
-                    <button id="btn-hero-chat" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <button id="btn-hero-chat" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-[background-color,border-color,box-shadow] btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">chat_bubble</span> Chat
                     </button>
-                    <button id="btn-hero-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
+                    <button id="btn-hero-help" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-[background-color,border-color,box-shadow] btn-press shadow-sm flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">help</span> Help Center
                     </button>
                 </div>
@@ -150,7 +150,7 @@ export function landingScreen() {
 
           <!-- Workspace Preview (inline mockup) -->
           <div class="landing-product-preview max-w-[1020px] w-full mt-28 stagger-children">
-            <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(34,152,218,0.18)] transition-all duration-500">
+            <div class="bg-white/90 backdrop-blur-md rounded-[var(--fm-card-radius)] shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden group hover:shadow-[0_20px_60px_-15px_rgba(34,152,218,0.18)] transition-shadow duration-200">
               <!-- Preview Chrome Bar -->
               <div class="flex items-center gap-2 px-4 py-3 bg-slate-100/50 border-b border-slate-200/60">
                 <div class="flex gap-1.5">
@@ -190,7 +190,7 @@ export function landingScreen() {
 
                   <div class="space-y-4 mt-6">
                     <!-- Question Card 1 -->
-                    <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-white transition-all group-hover:shadow-md animate-gentle-pulse">
+                    <div class="border border-slate-200 rounded-xl p-5 shadow-sm bg-white transition-shadow group-hover:shadow-md animate-gentle-pulse">
                       <p class="text-[13px] font-bold text-slate-800 mb-2.5">Professional Summary</p>
                       <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-[13px] text-slate-600 leading-relaxed font-medium">
                         I am a Senior UX Designer with over 8 years of experience building accessible enterprise platforms. At my previous role at Acme Corp, I led the redesign of...
@@ -441,7 +441,7 @@ export function landingScreen() {
             <h2 class="text-slate-900 text-3xl md:text-4xl font-extrabold tracking-tight mb-4">Loved by <span class="text-primary font-cursive">thousands</span></h2>
             <p class="text-slate-500 text-lg mb-12">What people are saying</p>
             
-            <div id="testimonials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full text-left transition-all duration-500 overflow-hidden relative" style="max-height: 220px;">
+            <div id="testimonials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full text-left transition-[max-height] duration-300 overflow-hidden relative" style="max-height: 220px;">
               <!-- Initially we'll just put an empty div, we will render it via JS! -->
             </div>
             
@@ -462,10 +462,10 @@ export function landingScreen() {
               </h2>
               <p class="text-slate-400 text-base max-w-md mx-auto mb-8">Join 500+ early adopters who have reclaimed their time with AI-powered form filling.</p>
               <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button id="btn-cta-start" class="bg-primary text-white px-8 py-3.5 rounded-full font-bold text-base hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 btn-press">
+                <button id="btn-cta-start" class="bg-primary text-white px-8 py-3.5 rounded-full font-bold text-base hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25 btn-press">
                   Get Started Now
                 </button>
-                <button id="btn-cta-dashboard" class="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold text-base hover:bg-white/20 transition-all">
+                <button id="btn-cta-dashboard" class="bg-white/10 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold text-base hover:bg-white/20 transition-colors">
                   ${dashboardActionLabel}
                 </button>
               </div>

@@ -121,7 +121,7 @@ export function docsScreen() {
       <!-- Navigation Bar -->
       <header class="docs-topbar h-16 border-b border-slate-200 flex items-center justify-between px-4 md:px-6 bg-white shrink-0 z-30">
         <div class="flex-1 flex justify-start">
-          <button type="button" class="docs-home-button bg-primary text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all btn-press" id="btn-home">
+          <button type="button" class="docs-home-button bg-primary text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors btn-press" id="btn-home">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
             Back to Home
           </button>
@@ -133,7 +133,7 @@ export function docsScreen() {
           <div class="hidden md:block flex-1 max-w-lg lg:max-w-xl" id="docs-search-wrapper">
              <div class="relative w-full" id="docs-search-container">
                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-               <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-all outline-none" />
+               <input type="text" id="docs-search-input" placeholder="Search guides..." aria-label="Search guides" class="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-primary/20 border border-slate-200 rounded-lg pl-9 pr-10 py-2 text-sm transition-[background-color,border-color,box-shadow] outline-none" />
                <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors hidden">
                   <span class="material-symbols-outlined text-[16px]">close</span>
                </button>
@@ -151,9 +151,9 @@ export function docsScreen() {
         </div>
 
         <div class="docs-topbar-actions flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
-          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
-          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
-          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms</button>
+          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-[background-color,border-color,color,box-shadow] border bg-primary text-white border-primary shadow-sm" data-docs-nav="docs">Docs</button>
+          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-[background-color,border-color,color,box-shadow] border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="privacy">Privacy Policy</button>
+          <button type="button" class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-[background-color,border-color,color,box-shadow] border bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary" data-docs-nav="terms">Terms</button>
         </div>
       </header>
 
@@ -458,12 +458,12 @@ export function docsScreen() {
                <div class="p-8 border border-slate-200 rounded-2xl bg-slate-50">
                  <div class="mb-6">
                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 block">Your Rating</label>
-                   <div id="star-rating" class="flex items-center gap-1">
-                     <span data-val="1" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="2" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="3" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="4" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
-                     <span data-val="5" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none">star</span>
+                   <div id="star-rating" class="flex items-center gap-1" role="radiogroup" aria-label="Your Rating">
+                     <button type="button" role="radio" aria-checked="false" aria-label="Rate 1 star" data-val="1" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none bg-transparent border-0 p-0 leading-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">star</button>
+                     <button type="button" role="radio" aria-checked="false" aria-label="Rate 2 stars" data-val="2" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none bg-transparent border-0 p-0 leading-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">star</button>
+                     <button type="button" role="radio" aria-checked="false" aria-label="Rate 3 stars" data-val="3" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none bg-transparent border-0 p-0 leading-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">star</button>
+                     <button type="button" role="radio" aria-checked="false" aria-label="Rate 4 stars" data-val="4" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none bg-transparent border-0 p-0 leading-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">star</button>
+                     <button type="button" role="radio" aria-checked="false" aria-label="Rate 5 stars" data-val="5" class="material-symbols-outlined text-3xl text-slate-300 cursor-pointer hover:text-amber-400 transition-colors select-none bg-transparent border-0 p-0 leading-none rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">star</button>
                    </div>
                  </div>
 
@@ -482,7 +482,7 @@ export function docsScreen() {
                    <textarea id="feedback-text" rows="4" class="w-full px-4 py-3 rounded-xl text-sm border border-slate-200 bg-white text-slate-700 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Tell us what you love, what could be better, or share ideas for new features..."></textarea>
                  </div>
 
-                 <button id="btn-submit-feedback" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-all btn-press flex items-center gap-2">
+                   <button id="btn-submit-feedback" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-[filter,background-color] btn-press flex items-center gap-2">
                    <span class="material-symbols-outlined text-lg">send</span>
                    Submit Feedback
                  </button>
@@ -530,7 +530,7 @@ export function docsScreen() {
                      <input id="contact-save-info" type="checkbox" class="size-4 rounded border-slate-300 text-primary focus:ring-primary/30" />
                      Save my info for next time
                    </label>
-                   <button id="btn-submit-contact" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-all btn-press flex items-center gap-2">
+                   <button id="btn-submit-contact" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:brightness-110 transition-[filter,background-color] btn-press flex items-center gap-2">
                      <span class="material-symbols-outlined text-lg">mail</span>
                      Send Message
                    </button>
@@ -587,7 +587,7 @@ export function docsScreen() {
 
           <div class="p-3 border-t border-slate-200/80 bg-white/70 backdrop-blur-md relative">
             <!-- Focus Tooltip -->
-            <div id="ai-focus-tooltip" class="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-primary text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 pointer-events-none transition-all duration-300 translate-y-2 z-50 whitespace-nowrap">
+            <div id="ai-focus-tooltip" class="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-primary text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 pointer-events-none transition-[opacity,transform] duration-200 translate-y-2 z-50 whitespace-nowrap">
               Ask me anything!
               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
             </div>
@@ -596,8 +596,8 @@ export function docsScreen() {
             ${authed ? `
               <div class="relative group">
                 <label for="docs-chat-input" class="sr-only">Ask the documentation assistant a question</label>
-                <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-all shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
-                <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-all shadow-md active:scale-95 disabled:opacity-50" disabled>
+                <textarea id="docs-chat-input" aria-label="Ask the documentation assistant a question" class="w-full rounded-xl border border-slate-200 bg-white focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary text-xs py-3 pl-3 pr-10 resize-none transition-[background-color,border-color,box-shadow] shadow-sm" placeholder="Ask a question..." rows="1" style="min-height: 48px; max-height: 120px;"></textarea>
+                <button id="btn-docs-send" type="button" aria-label="Send documentation chat message" class="absolute bottom-1/2 translate-y-1/2 right-2 w-8 h-8 flex shrink-0 items-center justify-center bg-primary text-white rounded-full hover:bg-primary/95 transition-[background-color,opacity] shadow-md active:scale-95 disabled:opacity-50" disabled>
                   <span class="material-symbols-outlined text-[16px]">send</span>
                 </button>
               </div>
@@ -1023,14 +1023,30 @@ export function docsScreen() {
 
     // Rating Logic
     let currentRating = 0;
-    const stars = wrapper.querySelectorAll('#star-rating span');
-    stars.forEach(star => {
+    const stars = wrapper.querySelectorAll('#star-rating button');
+    const syncStars = () => {
+      stars.forEach((s, i) => {
+        const selected = i < currentRating;
+        s.classList.toggle('text-amber-400', selected);
+        s.classList.toggle('text-slate-300', !selected);
+        s.setAttribute('aria-checked', selected && i === currentRating - 1 ? 'true' : 'false');
+      });
+    };
+    const setRating = (rating, { focus = false } = {}) => {
+      currentRating = Math.max(1, Math.min(5, rating));
+      syncStars();
+      if (focus) stars[currentRating - 1]?.focus();
+    };
+    stars.forEach((star, index) => {
       star.addEventListener('click', (e) => {
-        currentRating = parseInt(e.target.dataset.val);
-        stars.forEach((s, i) => {
-          if (i < currentRating) s.classList.replace('text-slate-300', 'text-amber-400');
-          else s.classList.replace('text-amber-400', 'text-slate-300');
-        });
+        setRating(parseInt(e.currentTarget.dataset.val));
+      });
+      star.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowLeft' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const direction = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : -1;
+        const nextRating = ((index + direction + stars.length) % stars.length) + 1;
+        setRating(nextRating, { focus: true });
       });
     });
 
@@ -1045,7 +1061,7 @@ export function docsScreen() {
         toast.success('Thank you for your feedback! It means a lot to us.');
         wrapper.querySelector('#feedback-text').value = '';
         currentRating = 0;
-        stars.forEach(s => s.classList.replace('text-amber-400', 'text-slate-300'));
+        syncStars();
       }, 500);
     });
 

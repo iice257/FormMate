@@ -71,11 +71,11 @@ export function successScreen() {
               </div>
 
               <div class="flex flex-col sm:flex-row gap-4 w-full">
-                <button class="flex-1 flex items-center justify-center gap-2 rounded-xl h-12 px-6 bg-primary text-white text-sm font-bold transition-all hover:bg-primary/90 shadow-md shadow-primary/20 btn-press">
+          <button class="flex-1 flex items-center justify-center gap-2 rounded-xl h-12 px-6 bg-primary text-white text-sm font-bold transition-colors hover:bg-primary/90 shadow-md shadow-primary/20 btn-press">
                   <span class="material-symbols-outlined text-sm">open_in_new</span>
                   <span>View Original Form</span>
                 </button>
-                <button class="flex-1 flex items-center justify-center gap-2 rounded-xl h-12 px-6 bg-slate-100 text-slate-900 text-sm font-bold transition-all hover:bg-slate-200 btn-press">
+          <button class="flex-1 flex items-center justify-center gap-2 rounded-xl h-12 px-6 bg-slate-100 text-slate-900 text-sm font-bold transition-colors hover:bg-slate-200 btn-press">
                   <span class="material-symbols-outlined text-sm">download</span>
                   <span>Download Receipt</span>
                 </button>
@@ -87,7 +87,7 @@ export function successScreen() {
               <h3 class="text-slate-900 text-xl font-bold leading-tight px-1">Next Steps</h3>
 
               <!-- Save to Profile -->
-              <div class="group flex items-stretch justify-between gap-6 rounded-xl bg-white p-6 shadow-sm border border-slate-200 hover:border-primary/40 transition-all">
+            <div class="group flex items-stretch justify-between gap-6 rounded-xl bg-white p-6 shadow-sm border border-slate-200 hover:border-primary/40 transition-[border-color,box-shadow]">
                 <div class="flex flex-col justify-between gap-4 flex-1">
                   <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2 text-primary mb-1">
@@ -99,7 +99,7 @@ export function successScreen() {
                       Add these ${answeredCount} verified responses to your profile to speed up 90% of future forms automatically.
                     </p>
                   </div>
-                  <button class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary/10 text-primary text-sm font-bold w-fit hover:bg-primary hover:text-white transition-all btn-press">
+              <button class="flex items-center justify-center gap-2 rounded-lg h-10 px-6 bg-primary/10 text-primary text-sm font-bold w-fit hover:bg-primary hover:text-white transition-colors btn-press">
                     <span class="material-symbols-outlined text-sm">verified_user</span>
                     <span>Save to Profile</span>
                   </button>

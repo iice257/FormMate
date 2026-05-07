@@ -87,7 +87,7 @@ function initHidingHeader() {
   const style = document.createElement('style');
   style.textContent = `
     header[data-fm-hide-on-scroll="true"] {
-      transition: transform 0.3s ease, opacity 0.3s ease !important;
+      transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms cubic-bezier(0.23, 1, 0.32, 1) !important;
       will-change: transform, opacity;
     }
   `;

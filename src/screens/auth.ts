@@ -20,7 +20,21 @@ function consumeAuthEntryReason() {
   }
 }
 
+function ensureAuthHeroPreload() {
+  if (document.querySelector('link[data-fm-auth-hero-preload="true"]')) return;
+
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'image';
+  link.href = '/auth-bg-image.png';
+  link.fetchPriority = 'high';
+  link.dataset.fmAuthHeroPreload = 'true';
+  document.head.appendChild(link);
+}
+
 export function authScreen() {
+  ensureAuthHeroPreload();
+
   const devTestUsers = getDevTestUsers();
   const authEntryReason = consumeAuthEntryReason();
   const authGatePromptHtml = authEntryReason === 'gated'

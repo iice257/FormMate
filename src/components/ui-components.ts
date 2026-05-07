@@ -27,7 +27,7 @@ export function renderButton(text, { id = '', icon = '', variant = 'primary', si
 
   const iconHtml = icon ? `<span class="material-symbols-outlined text-[1em]">${icon}</span>` : '';
 
-  return `<button ${id ? `id="${id}"` : ''} class="flex items-center justify-center font-bold transition-all btn-press ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${classes}" ${disabled ? 'disabled aria-disabled="true"' : ''} aria-label="${text.replace(/"/g, '&quot;')}">
+  return `<button ${id ? `id="${id}"` : ''} class="flex items-center justify-center font-bold transition-[background-color,border-color,color,box-shadow,filter,opacity] btn-press ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${classes}" ${disabled ? 'disabled aria-disabled="true"' : ''} aria-label="${text.replace(/"/g, '&quot;')}">
     ${iconHtml}${text}
   </button>`;
 }
@@ -123,7 +123,7 @@ export function renderTabs(tabs, { activeTab = 0, id = 'tabs' } = {}) {
   return `
     <div id="${id}" class="flex gap-1 p-1 rounded-xl" style="background: var(--fm-bg-sunken);" role="tablist" aria-label="Tabs">
       ${tabs.map((tab, i) => `
-        <button type="button" class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${i === activeTab ? 'bg-white shadow-sm' : 'hover:bg-white/50'}"
+        <button type="button" class="tab-btn flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-[background-color,box-shadow,color] ${i === activeTab ? 'bg-white shadow-sm' : 'hover:bg-white/50'}"
                 data-tab-index="${i}" data-tab-group="${id}"
                 id="${id}-tab-${i}"
                 role="tab"

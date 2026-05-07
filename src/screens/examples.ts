@@ -14,11 +14,11 @@ export function examplesScreen() {
   const avatarSrc = avatarFromProfile || fallbackAvatar;
 
   const authButtonHtml = isAuthenticated
-    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-all shadow-sm btn-press border border-slate-200">
+    ? `<button id="btn-profile" class="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-200 text-slate-900 text-sm font-bold pl-2 pr-4 py-1.5 rounded-full transition-colors shadow-sm btn-press border border-slate-200">
          <img src="${escapeAttr(avatarSrc)}" class="size-7 rounded-full object-cover border border-slate-200" alt="Avatar" />
          <span class="truncate max-w-[100px]">${displayFirstName}</span>
        </button>`
-    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`;
+    : `<button class="bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-colors shadow-[0_4px_12px_rgba(15,23,42,0.15)] btn-press" id="btn-login">Sign In</button>`;
 
   const demos = [
     {
@@ -149,14 +149,14 @@ export function examplesScreen() {
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="examples-grid">
               ${demos.map((demo) => `
-                <button type="button" class="demo-card relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 text-left shadow-[0_20px_60px_-35px_rgba(37,99,235,0.25)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_-32px_rgba(37,99,235,0.35)] group" data-url="${demo.url}" aria-label="Use demo: ${escapeAttr(demo.title)}">
+        <button type="button" class="demo-card relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 text-left shadow-[0_20px_60px_-35px_rgba(37,99,235,0.25)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_-32px_rgba(37,99,235,0.35)] group" data-url="${demo.url}" aria-label="Use demo: ${escapeAttr(demo.title)}">
                   <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary/8 via-sky-100/50 to-transparent pointer-events-none"></div>
                   <div class="relative">
                     <div class="mb-5 flex items-start justify-between gap-4">
                       <div class="flex items-center justify-center size-12 rounded-2xl border ${colorClasses[demo.color]} shadow-sm">
                         <span class="material-symbols-outlined text-2xl">${demo.icon}</span>
                       </div>
-                      <span class="material-symbols-outlined text-slate-300 transition-all group-hover:text-primary group-hover:translate-x-1">arrow_forward</span>
+          <span class="material-symbols-outlined text-slate-300 transition-[color,transform] group-hover:text-primary group-hover:translate-x-1">arrow_forward</span>
                     </div>
 
                     <div class="mb-5">
@@ -186,7 +186,7 @@ export function examplesScreen() {
     : `
     <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-mesh">
       <div class="layout-container flex h-full grow flex-col">
-        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-all">
+        <header data-fm-hide-on-scroll="true" class="flex items-center justify-between px-6 py-6 md:px-12 lg:px-24 sticky top-0 z-50 transition-[transform,opacity,background-color,box-shadow] duration-150 ease-out">
           <div class="flex-1 flex items-center justify-start">
             <button type="button" class="flex items-center gap-2.5 btn-press cursor-pointer bg-transparent border-0 p-0" id="btn-logo-home" aria-label="Go to home">
               <div class="size-10 flex shrink-0 items-center justify-center">
@@ -197,8 +197,8 @@ export function examplesScreen() {
           </div>
 
           <nav class="hidden md:flex items-center gap-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-full px-2.5 py-2 text-[15px] font-bold text-slate-500">
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-home">Home</button>
-            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-all cursor-pointer" id="nav-docs">Docs</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer" id="nav-home">Home</button>
+            <button type="button" class="px-6 py-2 rounded-full hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer" id="nav-docs">Docs</button>
           </nav>
 
           <div class="flex-1 flex items-center justify-end gap-3">
@@ -220,14 +220,14 @@ export function examplesScreen() {
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="examples-grid">
               ${demos.map((demo) => `
-                <button type="button" class="demo-card relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 text-left shadow-[0_20px_60px_-35px_rgba(37,99,235,0.25)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_-32px_rgba(37,99,235,0.35)] group" data-url="${demo.url}" aria-label="Use demo: ${escapeAttr(demo.title)}">
+              <button type="button" class="demo-card relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white/90 backdrop-blur-md p-6 text-left shadow-[0_20px_60px_-35px_rgba(37,99,235,0.25)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1.5 hover:shadow-[0_28px_80px_-32px_rgba(37,99,235,0.35)] group" data-url="${demo.url}" aria-label="Use demo: ${escapeAttr(demo.title)}">
                   <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-br from-primary/8 via-sky-100/50 to-transparent pointer-events-none"></div>
                   <div class="relative">
                     <div class="mb-5 flex items-start justify-between gap-4">
                       <div class="flex items-center justify-center size-12 rounded-2xl border ${colorClasses[demo.color]} shadow-sm">
                         <span class="material-symbols-outlined text-2xl">${demo.icon}</span>
                       </div>
-                      <span class="material-symbols-outlined text-slate-300 transition-all group-hover:text-primary group-hover:translate-x-1">arrow_forward</span>
+                  <span class="material-symbols-outlined text-slate-300 transition-[color,transform] group-hover:text-primary group-hover:translate-x-1">arrow_forward</span>
                     </div>
 
                     <div class="mb-5">
