@@ -21,6 +21,7 @@
     "test:request-security": "tsx tests/request-security.ts",
     "test:security-helpers": "tsx test-safe-html.ts && tsx test-request-security.ts",
     "test:e2e": "playwright test",
+    "review:live-parser": "tsx scripts/review-live-parser-dataset.ts",
     "test:storage": "npx tsx test-local-store.ts"
   },
   "devDependencies": {

@@ -23,10 +23,12 @@ import { applyProviderAdapterOverrides } from './adapters/provider-guard';
 
 const HARD_CAPTURE_PROVIDERS = new Set([
   PROVIDER_TYPE.GOOGLE_FORMS,
+  PROVIDER_TYPE.MICROSOFT_FORMS,
   PROVIDER_TYPE.WORKDAY,
 ]);
 
 const DOCUMENT_URL_PATTERN = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(?:[?#].*)?$/i;
+const DOCUMENT_ROUTE_PATTERN = /\/(documentcenter\/view|documents?\/download|download\/documents?)(?:\/|$)/i;
 
 function createParseError(code, message, details = {}) {
   const err = new Error(message);
@@ -46,9 +48,9 @@ function getDemoId(url) {
 function isDocumentUrl(url) {
   try {
     const parsed = new URL(String(url || ''));
-    return DOCUMENT_URL_PATTERN.test(parsed.pathname);
+    return DOCUMENT_URL_PATTERN.test(parsed.pathname) || DOCUMENT_ROUTE_PATTERN.test(parsed.pathname);
   } catch {
-    return DOCUMENT_URL_PATTERN.test(String(url || ''));
+    return DOCUMENT_URL_PATTERN.test(String(url || '')) || DOCUMENT_ROUTE_PATTERN.test(String(url || ''));
   }
 }
 
@@ -252,6 +254,8 @@ function buildProviderCaptureGateEnvelope(url, provider) {
     nextStepRequired: true,
     nextStepHint: provider === PROVIDER_TYPE.GOOGLE_FORMS
       ? 'Google Forms are screenshot-first in FormMate because structural access is frequently blocked by active-session requirements.'
+      : provider === PROVIDER_TYPE.MICROSOFT_FORMS
+        ? 'Microsoft Forms usually requires interactive rendering. Use Assisted Capture from a browser session instead of URL-only parsing.'
       : `${providerLabel} usually requires an active browser session or interactive rendering. Use Assisted Capture instead of URL-only parsing.`,
     warnings: [
       createParserMessage(
@@ -259,6 +263,8 @@ function buildProviderCaptureGateEnvelope(url, provider) {
         'warning',
         provider === PROVIDER_TYPE.GOOGLE_FORMS
           ? 'Google Forms are routed to screenshot parsing by default.'
+          : provider === PROVIDER_TYPE.MICROSOFT_FORMS
+            ? 'Microsoft Forms is routed to Assisted Capture by default.'
           : `${providerLabel} is routed to Assisted Capture by default.`,
       ),
     ],

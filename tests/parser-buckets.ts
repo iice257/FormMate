@@ -124,9 +124,19 @@ const workdayGate = await parseFormUrl('https://company.myworkdayjobs.com/en-US/
 assert.equal(workdayGate.outcome.status, 'blocked');
 assert.equal(workdayGate.outcome.nextAction, 'use_capture');
 
+const microsoftFormsGate = await parseFormUrl('https://forms.office.com/r/LHtNM0tdf2');
+assert.equal(microsoftFormsGate.acquisition.provider, 'microsoft_forms');
+assert.equal(microsoftFormsGate.outcome.status, 'blocked');
+assert.equal(microsoftFormsGate.outcome.nextAction, 'use_capture');
+
 const documentGate = await parseFormUrl('https://example.com/application.pdf');
 assert.equal(documentGate.outcome.status, 'unsupported');
 assert.equal(documentGate.outcome.nextAction, 'upload_screenshots');
 assert.equal(documentGate.outcome.warnings[0].code, 'DOCUMENT_URL_UNSUPPORTED');
+
+const routedDocumentGate = await parseFormUrl('https://www.cityofmanvel.com/DocumentCenter/View/415');
+assert.equal(routedDocumentGate.outcome.status, 'unsupported');
+assert.equal(routedDocumentGate.outcome.nextAction, 'upload_screenshots');
+assert.equal(routedDocumentGate.outcome.warnings[0].code, 'DOCUMENT_URL_UNSUPPORTED');
 
 console.log('Parser bucket tests passed.');

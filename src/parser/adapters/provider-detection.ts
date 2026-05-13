@@ -13,6 +13,7 @@ export function detectProviderFromUrl(url) {
   if (normalized.includes('docs.google.com/forms') || normalized.includes('forms.gle/')) return PROVIDER_TYPE.GOOGLE_FORMS;
   if (normalized.includes('typeform.com')) return PROVIDER_TYPE.TYPEFORM;
   if (normalized.includes('jotform.com')) return PROVIDER_TYPE.JOTFORM;
+  if (normalized.includes('forms.office.com') || normalized.includes('forms.microsoft.com')) return PROVIDER_TYPE.MICROSOFT_FORMS;
   if (normalized.includes('tally.so')) return PROVIDER_TYPE.TALLY;
   if (normalized.includes('surveymonkey.com')) return PROVIDER_TYPE.SURVEYMONKEY;
   if (normalized.includes('qualtrics.com')) return PROVIDER_TYPE.QUALTRICS;
@@ -28,6 +29,7 @@ export function detectProviderFromDomSignature(html) {
     { provider: PROVIDER_TYPE.GOOGLE_FORMS, markers: ['fb_public_load_data_', 'freebirdformviewer', 'docs.google.com/forms'] },
     { provider: PROVIDER_TYPE.TYPEFORM, markers: ['typeform', 'data-tf-widget', 'tf-v1-widget'] },
     { provider: PROVIDER_TYPE.JOTFORM, markers: ['jotform', 'jf-form', 'formid='] },
+    { provider: PROVIDER_TYPE.MICROSOFT_FORMS, markers: ['forms.office.com', 'forms.microsoft.com', 'office forms', 'microsoft forms'] },
     { provider: PROVIDER_TYPE.TALLY, markers: ['tally.so', 'tally-form', 'data-tally-'] },
     { provider: PROVIDER_TYPE.SURVEYMONKEY, markers: ['surveymonkey', 'smcx-widget', 'collector.surveymonkey.com'] },
     { provider: PROVIDER_TYPE.QUALTRICS, markers: ['qualtrics', 'qid', 'surveyengine'] },
