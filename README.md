@@ -1,12 +1,12 @@
 # FormMate
 
-FormMate is a lightweight AI-assisted form companion that scaffolds answers and helps users complete tedious web forms faster. Users paste a form URL, converse via voice or text, and the AI suggests or fills responses that the user can review, regenerate, or edit. It’s designed for productivity and controlled automation, not bulk submission or spam.
+FormMate is a lightweight AI-assisted form companion that scaffolds answers and helps users complete tedious web forms faster. Users paste a form URL or upload visible form screenshots, converse via voice or text, and the AI suggests responses that the user can review, regenerate, edit, and copy. It's designed for productivity and controlled automation, not bulk submission or spam.
 
 The focus is on:
 
 * reducing repetitive typing
 * maintaining user oversight
-* working with dynamic web forms
+* working with dynamic web forms and screenshot-based intake
 * clean, minimal web UI
 * AI-driven suggestion and scaffolding
 
@@ -22,8 +22,8 @@ The focus is on:
 
 ### UX Flow
 
-1. paste form URL
-2. form questions load (parsed dynamically)
+1. paste a form URL, upload screenshots, or combine screenshots with a source link
+2. form questions load from URL parsing, assisted capture, or screenshot analysis
 3. AI scaffolds answers
 4. user reviews or edits
 5. fill fields
@@ -72,9 +72,11 @@ The focus is on:
 * no long-term storage by default
 * user controls submission
 
-## Features (MVP)
+## Core Capabilities
 
 * form URL input
+* screenshot upload as a valid standalone source
+* screenshot upload with optional URL context
 * dynamic question detection
 * AI answer suggestions
 * regenerate per field

@@ -16,8 +16,12 @@ const MAX_GOOGLE_SCREENSHOTS = 5;
 const MAX_GOOGLE_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 
 export function analyzingScreen() {
-  const { formUrl } = getState();
-  const platform = detectFormPlatform(formUrl);
+  const { formUrl, imageArtifacts } = getState();
+  const screenshotOnly = !formUrl && Array.isArray(imageArtifacts) && imageArtifacts.length > 0;
+  const platform = screenshotOnly ? 'Screenshot Import' : detectFormPlatform(formUrl);
+  const sourceLabel = screenshotOnly
+    ? `${imageArtifacts.length} screenshot${imageArtifacts.length === 1 ? '' : 's'}`
+    : formUrl.length > 50 ? formUrl.substring(0, 50) + '...' : formUrl;
   const authed = getState().isAuthenticated;
   const homeLabel = authed ? 'Go to Dashboard' : 'Go Home';
 
@@ -73,7 +77,7 @@ export function analyzingScreen() {
             </p>
 
             <p class="text-slate-400 text-sm mb-10">
-              <span class="font-medium text-primary">${platform}</span> &middot; ${formUrl.length > 50 ? formUrl.substring(0, 50) + '...' : formUrl}
+              <span class="font-medium text-primary">${platform}</span> &middot; ${sourceLabel}
             </p>
 
             <!-- Progress Section -->

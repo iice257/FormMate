@@ -180,5 +180,42 @@ async function runChatContextTests() {
   assert.equal(capturedContext?.formQuestions?.[0]?.bucketReason, 'Open-ended answer is useful for AI drafting.', 'chat context should include bucket reason');
 }
 
+async function runActionSearchTests() {
+  const { getActionById, getActionIndex, searchActions } = await import('../src/actions/action-index.ts');
+  const allActions = getActionIndex();
+
+  assert.ok(allActions.length > 0, 'action index should expose actions');
+  assert.equal(getActionById('WORKSPACE-SUBMIT')?.id, 'workspace-submit', 'action lookup should be case-insensitive');
+
+  const [firstGenerate] = searchActions('generate answers', { limit: 1 });
+  assert.equal(firstGenerate?.id, 'workspace-generate-all', 'search should still rank exact action intent first');
+
+  const featured = searchActions('', { limit: 3 });
+  assert.equal(featured.length, 3, 'empty search should return featured actions capped by limit');
+  assert.ok(featured.every((action: { featured?: boolean }) => action.featured), 'empty search should return featured actions only');
+}
+
+async function runServerPolicyTests() {
+  const { isBalancedAdjacentScopeAllowed } = await import('../api/_shared/ai-policy.ts');
+
+  assert.equal(
+    isBalancedAdjacentScopeAllowed('copilot_chat', [{ role: 'user', content: 'Help rewrite this application answer' }]),
+    true,
+    'FormMate-adjacent chat requests should remain allowed',
+  );
+  assert.equal(
+    isBalancedAdjacentScopeAllowed('docs_chat', [{ role: 'user', content: 'Tell me a recipe' }]),
+    false,
+    'Unrelated docs chat requests should remain out of scope',
+  );
+  assert.equal(
+    isBalancedAdjacentScopeAllowed('form_parsing', [{ role: 'user', content: 'unrelated text' }]),
+    true,
+    'parser tasks should remain allowed without keyword scope checks',
+  );
+}
+
 runChatContractTests();
 await runChatContextTests();
+await runActionSearchTests();
+await runServerPolicyTests();

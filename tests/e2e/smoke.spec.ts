@@ -18,6 +18,38 @@ async function login(page) {
   await page.waitForTimeout(600);
 }
 
+const screenshotFile = {
+  name: 'visible-form.png',
+  mimeType: 'image/png',
+  buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]),
+};
+
+async function mockImageParse(page, expectedSourceUrl) {
+  await page.route('**/api/parser/image-extract', async (route) => {
+    const body = route.request().postDataJSON();
+    expect(body.images.length).toBe(1);
+    expect(body.sourceUrl || '').toBe(expectedSourceUrl);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        parseStatus: 'success',
+        completeness: 'visible_step_only',
+        nextAction: 'none',
+        legacyFormData: {
+          title: 'Screenshot Imported Form',
+          url: expectedSourceUrl,
+          source: 'Screenshot',
+          parseStrategy: 'image_service',
+          questions: [
+            { id: 'name', text: 'Full name', type: 'short_text', required: true, options: [] },
+          ],
+        },
+      }),
+    });
+  });
+}
+
 test('demo flow: examples -> analyzing -> workspace renders cards', async ({ page }) => {
   await seedOnboardingComplete(page);
   await login(page);
@@ -128,6 +160,33 @@ test('capture flow: manual payload import imports into workspace', async ({ page
   await expect(page.getByRole('heading', { name: 'E2E Captured Form' })).toBeVisible();
 });
 
+test('new form: standalone screenshot upload imports into workspace', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await login(page);
+  await mockImageParse(page, '');
+
+  await page.goto('/new');
+  await page.locator('#screenshot-input').setInputFiles(screenshotFile);
+
+  await page.waitForURL('**/workspace');
+  await expect(page.getByRole('heading', { name: 'Screenshot Imported Form' })).toBeVisible();
+  await expect(page.locator('[data-card-id]')).toHaveCount(1);
+});
+
+test('new form: screenshot upload preserves optional link context', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await login(page);
+  await mockImageParse(page, 'https://example.com/application');
+
+  await page.goto('/new');
+  await page.fill('#url-input', 'https://example.com/application');
+  await page.locator('#screenshot-input').setInputFiles(screenshotFile);
+
+  await page.waitForURL('**/workspace');
+  await expect(page.getByRole('heading', { name: 'Screenshot Imported Form' })).toBeVisible();
+  await expect(page.locator('[data-card-id]')).toHaveCount(1);
+});
+
 test('ai contract sanity: regenerate uses text output and updates UI', async ({ page }) => {
   await seedOnboardingComplete(page);
   await login(page);
@@ -153,6 +212,40 @@ test('ai contract sanity: regenerate uses text output and updates UI', async ({ 
   await regenerate.click();
 
   await expect(page.locator(`.answer-textarea[data-question-id="${qId}"]`)).toHaveValue('Mock regenerated answer');
+});
+
+test('ai chats respond on main, docs, and workspace surfaces', async ({ page }) => {
+  await seedOnboardingComplete(page);
+  await login(page);
+
+  await page.route('**/api/ai/chat', async (route) => {
+    const body = route.request().postDataJSON();
+    const task = body.task || 'chat';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        choices: [{ message: { content: `${task} ok` } }],
+      }),
+    });
+  });
+
+  await page.goto('/ai-chat');
+  await page.fill('#chat-input', 'Check main chat');
+  await page.click('#btn-send');
+  await expect(page.getByText('copilot_chat ok')).toBeVisible();
+
+  await page.goto('/docs');
+  await page.fill('#docs-chat-input', 'Check docs chat');
+  await page.click('#btn-docs-send');
+  await expect(page.getByText('docs_chat ok')).toBeVisible();
+
+  await page.goto('/examples');
+  await page.click('.demo-card[data-url="demo://customer-feedback"]');
+  await page.waitForURL('**/workspace');
+  await page.fill('#chat-input', 'Check workspace chat');
+  await page.click('#btn-send-chat');
+  await expect(page.getByText('copilot_chat ok')).toBeVisible();
 });
 
 test('public routes are directly reachable and signed-out unknown routes require auth', async ({ page }) => {

@@ -19,7 +19,7 @@ import {
 
 const DOCS_KNOWLEDGE = [
   { id: 'welcome', title: 'Welcome to FormMate', text: 'FormMate helps users fill out tedious, long, and complex online forms by reading form questions, using saved Vault/profile context, and drafting answers for review.', type: 'guide' },
-  { id: 'first-form', title: 'Filling Your First Form', text: 'Start from the Dashboard or New Form screen, paste a form URL, analyze the form, review the generated workspace answers, then copy or submit with user approval.', type: 'guide' },
+  { id: 'first-form', title: 'Filling Your First Form', text: 'Start from the Dashboard or New Form screen, paste a form URL, upload screenshots, or use screenshots with a link for source context. Analyze the form, review the generated workspace answers, then copy or submit with user approval.', type: 'guide' },
   { id: 'vault', title: 'The Information Vault', text: 'The Vault stores reusable personal context such as education, work history, project details, portfolio links, preferences, and other data the AI can reference when drafting answers.', type: 'guide' },
   { id: 'copilot', title: 'Using the Form Copilot', text: 'The Form Copilot helps refine workspace answers, rewrite tone, shorten responses, explain field categories, and apply targeted edits to active form answers.', type: 'guide' },
   { id: 'editing', title: 'Reviewing & Editing', text: 'Users should review every generated answer in the Workspace, edit fields manually when needed, regenerate AI-supported answers, and confirm outputs before submission.', type: 'guide' },
@@ -219,7 +219,7 @@ export function docsScreen() {
                <p class="text-lg text-slate-600 leading-relaxed mb-6">FormMate is your intelligent assistant for filling out tedious, long, and complex online forms. Instead of typing out your personal details, work experience, or answers to repetitive questions over and over, FormMate does it for you in seconds.</p>
                
                <h3 class="text-xl font-bold text-slate-900 mb-3">How does it work?</h3>
-               <p class="text-base text-slate-600 leading-relaxed mb-6">You simply provide FormMate with a link to a form (like a job application, registration page, or survey). Our AI instantly reads the questions, looks at the personal details you've securely saved in your "Vault", and generates the perfect thoughtful answers. You can chat with the Copilot to tweak those answers, and then copy them directly!</p>
+               <p class="text-base text-slate-600 leading-relaxed mb-6">You provide FormMate with a form link, visible screenshots of the form, or screenshots together with a link for source context. Our AI reads the visible questions, looks at the personal details you've securely saved in your "Vault", and generates thoughtful answers. You can chat with the Copilot to tweak those answers, and then copy them directly!</p>
                
                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                  <div class="p-6 border border-slate-200 rounded-xl bg-slate-50 flex flex-col items-start text-left">
@@ -251,15 +251,15 @@ export function docsScreen() {
                   <div class="flex gap-4">
                      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">1</div>
                      <div>
-                        <h4 class="font-bold text-slate-900 text-lg mb-1">Paste a URL</h4>
-                        <p class="text-slate-600 text-sm">On the Dashboard, paste the URL of the form you want to fill into the input box and press "Analyze Form".</p>
+                        <h4 class="font-bold text-slate-900 text-lg mb-1">Provide the form</h4>
+                        <p class="text-slate-600 text-sm">On New Form, paste the form URL, upload screenshots of the visible questions, or do both when the link gives useful source context.</p>
                      </div>
                   </div>
                   <div class="flex gap-4">
                      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">2</div>
                      <div>
-                        <h4 class="font-bold text-slate-900 text-lg mb-1">Wait for Magic</h4>
-                        <p class="text-slate-600 text-sm">FormMate will rapidly scan the page, identify all the fields, dropdowns, and text areas, and generate the best answers using your Vault data.</p>
+                        <h4 class="font-bold text-slate-900 text-lg mb-1">Analyze the visible fields</h4>
+                        <p class="text-slate-600 text-sm">FormMate scans the available page or screenshots, identifies fields, dropdowns, and text areas, and drafts answers using your Vault data.</p>
                      </div>
                   </div>
                   <div class="flex gap-4">

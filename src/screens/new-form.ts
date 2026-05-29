@@ -9,6 +9,10 @@ import { initAurora } from './Aurora';
 import './Aurora.css';
 import { escapeAttr, escapeHtml, safeHttpUrl } from '../utils/escape';
 import { isZenModeEnabled, updateZenMode, bindZenModeControls, openAccountModal, getZenModeToggleHtml } from '../components/layout';
+import { RASTER_IMAGE_MIME_TYPES, isAllowedRasterImageFile } from '../utils/file-validation';
+
+const MAX_SCREENSHOTS = 5;
+const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 
 export function newFormScreen() {
   const { isAuthenticated, userProfile, formUrl } = getState();
@@ -110,6 +114,22 @@ export function newFormScreen() {
                 <p class="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">Or</p>
                 <span></span>
               </div>
+              <div class="new-form-screenshot-card w-full max-w-xl mx-auto rounded-3xl border border-dashed border-primary/25 bg-white/70 backdrop-blur-sm p-4 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center gap-3 text-left">
+                  <div class="size-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined">photo_library</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-black text-slate-900">Use screenshots instead</div>
+                    <p class="text-xs text-slate-500 leading-relaxed">Upload visible form screenshots by themselves, or keep a link above so FormMate can preserve source context.</p>
+                  </div>
+                  <button id="btn-screenshot-upload" type="button" class="px-5 py-2.5 rounded-full bg-slate-900 text-white text-[13px] font-bold hover:bg-slate-800 transition-all btn-press shadow-sm whitespace-nowrap">
+                    Upload screenshots
+                  </button>
+                  <input id="screenshot-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden />
+                </div>
+                <div id="screenshot-status" class="mt-3 text-xs font-semibold text-slate-500" aria-live="polite">PNG, JPEG, and WebP are supported. Max ${MAX_SCREENSHOTS} images.</div>
+              </div>
               <div class="flex flex-wrap justify-center gap-3">
                 <button id="nav-examples" class="px-6 py-2.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 text-slate-800 text-[13px] font-bold hover:bg-white hover:border-primary/30 transition-all btn-press shadow-sm flex items-center gap-2">
                   <span class="material-symbols-outlined text-base">explore</span> Examples
@@ -135,6 +155,9 @@ export function newFormScreen() {
     const btnBack = wrapper.querySelector('#btn-back');
     const btnZenBack = wrapper.querySelector('#btn-zen-back');
     const btnZenExit = wrapper.querySelector('#btn-zen-exit');
+    const btnScreenshotUpload = wrapper.querySelector('#btn-screenshot-upload');
+    const screenshotInput = wrapper.querySelector('#screenshot-input');
+    const screenshotStatus = wrapper.querySelector('#screenshot-status');
     let zenEnabled = isZenModeEnabled('new');
     let zenTurnedOnFromNew = false;
     const auroraBg = wrapper.querySelector('#aurora-bg');
@@ -196,6 +219,65 @@ export function newFormScreen() {
       if (e.key === 'Enter') btnAnalyze.click();
     });
 
+    btnScreenshotUpload?.addEventListener('click', () => {
+      screenshotInput.value = '';
+      screenshotInput.click();
+    });
+
+    screenshotInput?.addEventListener('change', async () => {
+      const files = Array.from(screenshotInput.files || []);
+      if (!files.length) return;
+
+      if (files.length > MAX_SCREENSHOTS) {
+        toast.error(`Upload up to ${MAX_SCREENSHOTS} screenshots at a time.`);
+        return;
+      }
+
+      const oversized = files.filter((file) => file.size > MAX_SCREENSHOT_BYTES);
+      if (oversized.length) {
+        toast.error(`Some screenshots are too large. Max ${Math.floor(MAX_SCREENSHOT_BYTES / (1024 * 1024))}MB each.`);
+        return;
+      }
+
+      const checks = await Promise.all(files.map(async (file) => ({ file, ok: await isAllowedRasterImageFile(file) })));
+      const valid = checks.filter((entry) => entry.ok && RASTER_IMAGE_MIME_TYPES.has(String(entry.file.type || '').toLowerCase())).map((entry) => entry.file);
+      if (!valid.length) {
+        toast.error('Use PNG, JPEG, or WebP screenshots.');
+        return;
+      }
+
+      if (screenshotStatus) screenshotStatus.textContent = 'Preparing screenshots...';
+
+      let sourceUrl = '';
+      const rawUrl = String(urlInput.value || '').trim();
+      if (rawUrl) {
+        try {
+          sourceUrl = normalizeSubmittedFormUrl(rawUrl, { allowDemo: true });
+        } catch (error) {
+          if (screenshotStatus) screenshotStatus.textContent = 'Fix or remove the link, then upload screenshots again.';
+          toast.error(error?.message || 'Invalid URL format');
+          return;
+        }
+      }
+
+      try {
+        const imageArtifacts = (await Promise.all(valid.map(fileToDataUrl))).filter(Boolean);
+        if (!imageArtifacts.length) throw new Error('No screenshots could be prepared.');
+        setState({
+          formUrl: sourceUrl,
+          capturePayload: null,
+          imageArtifacts,
+          parseResult: null,
+          formData: null,
+        });
+        toast.success(sourceUrl ? 'Screenshots queued with link context.' : 'Screenshots queued for analysis.');
+        navigateTo('analyzing');
+      } catch (error) {
+        if (screenshotStatus) screenshotStatus.textContent = 'Could not prepare screenshots.';
+        toast.error(error?.message || 'Could not prepare screenshots.');
+      }
+    });
+
     wrapper.querySelector('#nav-examples')?.addEventListener('click', () => navigateTo('examples'));
     wrapper.querySelector('#nav-chat')?.addEventListener('click', () => {
       navigateTo('ai-chat');
@@ -215,4 +297,13 @@ export function newFormScreen() {
   }
 
   return { html, init };
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read screenshot.'));
+    reader.readAsDataURL(file);
+  });
 }

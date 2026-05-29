@@ -288,6 +288,15 @@ function getSearchBlob(action) {
   ].join(' '));
 }
 
+const ACTION_SEARCH_INDEX = ACTIONS.map((action) => ({
+  action,
+  id: action.id,
+  normalizedTitle: normalizeSearchValue(action.title),
+  searchBlob: getSearchBlob(action),
+}));
+
+const ACTION_BY_ID = new Map(ACTIONS.map((action) => [action.id, action]));
+
 function scrollToAnchor(anchorId) {
   const target = document.getElementById(anchorId);
   if (!target) return false;
@@ -316,42 +325,43 @@ function openAccountTab(tab, options = {}) {
 }
 
 export function getActionIndex() {
-  return ACTIONS.map((action) => ({ ...action, route: getActionRoute(action) }));
+  return ACTION_SEARCH_INDEX.map(({ action }) => ({ ...action, route: getActionRoute(action) }));
 }
 
 export function getActionById(id) {
   if (!id) return null;
   const key = String(id).trim().toLowerCase();
-  const action = ACTIONS.find((entry) => entry.id === key);
+  const action = ACTION_BY_ID.get(key);
   return action ? { ...action, route: getActionRoute(action) } : null;
 }
 
 export function searchActions(query = '', options = {}) {
   const limit = options.limit || 8;
   const normalizedQuery = normalizeSearchValue(query);
-  const actions = getActionIndex();
 
   if (!normalizedQuery) {
-    return actions.filter((action) => action.featured).slice(0, limit);
+    return ACTION_SEARCH_INDEX
+      .filter(({ action }) => action.featured)
+      .slice(0, limit)
+      .map(({ action }) => ({ ...action, route: getActionRoute(action) }));
   }
 
   const tokens = normalizedQuery.split(' ').filter(Boolean);
 
-  return actions
-    .map((action) => {
-      const blob = getSearchBlob(action);
+  return ACTION_SEARCH_INDEX
+    .map(({ action, id, normalizedTitle, searchBlob }) => {
       let score = 0;
 
-      if (blob.includes(normalizedQuery)) score += 12;
-      if (normalizeSearchValue(action.title).startsWith(normalizedQuery)) score += 8;
-      if (action.id === normalizedQuery) score += 14;
+      if (searchBlob.includes(normalizedQuery)) score += 12;
+      if (normalizedTitle.startsWith(normalizedQuery)) score += 8;
+      if (id === normalizedQuery) score += 14;
 
       for (const token of tokens) {
-        if (blob.includes(token)) score += 3;
-        if (normalizeSearchValue(action.title).includes(token)) score += 2;
+        if (searchBlob.includes(token)) score += 3;
+        if (normalizedTitle.includes(token)) score += 2;
       }
 
-      return { action, score };
+      return { action: { ...action, route: getActionRoute(action) }, score };
     })
     .filter((entry) => entry.score > 0)
     .sort((left, right) => {

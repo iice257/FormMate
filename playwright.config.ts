@@ -17,9 +17,13 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
   },
   webServer: {
-    command: `node ./node_modules/vite/bin/vite.js dev --configLoader native --host 127.0.0.1 --port ${port}`,
+    command: 'node scripts/dev-stack.mjs',
     url: baseUrl,
-    reuseExistingServer: !process.env.CI,
+    env: {
+      VITE_DEV_HOST: '127.0.0.1',
+      VITE_DEV_PORT: port,
+    },
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

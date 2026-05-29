@@ -23,10 +23,13 @@ const HELP_KEYWORDS = [
   'dashboard', 'docs', 'help', 'submit', 'screenshot', 'capture',
 ];
 
+const escapePattern = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const HELP_KEYWORD_PATTERN = new RegExp(HELP_KEYWORDS.map(escapePattern).join('|'), 'i');
+
 function hasRelevantKeyword(text) {
-  const lower = String(text || '').toLowerCase();
-  if (!lower) return false;
-  return HELP_KEYWORDS.some((keyword) => lower.includes(keyword));
+  const value = String(text || '');
+  if (!value) return false;
+  return HELP_KEYWORD_PATTERN.test(value);
 }
 
 function getNewestUserMessage(messages) {

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createServer } from 'node:http';
-import { config as loadDotenv } from 'dotenv';
+import { existsSync, readFileSync } from 'node:fs';
+import { parse as parseDotenv } from 'dotenv';
 import chatHandler from '../api/ai/chat.ts';
 import transcribeHandler from '../api/ai/transcribe.ts';
 import visionContextHandler from '../api/ai/vision-context.ts';
@@ -14,8 +15,26 @@ const parsedPort = Number.parseInt(String(process.env.FORMMATE_API_PORT || ''), 
 const PORT = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 
 // Local API server should mirror Vercel env pulls used by frontend proxy flows.
-loadDotenv({ path: '.env.local' });
-loadDotenv();
+// Blank local entries are ignored so a placeholder in .env.local does not mask
+// a real fallback value in .env.
+function loadEnvFile(path, { override = false } = {}) {
+  if (!existsSync(path)) return;
+
+  const parsed = parseDotenv(readFileSync(path));
+  let injected = 0;
+  for (const [key, value] of Object.entries(parsed)) {
+    const normalized = String(value || '').trim();
+    if (!normalized) continue;
+    if (!override && String(process.env[key] || '').trim()) continue;
+    process.env[key] = value;
+    injected += 1;
+  }
+
+  console.log(`[local-api] loaded ${injected} env value(s) from ${path}`);
+}
+
+loadEnvFile('.env');
+loadEnvFile('.env.local', { override: true });
 
 const strictTls = String(process.env.FORMMATE_STRICT_TLS || '').trim() === '1';
 if (!strictTls) {
