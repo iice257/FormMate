@@ -30,7 +30,7 @@ function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
   const authed = getState().isAuthenticated;
   const authButtonHtml = !authed
     ? `<button class="legal-signin-btn bg-slate-900 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.15)] hover:-translate-y-0.5 btn-press" id="btn-login">Sign In</button>`
-    : `<button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Go to Dashboard</button>`;
+    : `<button class="docs-dashboard-button bg-primary text-white px-4 py-2 rounded-xl hover:brightness-110 transition-colors shadow-sm btn-press" id="btn-dashboard">Dashboard</button>`;
 
   return `
     <div class="flex flex-col h-screen bg-white font-sans overflow-hidden">
@@ -42,14 +42,14 @@ function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
           </button>
         </div>
 
-        <div class="flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
+        <div class="docs-topbar-center flex-1 flex justify-center items-center gap-3 md:gap-4 min-w-0">
           <span class="font-black text-base md:text-lg tracking-tighter text-slate-900 whitespace-nowrap">Form<span class="text-primary">Mate</span> Legal</span>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
+        <div class="docs-topbar-actions flex-1 flex items-center justify-end gap-2 md:gap-3 text-sm font-semibold">
           <button
             type="button"
-            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'docs'
+            class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'docs'
               ? 'bg-primary text-white border-primary shadow-sm'
               : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
             data-legal-nav="docs"
@@ -58,7 +58,7 @@ function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
           </button>
           <button
             type="button"
-            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'privacy'
+            class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'privacy'
               ? 'bg-primary text-white border-primary shadow-sm'
               : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
             data-legal-nav="privacy"
@@ -67,7 +67,7 @@ function renderLegalShell({ title, subtitle, bodyHtml, activeTab }) {
           </button>
           <button
             type="button"
-            class="px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'terms'
+            class="docs-nav-pill px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all border ${activeTab === 'terms'
               ? 'bg-primary text-white border-primary shadow-sm'
               : 'bg-white text-slate-600 border-slate-200 hover:border-primary/30 hover:text-primary'}"
             data-legal-nav="terms"

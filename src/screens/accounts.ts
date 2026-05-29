@@ -21,7 +21,7 @@ export function accountsScreen() {
   const vaultEntries = Object.entries(vault);
 
   const html = `
-    <div class="flex h-screen overflow-hidden">
+    <div class="accounts-page-shell flex h-screen overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-64 border-r flex-col shrink-0 hidden lg:flex" style="border-color: var(--fm-border); background: var(--fm-bg-elevated);">
         <button type="button" class="p-6 flex items-center gap-3 cursor-pointer bg-transparent border-0 text-left" id="btn-accounts-home">
@@ -49,7 +49,7 @@ export function accountsScreen() {
       <!-- Main -->
       <main class="flex-1 overflow-y-auto no-scrollbar" style="background: var(--fm-bg);">
         <!-- Header -->
-        <header class="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-10 glass" style="border-color: var(--fm-border);">
+        <header class="accounts-page-header h-16 border-b flex items-center justify-between px-8 sticky top-0 z-10 glass" style="border-color: var(--fm-border);">
           <div class="flex-1 flex justify-start">
             <button id="btn-back" class="bg-slate-900 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-lg hover:bg-slate-800 transition-all btn-press">
               <span class="material-symbols-outlined text-sm">arrow_back</span>
@@ -70,9 +70,9 @@ export function accountsScreen() {
           </div>
         </header>
 
-        <div class="max-w-3xl mx-auto p-8 space-y-8">
+        <div class="accounts-page-main max-w-3xl mx-auto p-8 space-y-8">
           <!-- Profile Header -->
-          <div class="flex items-center gap-6 p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
+          <div class="accounts-profile-card flex items-center gap-6 p-6 rounded-[var(--fm-card-radius)]" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
             <div class="size-20 rounded-[var(--fm-card-radius)] flex items-center justify-center text-3xl font-bold" style="background: var(--fm-gradient-primary); color: white;">
               ${escapeHtml((userProfile.name || 'U').charAt(0).toUpperCase())}
             </div>
@@ -97,7 +97,7 @@ export function accountsScreen() {
             <!-- Profile Tab (default) -->
             <div id="tab-profile" class="space-y-4">
               <div class="p-6 rounded-xl space-y-5" style="background: var(--fm-bg-elevated); border: 1px solid var(--fm-border);">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="accounts-profile-grid grid grid-cols-2 gap-4">
                   <div>
                     <label for="prof-name" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Full Name</label>
                     <input id="prof-name" type="text" value="${escapeAttr(userProfile.name)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
@@ -107,7 +107,7 @@ export function accountsScreen() {
                     <input id="prof-email" type="email" value="${escapeAttr(userProfile.email)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="accounts-profile-grid grid grid-cols-2 gap-4">
                   <div>
                     <label for="prof-phone" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style="color: var(--fm-text-secondary);">Phone</label>
                     <input id="prof-phone" type="tel" value="${escapeAttr(userProfile.phone)}" class="w-full h-11 px-4 rounded-xl text-sm" style="border: 1px solid var(--fm-border); background: var(--fm-surface); color: var(--fm-text);" />

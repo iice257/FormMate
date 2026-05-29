@@ -50,6 +50,77 @@ async function mockImageParse(page, expectedSourceUrl) {
   });
 }
 
+async function expectVisibleLayoutWithinViewport(page, label = page.url()) {
+  const problems = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const ignoredTags = new Set(['SCRIPT', 'STYLE', 'LINK', 'META']);
+    const visibleProblems = [];
+
+    document.querySelectorAll('body *').forEach((node) => {
+      if (ignoredTags.has(node.tagName)) return;
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return;
+      const rect = node.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return;
+      if (rect.bottom < 0 || rect.top > viewportHeight) return;
+      if (rect.right <= 0 || rect.left >= viewportWidth) return;
+      if (rect.right <= viewportWidth + 1 && rect.left >= -1 && rect.width <= viewportWidth + 1) return;
+      const text = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+      const isControl = node.matches('button, a, input, textarea, select, [role], [aria-label], [tabindex]:not([tabindex="-1"])');
+      if (!isControl && !text) return;
+
+      visibleProblems.push({
+        selector: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${node.className ? `.${String(node.className).split(/\s+/).filter(Boolean).slice(0, 4).join('.')}` : ''}`,
+        text: text.slice(0, 80),
+        rect: {
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        },
+      });
+    });
+
+    return visibleProblems.slice(0, 8);
+  });
+
+  expect(problems, label).toEqual([]);
+}
+
+async function expectNewFormHeaderDoesNotOverlap(page) {
+  const overlaps = await page.evaluate(() => {
+    const selectors = ['#btn-back', '#logo-home', '.zen-mode-toggle-header', '#btn-profile'];
+    const boxes = selectors.map((selector) => {
+      const node = document.querySelector(selector);
+      if (!node) return null;
+      const rect = node.getBoundingClientRect();
+      return {
+        selector,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+      };
+    }).filter(Boolean);
+
+    const collisions = [];
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        const horizontal = a.left < b.right - 1 && a.right > b.left + 1;
+        const vertical = a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        if (horizontal && vertical) {
+          collisions.push(`${a.selector} overlaps ${b.selector}`);
+        }
+      }
+    }
+    return collisions;
+  });
+
+  expect(overlaps).toEqual([]);
+}
+
 test('demo flow: examples -> analyzing -> workspace renders cards', async ({ page }) => {
   await seedOnboardingComplete(page);
   await login(page);
@@ -79,6 +150,27 @@ test('dev test access reaches protected app shell', async ({ page }) => {
 
   await page.waitForURL('**/dashboard');
   await expect(page.locator('#nav-dashboard')).toBeVisible();
+});
+
+test('mobile layouts keep controls within the visible viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedOnboardingComplete(page);
+  await login(page);
+
+  for (const route of ['/dashboard', '/new', '/docs', '/privacy', '/terms', '/history', '/vault', '/accounts']) {
+    await page.goto(route);
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(300);
+    await expectVisibleLayoutWithinViewport(page, route);
+    if (route === '/new') {
+      await expectNewFormHeaderDoesNotOverlap(page);
+    }
+  }
+
+  await page.goto('/examples');
+  await page.click('.demo-card[data-url="demo://customer-feedback"]');
+  await page.waitForURL('**/workspace');
+  await expectVisibleLayoutWithinViewport(page, '/workspace');
 });
 
 test('auth screen exposes Google and dev access paths', async ({ page }) => {

@@ -3699,6 +3699,76 @@ input[type="range"]:active::-moz-range-thumb {
   }
 }
 
+@media (max-width: 767px) {
+  .docs-topbar {
+    height: auto !important;
+    min-height: 4rem;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "home title"
+      "tabs tabs";
+    align-items: center;
+    gap: 0.65rem 0.75rem;
+    padding: 0.7rem 1rem !important;
+  }
+
+  .docs-topbar > div:first-child {
+    grid-area: home;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .docs-topbar-center {
+    grid-area: title;
+    justify-content: flex-start !important;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .docs-topbar-center > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .docs-topbar-actions {
+    grid-area: tabs;
+    flex: none !important;
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.05rem 0 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .docs-topbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .docs-topbar .docs-home-button {
+    min-width: 2.6rem !important;
+    min-height: 2.6rem !important;
+    padding: 0 0.86rem !important;
+    white-space: nowrap;
+  }
+
+  .docs-topbar-actions .docs-nav-pill,
+  .docs-topbar-actions .legal-signin-btn,
+  .docs-topbar-actions .docs-dashboard-button {
+    flex: 0 0 auto;
+    min-height: 2.4rem;
+    padding: 0 0.9rem !important;
+    font-size: 0.76rem !important;
+    border-radius: 999px !important;
+    white-space: nowrap;
+  }
+}
+
 .ai-inline-action {
   display: inline-flex;
   align-items: center;
@@ -5091,6 +5161,355 @@ button#btn-back-login .material-symbols-outlined,
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(203, 213, 225, 0.8), transparent);
+}
+
+@media (max-width: 767px) {
+  .zen-new-form-shell {
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .zen-new-form-header {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.8rem 0.9rem !important;
+  }
+
+  .zen-new-form-header > div {
+    flex: 0 0 auto !important;
+    min-width: 0;
+  }
+
+  .zen-new-form-header > div:nth-child(2) {
+    justify-content: center !important;
+    overflow: hidden;
+  }
+
+  .zen-new-form-header > div:last-child {
+    justify-content: flex-end !important;
+    gap: 0.45rem !important;
+  }
+
+  .zen-new-form-header #logo-home {
+    max-width: 3.2rem;
+  }
+
+  .zen-new-form-header #logo-home span {
+    display: none;
+  }
+
+  .zen-new-form-header #btn-back {
+    min-width: 2.7rem !important;
+    width: 2.7rem !important;
+    height: 2.7rem !important;
+    min-height: 2.7rem !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 999px !important;
+    font-size: 0 !important;
+  }
+
+  .zen-new-form-header #btn-back .material-symbols-outlined {
+    font-size: 1.35rem !important;
+  }
+
+  .zen-new-form-header #btn-profile {
+    min-width: 2.7rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    padding: 0 !important;
+    justify-content: center;
+  }
+
+  .zen-new-form-header #btn-profile span {
+    display: none;
+  }
+
+  .zen-new-form-header #btn-profile img {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .zen-new-form-header .zen-mode-toggle-header {
+    width: 2.7rem;
+    min-width: 2.7rem;
+    height: 2.7rem;
+    min-height: 2.7rem;
+    padding: 0 !important;
+    border-radius: 999px;
+  }
+
+  .zen-new-form-main {
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+    min-height: calc(100svh - 4.3rem);
+    padding: clamp(1.4rem, 5vw, 2rem) 1rem 2.4rem !important;
+    overflow: visible;
+  }
+
+  .zen-new-form-panel {
+    max-width: 100% !important;
+    margin-inline: auto;
+  }
+
+  .zen-new-form-panel.space-y-10 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.85rem !important;
+  }
+
+  .zen-new-form-copy {
+    font-size: 3.65rem !important;
+    line-height: 0.98 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .new-form-input-shell {
+    border-radius: 1.8rem !important;
+    padding: 0.7rem !important;
+  }
+
+  .new-form-input-shell input {
+    height: 3.35rem !important;
+  }
+
+  .new-form-input-shell #btn-analyze {
+    width: 100%;
+    min-height: 3.45rem;
+  }
+
+  .new-form-screenshot-card {
+    border-radius: 1.35rem !important;
+    padding: 1rem !important;
+  }
+
+  .new-form-screenshot-card button {
+    width: 100%;
+  }
+
+  .zen-new-form-wave {
+    inset-inline: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .accounts-page-shell {
+    height: auto !important;
+    min-height: 100svh;
+    overflow-x: hidden !important;
+  }
+
+  .accounts-page-header {
+    padding-inline: 0.9rem !important;
+    gap: 0.55rem;
+  }
+
+  .accounts-page-header > div {
+    min-width: 0;
+  }
+
+  .accounts-page-header #btn-back {
+    min-width: 2.65rem !important;
+    width: 2.65rem !important;
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 999px !important;
+    font-size: 0 !important;
+  }
+
+  .accounts-page-header #btn-back .material-symbols-outlined {
+    font-size: 1.35rem !important;
+  }
+
+  .accounts-page-header #btn-user-badge {
+    width: 2.65rem;
+    height: 2.65rem;
+    padding: 0 !important;
+    justify-content: center;
+  }
+
+  .accounts-page-header #btn-user-badge span {
+    display: none;
+  }
+
+  .accounts-page-main {
+    max-width: 100%;
+    padding: 1rem !important;
+    gap: 1rem;
+  }
+
+  .accounts-profile-card {
+    align-items: flex-start !important;
+    gap: 1rem !important;
+    padding: 1.05rem !important;
+  }
+
+  .accounts-profile-card > div:first-child {
+    width: 4rem !important;
+    height: 4rem !important;
+    border-radius: 1.1rem !important;
+    font-size: 2rem !important;
+  }
+
+  #account-tabs {
+    display: flex;
+    overflow: visible;
+    gap: 0.35rem !important;
+    padding: 0.45rem !important;
+  }
+
+  #account-tabs .tab-btn {
+    flex: 1 1 0 !important;
+    min-width: 0;
+    min-height: 4.55rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.65rem 0.55rem !important;
+    font-size: 0.64rem !important;
+    line-height: 1.05;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  #account-tabs .tab-btn .material-symbols-outlined {
+    margin-right: 0 !important;
+    font-size: 1.25rem !important;
+  }
+
+  #tab-content > div > div,
+  #tab-content .p-6 {
+    padding: 1.05rem !important;
+  }
+
+  .accounts-profile-grid,
+  #style-tones,
+  #tab-settings .grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #tab-settings {
+    height: auto !important;
+    flex-direction: column !important;
+  }
+
+  #tab-settings > aside {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--fm-border);
+    padding-left: 0 !important;
+    padding-top: 1rem;
+    order: -1;
+  }
+
+  #settings-nav {
+    display: flex;
+    gap: 0.45rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  #settings-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-nav-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .zen-history-inner {
+    padding: 1rem !important;
+  }
+
+  .zen-history-header {
+    margin-bottom: 1.2rem !important;
+  }
+
+  .zen-history-header h1 {
+    font-size: 3rem !important;
+    line-height: 1 !important;
+  }
+
+  .zen-history-header p {
+    font-size: 0.98rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .zen-history-table-shell > div:first-child {
+    padding: 0.85rem !important;
+  }
+
+  .zen-history-table-shell > div:first-child > div {
+    max-width: none !important;
+  }
+
+  .zen-history-table-shell table,
+  .zen-history-table-shell thead,
+  .zen-history-table-shell tbody,
+  .zen-history-table-shell tr,
+  .zen-history-table-shell td {
+    display: block;
+    width: 100%;
+  }
+
+  .zen-history-table-shell thead {
+    display: none;
+  }
+
+  .zen-history-table-shell .history-row {
+    padding: 0.85rem 1rem;
+  }
+
+  .zen-history-table-shell .history-row td {
+    padding: 0.38rem 0 !important;
+    text-align: left !important;
+  }
+
+  .zen-history-table-shell .history-row td:first-child {
+    padding-top: 0 !important;
+  }
+
+  .zen-history-table-shell .history-row td:last-child {
+    padding-bottom: 0 !important;
+  }
+
+  .zen-history-table-shell .btn-open-history {
+    margin-left: 0 !important;
+  }
+
+  #history-empty-row td {
+    width: 100%;
+    padding: 2.2rem 1rem !important;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 420px) {
+  .zen-new-form-copy {
+    font-size: 3.35rem !important;
+  }
+
+  .zen-history-header h1 {
+    font-size: 2.75rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .zen-new-form-copy {
+    font-size: 3rem !important;
+  }
+
+  .zen-history-header h1 {
+    font-size: 2.45rem !important;
+  }
 }
 
 .workspace-editor-stage {

@@ -33,7 +33,7 @@ export function newFormScreen() {
   const showZenBack = zenActive && canGoBackWithinApp('new');
 
   const html = `
-    <div class="relative flex h-screen w-full flex-col overflow-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
+    <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden zen-new-form-shell ${zenActive ? 'is-zen-mode' : ''}" data-zen-shell="true" data-zen-screen="new">
       <button
         type="button"
         id="btn-zen-back"
