@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">FormMate AI</title>
+  <desc id="desc">AI form companion social preview.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e0f2fe"/>
+      <stop offset="1" stop-color="#2298da"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="96" y="74" width="1008" height="482" rx="34" fill="#ffffff" opacity="0.94"/>
+  <text x="156" y="178" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="800">FormMate AI</text>
+  <text x="160" y="232" fill="#2563eb" font-family="Inter, Arial, sans-serif" font-size="30">Paste the form. Let AI handle the busywork.</text>
+  <rect x="160" y="294" width="520" height="58" rx="14" fill="#eef6ff"/>
+  <rect x="160" y="376" width="420" height="58" rx="14" fill="#eef6ff"/>
+  <rect x="160" y="458" width="320" height="58" rx="14" fill="#eef6ff"/>
+  <path d="M190 323h330M190 405h252M190 487h186" stroke="#38bdf8" stroke-width="12" stroke-linecap="round"/>
+  <rect x="760" y="280" width="250" height="180" rx="28" fill="#0f172a"/>
+  <path d="M818 370l42 42 92-104" fill="none" stroke="#22c55e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="972" cy="206" r="62" fill="#2298da"/>
+  <text x="938" y="228" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="54" font-weight="800">AI</text>
+</svg>
